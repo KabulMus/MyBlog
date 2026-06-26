@@ -1,0 +1,803 @@
+/* --- 1. 字体声明 --- */
+@import url('https://fonts.googleapis.com/css2?family=Barlow&family=Barlow+Condensed:wght@400;600&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
+/* Musical - 乐谱符号字体 */
+@font-face { font-family: 'Musical'; src: url('fonts/Musical-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Musical'; src: url('fonts/Musical-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Musical'; src: url('fonts/Musical-Semibold.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Musical'; src: url('fonts/Musical-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
+/* 统一 Inter 可变字体声明 */
+@font-face { font-family: 'Icons'; src: url('fonts/Icons-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: auto; font-feature-settings: "liga" 1; }
+/* Noto Sans SC - 思源黑体 Variable Font */
+/* --- 2. 颜色变量 --- */
+:root {
+    --primary-blue: #1e66c6;
+    --bg-light: #f1f5f9;
+    --text-main: #1D1D1F;
+    --text-sub: #6b7280;
+    --navbar-bg: rgba(255, 255, 255, 0.8);
+    --card-bg: #ffffff;
+    --card-shadow: 0 8px 20px -4px rgba(14, 52, 112, 0.12), 0 4px 8px -2px rgba(14, 52, 112, 0.08);
+    --card-hover-shadow: 0 12px 30px rgba(14, 52, 112, 0.2);
+    --item-border: rgba(0, 0, 0, 0.08);
+    --card-radius: 12px;
+    --on-primary: #ffffff; /* 初始为白色 */
+    --bilibili-blue: #0cb6f2;
+	--bilibili-pink: #ff6699;
+	--xhs-red: #ff2442;
+	--youtube-red: #ff0033;
+	--discord-blurple: #5865f2;
+	--qq-brand: #0052d9;
+	--wechat-green: #07C160;
+	--duolingo-green: #58cc02;
+    --baidu-blue: #2932e1;
+    --weibo-orange: #ff8200;
+    --douyin-bg: #161823;
+    --douyin-text: #f9f9fa;
+}
+
+/* 深色模式变量 */
+:root[data-theme='dark'] {
+    --primary-blue: #93c5fd;
+    --bg-light: #0f172a;
+    --text-main: #F5F5F7;
+    --text-sub: #94a3b8;
+    --navbar-bg: rgba(15, 23, 42, 0.8);
+    --card-bg: #1e293b;
+    --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    --card-hover-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7);
+    --item-border: rgba(255, 255, 255, 0.08);
+    --on-primary: #0f172a; /* 深色模式下设为与背景相同的深蓝色/黑色 */
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        --primary-blue: #93c5fd;
+        --bg-light: #0f172a;
+        --text-main: #F5F5F7;
+        --text-sub: #94a3b8;
+        --navbar-bg: rgba(15, 23, 42, 0.8);
+        --card-bg: #1e293b;
+        --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+        --card-hover-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7);
+        --item-border: rgba(255, 255, 255, 0.08);
+        --on-primary: #0f172a;
+    }
+}
+
+section.container a {
+    font-size: inherit;
+}
+
+num {
+    font-variant-numeric: tabular-nums;
+}
+
+icons {
+    font-family: 'Icons';
+    font-weight: 400;
+}
+
+/* --- 3. 基础复位 --- */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: 80px; /* 匹配导航栏高度，防止跳转后由于偏移过大露出英雄区背景 */
+}
+
+/* 彻底隐藏所有滚动条，但保留滑动/滚动功能 */
+*::-webkit-scrollbar { display: none; } /* Chrome, Safari, Edge */
+* {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;     /* Firefox */
+}
+
+/* 确保表单元素继承页面字体 */
+button, input, select, textarea { font-family: inherit; }
+
+body {
+    font-size: 1rem;
+    font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+    font-optical-sizing: auto;
+    background-color: var(--bg-light);
+    color: var(--text-main);
+    line-height: 1.6;
+    line-break: strict;
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 1, "chws" 1;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    user-select: none; /* 默认所有文本不可选中 */
+}
+
+/* --- 内容区域布局 --- */
+.content-section {
+	background-color: var(--bg-light);
+	padding: 60px 20px;
+	text-align: center;
+	position: relative;
+	z-index: 2;
+}
+
+section.container {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.section-title {
+	font-size: 1.3rem;
+	font-weight: 600;
+	margin-bottom: 40px;
+	position: relative;
+	display: inline-block;
+}
+
+.section-title::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	bottom: -8px;
+	width: 30px;
+	height: 3px;
+	border-radius: 3px;
+	background-color: var(--primary-blue);
+}
+
+.section-hint {
+	font-size: 0.85rem;
+	color: var(--text-sub);
+	margin-top: -25px;
+	margin-bottom: 30px;
+	display: flex;
+	justify-content: center;
+}
+
+.section-content { margin-bottom: 70px; }
+
+.grid {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+    align-items: center;
+	gap: 20px;
+	margin-top: 10px;
+}
+
+.grid p { color: var(--text-sub); }
+.grid h2 { font-size: 1.6rem; font-weight: 800; color: var(--primary-blue); }
+
+/* --- 4. 斜体逻辑定制 --- */
+/* 针对中文环境：斜体变细正体（字重降至300） */
+html[lang^="zh"] i,
+html[lang^="zh"] em,
+html[lang^="zh"] .italic {
+    font-style: normal;
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased; /* 增强细字体的清晰度 */
+}
+
+/* 临时覆盖中文斜体逻辑，强制使用 Inter 的斜体 */
+html[lang^="zh"] .inter-italic-override {
+    font-family: 'Inter', sans-serif; /* 确保使用 Inter */
+    font-style: italic;
+}
+
+/* 针对英文环境：保留 Inter 的标准斜体 */
+html[lang="en-US"] i,
+html[lang="en-US"] em,
+html[lang="en-US"] .italic {
+    font-style: italic;
+}
+
+/* --- 4. 共有组件: 导航栏 --- */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 60px;
+    background: var(--navbar-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+    display: flex;
+    transform: translateY(0);
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
+    box-shadow: var(--card-shadow);
+    border-bottom: 1px solid var(--item-border);
+}
+
+.nav-container {
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 0 20px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.nav-brand {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	text-decoration: none;
+	color: var(--text-main);
+	font-weight: 700;
+	font-size: 1.1rem;
+    stroke: var(--text-main);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+	transition: color 0.2s ease, font-weight 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.nav-brand:hover { color: var(--primary-blue); font-weight: 900; stroke: var(--primary-blue); stroke-width: 6; }
+
+.nav-avatar {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid rgba(0,0,0,0.05);
+}
+
+.nav-links {
+	display: flex;
+	gap: 20px;
+}
+
+.menu-toggle {
+	display: none;
+	background: none;
+	border: none;
+	color: var(--text-main);
+	cursor: pointer;
+	padding: 5px;
+	align-items: center;
+	justify-content: center;
+	transition: color 0.2s ease;
+}
+
+.menu-toggle.active { color: var(--primary-blue); }
+
+.menu-toggle svg { width: 24px; height: 24px; stroke: currentColor; }
+
+.nav-links a {
+	text-decoration: none;
+	color: var(--text-main);
+	font-size: 0.9rem;
+	font-weight: 400; /* 默认字重 */
+	transition: color 0.2s ease, font-weight 0.2s ease; /* 添加字重过渡 */
+	position: relative;
+	display: inline-flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+/* 使用伪元素预留粗体占位，防止等宽字体抖动 */
+.nav-links a::before {
+	content: attr(data-text);
+	height: 0;
+	visibility: hidden;
+	overflow: hidden;
+	user-select: none;
+	pointer-events: none;
+	font-weight: 700; /* 预留 700 字重的空间 */
+}
+
+.nav-links a:hover { color: var(--primary-blue); font-weight: 700; } /* 悬停时字重变为700 */
+
+/* --- 移动端下拉菜单 --- */
+.nav-dropdown {
+	position: absolute;
+	top: 70px;
+	right: 20px;
+	background: var(--card-bg);
+	border-radius: 12px;
+	box-shadow: 0 12px 30px -5px rgba(14, 52, 112, 0.2);
+	display: flex;
+	flex-direction: column;
+	min-width: 150px;
+	padding: 8px;
+	opacity: 0;
+	visibility: hidden;
+	transform: translateY(-20px);
+	transition: all 0.5s ease;
+	z-index: 101;
+}
+
+.nav-dropdown.active {
+	opacity: 1;
+	visibility: visible;
+	transform: translateY(0);
+}
+
+.nav-dropdown a {
+	text-decoration: none;
+	color: var(--text-main);
+	padding: 12px 16px;
+	font-weight: 400; /* 默认字重 */
+	font-size: 1rem;
+    line-height: 0.8;
+	border-radius: 8px;
+	transition: color 0.2s ease, font-weight 0.2s ease;
+	position: relative;
+	/* 关键修改 1：像桌面端一样，改为 flex 纵向容器，确保伪元素能完美在容器内完成空间占位而互不干扰 */
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: flex-start; /* 移动端菜单通常左对齐，若想居中可改为 center */
+}
+
+.nav-dropdown a::before {
+	content: attr(data-text);
+	height: 0;
+	visibility: hidden;
+	overflow: hidden;
+	user-select: none;
+	pointer-events: none;
+	/* 关键修改 2：修复原代码中的 100，预留 700 字重的空间，从而防止变粗时位置抖动 */
+	font-weight: 700; 
+}
+
+.nav-dropdown a:hover { 
+	color: var(--primary-blue); 
+	font-weight: 700; /* 悬停时平滑变为粗体 */
+}
+
+/* --- 导航分割线 --- */
+.nav-divider {
+    display: inline-block;
+    width: 2px;
+    height: 20px;
+    background: var(--text-sub);
+    opacity: 0.3;
+    align-self: center;
+    border-radius: 3px;
+}
+
+/* 移动端下拉菜单内的横向分割线 */
+.dropdown-divider {
+    height: 1px;
+    background: var(--text-sub);
+    opacity: 0.2;
+    margin: 8px 16px;
+}
+
+/* --- 页面激活态样式 (用于子页面) --- */
+.nav-links a.active,
+.nav-dropdown a.active {
+    color: var(--primary-blue);
+    font-weight: 700;
+}
+
+/* 确保激活态的 ::before 空间保持稳定 */
+.nav-links a.active::before,
+.nav-dropdown a.active::before {
+    font-weight: 700;
+}
+
+/* --- 5. 共有组件: 弹窗 --- */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center;
+    z-index: 1000; backdrop-filter: blur(4px); visibility: hidden; opacity: 0; transition: all 0.3s ease;
+}
+.modal-overlay.active { visibility: visible; opacity: 1; }
+.modal-modal {
+    background: var(--card-bg); border-radius: var(--card-radius); text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(2, 6, 23, 0.5); position: relative;
+    transform: translateY(20px) scale(0.95); transition: all 0.4s ease;
+    overflow: hidden; /* 确保内部滚动时不超出圆角 */
+    display: flex; flex-direction: column;
+    width: 90%; 
+    max-width: 340px; 
+}
+.modal-overlay.active .modal-modal { transform: translateY(0) scale(1); }
+
+.modal-body {
+    padding: 30px;
+    max-height: 90vh; /* 将高度限制移至此处 */
+    overflow-y: auto; /* 仅此处允许滚动 */
+    width: 100%;
+}
+
+.modal-qr {
+	width: 220px;
+	height: 220px;
+	max-width: 100%; /* 防止图片在极窄屏下溢出 */
+	height: auto;
+}
+
+
+@media (max-width: 480px) {
+    .modal-body {
+        padding: 25px 20px; /* 极窄屏下进一步压缩内边距，给文字留空间 */
+    }
+}
+
+/* 弹窗内部组件 */
+.close-btn {
+    position: absolute; top: 10px; right: 10px; width: 32px; height: 32px;
+    display: flex; justify-content: center; align-items: center;
+    border: none; background: transparent; cursor: pointer;
+}
+.close-btn svg { width: 18px; height: 18px; fill: none; stroke: #94a3b8; stroke-width: 2.5; stroke-linecap: round; transition: stroke 0.2s; }
+.close-btn:hover svg { stroke: var(--primary-blue); }
+
+.modal-btn {
+    display: inline-block; margin-top: 20px; padding: 10px 35px;
+    background-color: var(--primary-blue); color: var(--on-primary) !important;
+    text-decoration: none; border-radius: 8px; font-weight: 600; 
+    transition: opacity 0.2s;
+}
+.modal-btn:hover { opacity: 0.85; }
+
+/* --- 6. 按钮与切换器 --- */
+.theme-toggle-btn, .lang-toggle-btn, .back-home-btn {
+    position: fixed; right: 25px; width: 44px; height: 44px; z-index: 101;
+    border-radius: 50%; background: var(--card-bg); color: var(--text-main);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--item-border);
+    box-shadow: var(--card-shadow);
+    display: flex; justify-content: center; align-items: center;
+    transition: all 0.3s ease; cursor: pointer;
+    text-decoration: none;
+}
+
+.theme-toggle-btn { bottom: 25px; }
+.lang-toggle-btn { bottom: 80px; }
+.back-home-btn { top: 25px; left: 20px; right: auto; } /* 返回首页按钮位置 */
+
+.milestone-card { border: 1px solid var(--item-border); }
+
+.theme-toggle-btn svg, .lang-toggle-btn svg, .back-home-btn svg { 
+    width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; 
+}
+.theme-toggle-btn:hover, .lang-toggle-btn:hover, .back-home-btn:hover { 
+    transform: scale(1.1); color: var(--primary-blue); box-shadow: 0 8px 20px rgba(14, 52, 112, 0.2); 
+}
+
+/* --- 8. 响应式显隐控制 --- */
+.mobile-only { display: none !important; }
+
+@media (max-width: 768px) {
+    .desktop-only { display: none !important; }
+    .mobile-only { display: flex !important; }
+}
+
+/* --- 7. 页脚 --- */
+footer {
+    margin-top: 80px; padding: 60px 0 30px; border-top: 1px solid var(--item-border);
+    text-align: center;
+}
+
+footer p, a {
+    font-size: 0.85rem;
+    color: var(--text-sub);
+    margin: 4px 0;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+footer a:hover {
+    color: var(--primary-blue);
+}
+
+/* --- 全局 Toast 通知样式 --- */
+.toast-notice {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card-bg);
+    color: var(--text-main);
+    padding: 10px 22px;
+    border-radius: 50px;
+    border: 1px solid var(--primary-blue);
+    box-shadow: 0 10px 30px rgba(30, 102, 198, 0.15);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.toast-notice.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* --- 加载圆圈样式 --- */
+.loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 4px solid rgba(127, 127, 127, 0.2);
+    border-top-color: var(--primary-blue);
+    border-radius: 50%;
+    animation: spinner-spin 1s linear infinite;
+    margin: 20px auto 0;
+}
+@keyframes spinner-spin { to { transform: rotate(360deg); } }
+
+/* --- Card --- */
+
+.card {
+	background-color: var(--card-bg);
+	border-radius: 150px;
+	padding: 20px;
+	box-shadow: var(--card-shadow);
+	text-decoration: none;
+	color: var(--text-main);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	translate: 0;
+	border: 1px solid var(--item-border);
+	transition: transform 0.3s ease, translate 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+	cursor: pointer;
+	height: 60px;
+	flex-direction: row;
+}
+
+.card-svg {
+	height: 24px;
+	width: auto;
+	fill: currentColor;
+	overflow: visible;
+	margin-right: 6px;
+    padding-top: 2px
+}
+
+.card-subtitle { font-size: 1.5rem; font-weight: 600; padding-top: 2px; }
+.card:hover { background-color: var(--primary-blue); color: var(--on-primary); box-shadow: var(--card-hover-shadow); }
+
+.card.bilibili:hover { background-color: var(--bilibili-blue); color: #fff; }
+.card.xhs:hover { background-color: var(--xhs-red); color: #fff; }
+.card.youtube:hover { background-color: var(--youtube-red); color: #fff; }
+.card.discord:hover { background-color: var(--discord-blurple); color: #fff; }
+.card.qq:hover { background-color: var(--qq-brand); color: #fff; }
+.card.wechat:hover { background-color: var(--wechat-green); color: #fff; }
+.card.duolingo:hover { background-color: var(--duolingo-green); color: #fff; }
+.card.baidu:hover { background-color: var(--baidu-blue); color: #fff }
+.card.wiki:hover { background-color: #000; color: #fff; }
+.card.weibo:hover { background-color: var(--weibo-orange); color: #fff; }
+.card.douyin:hover { background-color: var(--douyin-bg); color: var(--douyin-text); }
+
+:root[data-theme='dark'] {
+    .card.wiki:hover { background-color: #fff; color: #000; }
+    .card.douyin:hover { background-color: var(--douyin-text); color: var(--douyin-bg); }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        .card.wiki:hover { background-color: #fff; color: #000; }
+        .card.douyin:hover { background-color: var(--douyin-text); color: var(--douyin-bg); }
+    }
+}
+
+
+
+/* --- 筛选 Filter ---*/
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px auto 0;
+    width: 100%;
+    max-width: 1000px;
+}
+.filter-btn {
+    width: 70px;
+    background: var(--card-bg);
+    border: 1px solid var(--item-border);
+    border-radius: 8px;
+    padding: 8px 0;
+    font-weight: 400;
+    font-size: 0.85rem;
+    color: var(--text-sub);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    box-shadow: var(--card-shadow);
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: normal;
+}
+.filter-btn:hover { transform: scale(1.1); color: var(--primary-blue); box-shadow: var(--card-hover-shadow); }
+.filter-btn.active { 
+    background: var(--primary-blue) !important; 
+    color: var(--on-primary) !important; 
+    border-color: var(--primary-blue) !important; 
+    box-shadow: 0 4px 15px rgba(30, 102, 198, 0.3); 
+}
+
+/* --- 标题栏 (Page Hero) --- */
+.page-hero {
+    position: relative;
+    width: 100%;
+    min-height: 240px; /* 比主页 hero 小 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 40px; /* 为固定导航留空间 */
+    color: #ffffff;
+    text-align: center;
+    background: linear-gradient(180deg, #90befc 24%, #0e347a 77.2%, #0b122a 100%);
+}
+
+.page-hero section.hero-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 5000px;
+    padding: 0 20px;
+}
+
+.page-hero h1 {
+    font-size: 2.8rem;
+    color: #ffffff;
+    margin-bottom: 5px;
+    text-shadow: 0 4px 12px rgba(8, 15, 38, 0.4);
+}
+
+.page-hero .tagline {
+    font-size: 1rem;
+    color: #ffffff;
+    max-width: 600px;
+    margin-bottom: 10px;
+}
+
+/* 子页面标题栏移动端适配 */
+@media (max-width: 768px) {
+    .page-hero h1 { font-size: 2.2rem; }
+}
+/* ==========================================================================
+   博客文章排版对齐（Markdown 样式适配）
+   完美适配全局深浅色模式与字体系统
+   ========================================================================== */
+
+.typography-body {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem; /* 增加上下呼吸感 */
+    font-size: 1.05rem; /* 微调字号，更适合长文阅读 */
+    line-height: 1.8;
+    color: var(--text-main); /* 👈 使用你的主文本色 */
+    user-select: text; /* 👈 允许读者选中/复制文章文本（覆盖了body的none） */
+}
+
+/* 适配你优雅的字体声明：中文用 Noto Serif SC（宋体），英文用 Playfair Display/Source Serif 4 */
+.typography-body p,
+.typography-body li {
+    margin-bottom: 1.4rem;
+}
+
+/* 让文章里的标题对齐你的设计规范 */
+.typography-body h1,
+.typography-body h2,
+.typography-body h3,
+.typography-body h4 {
+    color: var(--text-main); 
+    font-weight: 700;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.typography-body h1 { font-size: 2.2rem; }
+.typography-body h2 { 
+    font-size: 1.6rem; 
+    border-bottom: 1px solid var(--item-border); /* 👈 使用你的微弱边框变量 */
+    padding-bottom: 0.6rem; 
+}
+.typography-body h3 { font-size: 1.3rem; }
+
+/* 调整列表样式 */
+.typography-body ul, 
+.typography-body ol {
+    margin-bottom: 1.4rem;
+    padding-left: 1.8rem;
+}
+
+.typography-body li {
+    margin-bottom: 0.6rem;
+}
+
+/* 行内代码块适配 */
+.typography-body code {
+    background: var(--item-border); /* 👈 动态背景，深浅色模式都自然 */
+    color: var(--primary-blue); /* 👈 提取你的标志性蓝色 */
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+/* 链接样式适配 */
+.typography-body a {
+    color: var(--primary-blue);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--primary-blue);
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.typography-body a:hover {
+    color: var(--text-sub);
+    border-bottom-style: solid;
+}
+
+/* ==========================================================================
+   博客列表页样式
+   完美复用你的 Card 阴影与悬浮动效
+   ========================================================================== */
+.blog-list-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+}
+
+.blog-list-wrapper h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    color: var(--text-main);
+}
+
+.post-list {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* 使用现代的 gap 布局 */
+}
+
+.post-item {
+    background-color: var(--card-bg); /* 👈 变身优雅的卡片样式 */
+    border-radius: var(--card-radius);
+    padding: 24px;
+    border: 1px solid var(--item-border);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 让整张卡片在悬浮时拥有跟你首页按钮一样的精致动态阴影 */
+.post-item:hover {
+    box-shadow: var(--card-hover-shadow);
+}
+
+.post-title-link {
+    text-decoration: none;
+    color: var(--text-main); 
+}
+
+.post-title-link h3 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 0;
+    transition: color 0.2s ease;
+}
+
+/* 悬浮时标题文字变成你的主打蓝色 */
+.post-item:hover .post-title-link h3 {
+    color: var(--primary-blue); 
+}
+
+.post-desc {
+    font-size: 0.95rem;
+    color: var(--text-sub); /* 👈 你的副文本色 */
+    margin-top: 0.8rem;
+    line-height: 1.6;
+}

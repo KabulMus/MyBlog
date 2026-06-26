@@ -1,11 +1,13 @@
 ---
-import Welcome from '../components/Welcome.astro';
+// 1. 引入我们的公共外壳
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="频道列表" description="在各平台关注我的频道">
+	
+	<section class="channel-grid">
+		<h2>我的社交媒体</h2>
+		<p>这里是你原本首页的各种卡片、链接或内容...</p>
+	</section>
+
 </Layout>
