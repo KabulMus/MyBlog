@@ -1,13 +1,30 @@
 ---
-// 1. 引入我们的公共外壳
 import Layout from '../layouts/Layout.astro';
+
+// ⚡️ 最新版 Astro 的正确写法：
+// 1. 使用 import.meta.glob 异步读取所有 .md 文件
+const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
+
+// 2. 将读取到的对象转换成数组，方便我们在下面用 .map() 渲染
+const posts = Object.values(markdownFiles);
 ---
 
-<Layout title="频道列表" description="在各平台关注我的频道">
-	
-	<section class="channel-grid">
-		<h2>我的社交媒体</h2>
-		<p>这里是你原本首页的各种卡片、链接或内容...</p>
-	</section>
+<Layout title="我的博客" description="记录技术、生活与思考">
+    
+    <div class="blog-list-wrapper">
+        <h2>近期文章</h2>
+        
+        <ul class="post-list">
+            {posts.map((post: any) => (
+                <li class="post-item">
+                    {/* ⚡️ 注意：最新版的 url 属性和 frontmatter 依然保留 */}
+                    <a href={post.url} class="post-title-link">
+                        <h3>{post.frontmatter.title}</h3>
+                    </a>
+                    <p class="post-desc">{post.frontmatter.description}</p>
+                </li>
+            ))}
+        </ul>
+    </div>
 
 </Layout>
