@@ -617,9 +617,7 @@ footer a:hover {
     color: var(--on-primary) !important; 
     border-color: var(--primary-blue) !important; 
     box-shadow: 0 4px 15px rgba(30, 102, 198, 0.3); 
-}
-
-/* --- 标题栏 (Page Hero) --- */
+}/* --- 标题栏 (Page Hero) --- */
 .page-hero {
     position: relative;
     width: 100%;
@@ -638,165 +636,223 @@ footer a:hover {
     z-index: 2;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: left;
     justify-content: center;
     width: 100%;
-    max-width: 5000px;
-    padding: 0 20px;
+    max-width: 800px;
+}
+/* --- 标题栏 (Page Hero) - 彻底打破容器，恢复自然排版 --- */
+.page-hero {
+    position: relative;
+    width: 100%;
+    /* ⚡️ 彻底删掉原来的 min-height 和 flex 居中对齐，杜绝上下被强行撑开 */
+    padding-top: 90px;  /* 刚好让出 60px 的固定导航栏，并留出 30px 的优雅上边距 */
+    text-align: left;
 }
 
+.page-hero section.hero-content {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* ✨ 完美的文字渐变色保持不变 */
 .page-hero h1 {
     font-size: 2.8rem;
-    color: var(--primary-blue);
-    margin-bottom: 5px;
-    text-shadow: 0 4px 12px rgba(8, 15, 38, 0.4);
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #6366f1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px; /* 标题和下面副标题的紧凑间距 */
+    text-shadow: none; 
 }
 
 .page-hero .tagline {
     font-size: 1rem;
-    color: var(--text-main);
-    max-width: 600px;
-    margin-bottom: 10px;
+    color: var(--text-sub);
 }
 
-/* 子页面标题栏移动端适配 */
-@media (max-width: 768px) {
-    .page-hero h1 { font-size: 2.2rem; }
-}
 /* ==========================================================================
-   博客文章排版对齐（Markdown 样式适配）
-   完美适配全局深浅色模式与字体系统
+   诉求 2 & 4：剩下的正文排版（含 # 号悬停）与历史存档样式保持原样
    ========================================================================== */
-
 .typography-body {
     max-width: 800px;
     margin: 0 auto;
-    padding: 3rem 1.5rem; /* 增加上下呼吸感 */
-    font-size: 1.05rem; /* 微调字号，更适合长文阅读 */
-    line-height: 1.8;
-    color: var(--text-main); /* 👈 使用你的主文本色 */
-    user-select: text; /* 👈 允许读者选中/复制文章文本（覆盖了body的none） */
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-main);
+    user-select: text;
 }
 
-/* 适配你优雅的字体声明：中文用 Noto Serif SC（宋体），英文用 Playfair Display/Source Serif 4 */
-.typography-body p,
-.typography-body li {
-    margin-bottom: 1.4rem;
+.typography-body p, .typography-body li {
+    margin-bottom: 0.8rem;
 }
 
-/* 让文章里的标题对齐你的设计规范 */
-.typography-body h1,
-.typography-body h2,
-.typography-body h3,
-.typography-body h4 {
-    color: var(--text-main); 
+.typography-body h1 {
+    font-size: 2.2rem;
+    color: var(--text-main);
     font-weight: 700;
-    margin-top: 2.5rem;
+    margin-top: 1.5rem;
     margin-bottom: 1rem;
 }
 
-.typography-body h1 { font-size: 2.2rem; }
-.typography-body h2 { 
-    font-size: 1.6rem; 
-    border-bottom: 1px solid var(--item-border); /* 👈 使用你的微弱边框变量 */
-    padding-bottom: 0.6rem; 
+.typography-body h2, .typography-body h3,
+.typography-body h4 {
+    color: var(--text-main);
+    font-weight: 700;
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+.typography-body h2 {
+    font-size: 1.6rem;
+    border-bottom: 1px solid var(--item-border);
+    padding-bottom: 0.6rem;
 }
 .typography-body h3 { font-size: 1.3rem; }
 
-/* 调整列表样式 */
-.typography-body ul, 
-.typography-body ol {
+/* ==========================================================================
+   🛠️ 终极隔离：仅在纯文章正文内启用悬停变色与井号（彻底不波及卡片）
+   ========================================================================== */
+
+/* 1. 精准限定：只有【不属于卡片链接 .post-title-link】的文章内 h2, h3, h4，才拥有缓动 */
+.typography-body h2:not(.post-title-link h2), 
+.typography-body h3:not(.post-title-link h3), 
+.typography-body h4:not(.post-title-link h4) {
+    position: relative; /* 为绝对定位的井号提供基准 */
+    transition: color 0.2s ease;
+}
+
+/* 2. 只有真正的文章正文标题悬停时才会变成品牌蓝 */
+.typography-body h2:not(.post-title-link h2):hover, 
+.typography-body h3:not(.post-title-link h3):hover, 
+.typography-body h4:not(.post-title-link h4):hover {
+    color: var(--primary-blue);
+}
+
+/* 3. 精准限定：只有真正的文章标题左侧才会生成井号，排除卡片标题 */
+.typography-body h2:not(.post-title-link h2)::before, 
+.typography-body h3:not(.post-title-link h3)::before, 
+.typography-body h4:not(.post-title-link h4)::before {
+    content: "#"; 
+    position: absolute; 
+    left: -1.6rem; 
+    color: var(--primary-blue);
+    font-weight: 500; 
+    font-family: 'Inter', sans-serif; 
+    opacity: 0; 
+    transition: opacity 0.2s ease; /* 纯粹的不透明度缓动 */
+}
+
+/* 4. 悬停时井号自然浮现 */
+.typography-body h2:not(.post-title-link h2):hover::before, 
+.typography-body h3:not(.post-title-link h3):hover::before, 
+.typography-body h4:not(.post-title-link h4):hover::before { 
+    opacity: 0.8; 
+}
+
+.typography-body ul, .typography-body ol {
     margin-bottom: 1.4rem;
     padding-left: 1.8rem;
 }
 
-.typography-body li {
-    margin-bottom: 0.6rem;
-}
-
-/* 行内代码块适配 */
+.typography-body li { margin-bottom: 0.2rem; }
 .typography-body code {
-    background: var(--item-border); /* 👈 动态背景，深浅色模式都自然 */
-    color: var(--primary-blue); /* 👈 提取你的标志性蓝色 */
+    background: var(--item-border);
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
     font-family: monospace;
     font-size: 0.9em;
 }
-
-/* 链接样式适配 */
 .typography-body a {
     color: var(--primary-blue);
     text-decoration: none;
     border-bottom: 1px dashed var(--primary-blue);
-    transition: color 0.2s ease, border-color 0.2s ease;
+    transition: color 0.2s ease, border-bottom-style 0.2s ease;
 }
-
 .typography-body a:hover {
     color: var(--text-sub);
     border-bottom-style: solid;
 }
-
 /* ==========================================================================
-   博客列表页样式
-   完美复用你的 Card 阴影与悬浮动效
+   ⚡️ 终极隔离：修复卡片列表继承的 ul 缩进污染
    ========================================================================== */
-.blog-list-wrapper {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 3rem 1.5rem;
-}
 
-.blog-list-wrapper h2 {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin-bottom: 2rem;
-    color: var(--text-main);
-}
-
-.post-list {
+/* 1. 精准重置：强制清空首页卡片列表 ul 意外继承的 1.8rem 左缩进 */
+.typography-body ul.post-list {
     list-style: none;
-    padding: 0;
+    padding-left: 0 !important; /* ⚡️ 核心修复：用 !important 斩断全局正文 ul 的 padding-left */
+    padding-right: 0;
     margin: 2rem 0;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem; /* 使用现代的 gap 布局 */
+    gap: 1.5rem;
 }
 
+/* 2. 卡片容器样式（保持你原有的优雅卡片属性） */
 .post-item {
-    background-color: var(--card-bg); /* 👈 变身优雅的卡片样式 */
+    background-color: var(--card-bg);
     border-radius: var(--card-radius);
-    padding: 24px;
+    padding: 22px 24px;
     border: 1px solid var(--item-border);
     box-shadow: var(--card-shadow);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* 让整张卡片在悬浮时拥有跟你首页按钮一样的精致动态阴影 */
-.post-item:hover {
-    box-shadow: var(--card-hover-shadow);
-}
-
+/* 3. 卡片内部标题常规样式：确保它是干净、普通的、无井号、无缩进的 h3 */
 .post-title-link {
     text-decoration: none;
-    color: var(--text-main); 
 }
 
 .post-title-link h3 {
     font-size: 1.35rem;
     font-weight: 600;
-    margin: 0;
+    color: var(--text-main);
+    margin: 0 0 8px 0;
+    padding: 0;          /* 确保卡片里的标题绝没有任何内边距 */
+    text-align: left;
     transition: color 0.2s ease;
 }
 
-/* 悬浮时标题文字变成你的主打蓝色 */
+/* 鼠标移入卡片时，只有卡片标题变品牌蓝 */
 .post-item:hover .post-title-link h3 {
-    color: var(--primary-blue); 
+    color: var(--primary-blue);
 }
 
-.post-desc {
+/* 3. 卡片内标题的悬浮交互：复用你的变量 */
+.post-title-link {
+    text-decoration: none;
+}
+
+.post-title-link h3 {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0 0 8px 0; /* 严格缩减底边距，紧凑贴合下方日期 */
+    transition: color 0.2s ease;
+}
+
+/* 鼠标移入整张卡片时，标题也平滑变色（可按需选择激活） */
+.post-item:hover .post-title-link h3 {
+    color: var(--primary-blue);
+}
+
+/* 4. 列表页卡片专属的日期样式 */
+.post-date {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--text-sub);
+    font-family: 'Inter', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 5. 详情页顶部 (Page Hero) 大标题下方的日期样式保持一致 */
+.page-hero-date {
+    display: inline-block;
     font-size: 0.95rem;
-    color: var(--text-sub); /* 👈 你的副文本色 */
-    margin-top: 0.8rem;
-    line-height: 1.6;
+    color: var(--text-sub);
+    margin-top: 6px;
+    font-family: 'Inter', monospace;
+    font-variant-numeric: tabular-nums;
 }

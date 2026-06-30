@@ -1,30 +1,39 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-// ⚡️ 最新版 Astro 的正确写法：
-// 1. 使用 import.meta.glob 异步读取所有 .md 文件
+// 1. 读取 blog 文件夹里的所有 markdown 文章
 const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
+const allPosts: any[] = Object.values(markdownFiles);
 
-// 2. 将读取到的对象转换成数组，方便我们在下面用 .map() 渲染
-const posts = Object.values(markdownFiles);
+// 2. 纯粹按照时间戳由新到旧进行物理排序（一排到底，不切片）
+const sortedPosts = allPosts.sort((a, b) => {
+    const dateA = new Date(a.frontmatter?.date || 0).getTime();
+    const dateB = new Date(b.frontmatter?.date || 0).getTime();
+    return dateB - dateA;
+});
 ---
 
-<Layout title="我的博客" description="记录技术、生活与思考">
+<Layout title="我的博客">
     
     <div class="blog-list-wrapper">
-        <h2>近期文章</h2>
-        
         <ul class="post-list">
-            {posts.map((post: any) => (
-                <li class="post-item">
-                    {/* ⚡️ 注意：最新版的 url 属性和 frontmatter 依然保留 */}
-                    <a href={post.url} class="post-title-link">
-                        <h3>{post.frontmatter.title}</h3>
-                    </a>
-                    <p class="post-desc">{post.frontmatter.description}</p>
-                </li>
-            ))}
+            {sortedPosts.map((post) => {
+                const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
+                return (
+                    /* ⚡️ 核心回归：复用优雅的卡片容器类名 post-item */
+                    <li class="post-item">
+                        <a href={postUrl} class="post-title-link">
+                            <h3>{post.frontmatter?.title || '未命名文章'}</h3>
+                        </a>
+                        {post.frontmatter?.date && <span class="post-date">{post.frontmatter.date}</span>}
+                    </li>
+                );
+            })}
         </ul>
+
+        {sortedPosts.length === 0 && (
+            <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章，快去 src/pages/blog/ 写一篇吧！</p>
+        )}
     </div>
 
 </Layout>
