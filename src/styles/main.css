@@ -425,27 +425,29 @@ footer a:hover {
     margin-bottom: 0.8rem;
 }
 
-.typography-body h1 {
-    font-size: 2.2rem;
-    color: var(--text-main);
-    font-weight: 700;
-}
-
-.typography-body h2, .typography-body h3,
-.typography-body h4, .typography-body h5,
-.typography-body h6 {
+.typography-body h1, .typography-body h2,
+.typography-body h3, .typography-body h4,
+.typography-body h5, .typography-body h6 {
     color: var(--text-main);
     font-weight: 700;
     position: relative;
 }
+
+.typography-body h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.6rem;
+}
+
 .typography-body h2 {
     font-size: 1.6rem;
     margin-bottom: 0.5rem;
 }
+
 .typography-body h3 {
     font-size: 1.3rem;
     margin-bottom: 0.4rem;
 }
+
 .typography-body h4, .typography-body h5, .typography-body h6 {
     font-size: 1rem;
     margin-bottom: 0.3rem;
@@ -455,6 +457,7 @@ footer a:hover {
    ========================================================================== */
 
 /* 1. 精准限定：只有【不属于卡片链接 .post-title-link】的文章内 h2, h3, h4，才拥有缓动 */
+.typography-body h1:not(.post-title-link h1),
 .typography-body h2:not(.post-title-link h2), 
 .typography-body h3:not(.post-title-link h3), 
 .typography-body h4:not(.post-title-link h4), 
@@ -465,6 +468,7 @@ footer a:hover {
 }
 
 /* 2. 只有真正的文章正文标题悬停时才会变成品牌蓝 */
+.typography-body h1:not(.post-title-link h1):hover,
 .typography-body h2:not(.post-title-link h2):hover, 
 .typography-body h3:not(.post-title-link h3):hover, 
 .typography-body h4:not(.post-title-link h4):hover,
@@ -474,6 +478,7 @@ footer a:hover {
 }
 
 /* 3. 精准限定：只有真正的文章标题左侧才会生成井号，排除卡片标题 */
+.typography-body h1:not(.post-title-link h1)::before,
 .typography-body h2:not(.post-title-link h2)::before, 
 .typography-body h3:not(.post-title-link h3)::before, 
 .typography-body h4:not(.post-title-link h4)::before,
@@ -481,7 +486,7 @@ footer a:hover {
 .typography-body h6:not(.post-title-link h6)::before {
     content: "#"; 
     position: absolute; 
-    left: -1.2rem; 
+    left: -1.4rem; 
     color: var(--primary-blue);
     font-weight: 600; 
     font-family: 'Inter', sans-serif; 
@@ -490,6 +495,7 @@ footer a:hover {
 }
 
 /* 4. 悬停时井号自然浮现 */
+.typography-body h1:not(.post-title-link h1):hover::before,
 .typography-body h2:not(.post-title-link h2):hover::before, 
 .typography-body h3:not(.post-title-link h3):hover::before, 
 .typography-body h4:not(.post-title-link h4):hover::before,

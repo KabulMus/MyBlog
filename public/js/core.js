@@ -112,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 2. 纯正文标题锚点生成与平滑跳转（精准排除首页卡片标题）
 function initHeadingAnchors() {
     // ⚡️ 核心修复：添加 :not(.post-title-link h3)，让 JS 彻底忽略首页卡片里的 h3
-    const headings = document.querySelectorAll('.typography-body h2:not(.post-title-link h3), .typography-body h3:not(.post-title-link h3), .typography-body h4:not(.post-title-link h4), .typography-body h5:not(.post-title-link h5), .typography-body h6:not(.post-title-link h6)');
+    const headings = document.querySelectorAll('.typography-body h1:not(.post-title-link h1), .typography-body h2:not(.post-title-link h2), .typography-body h3:not(.post-title-link h3), .typography-body h4:not(.post-title-link h4), .typography-body h5:not(.post-title-link h5), .typography-body h6:not(.post-title-link h6)');
     
     headings.forEach((heading) => {
         // 如果 Markdown 生成时没有带 id，根据文字自动生成一个标准的 id 锚点
