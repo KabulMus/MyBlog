@@ -429,8 +429,6 @@ footer a:hover {
     font-size: 2.2rem;
     color: var(--text-main);
     font-weight: 700;
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
 }
 
 .typography-body h2, .typography-body h3,
@@ -438,16 +436,20 @@ footer a:hover {
 .typography-body h6 {
     color: var(--text-main);
     font-weight: 700;
-    margin-top: 2.5rem;
-    margin-bottom: 1rem;
     position: relative;
 }
 .typography-body h2 {
     font-size: 1.6rem;
-    padding-bottom: 0.6rem;
+    margin-bottom: 0.5rem;
 }
-.typography-body h3 { font-size: 1.3rem; }
-.typography-body h4, .typography-body h5, .typography-body h6 { font-size: 1rem; }
+.typography-body h3 {
+    font-size: 1.3rem;
+    margin-bottom: 0.4rem;
+}
+.typography-body h4, .typography-body h5, .typography-body h6 {
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+}
 /* ==========================================================================
    🛠️ 终极隔离：仅在纯文章正文内启用悬停变色与井号（彻底不波及卡片）
    ========================================================================== */

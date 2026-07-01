@@ -141,7 +141,7 @@ function toggleTheme() {
 水分子的化学式是 H<sub>2</sub>O，而 2 的 3 次方可以写作 2<sup>3</sup>=8。
 
 ### 2. 图像自适应测试
-下面是一张普通段落中的小图标（比如表情包）：![emoji](https://api.iconify.design/twemoji:party-popper.svg) 它应该完美融入行内，而不是把这一行的上下行距粗暴地撑开。
+下面是一张普通段落中的小图标（比如表情包）：它应该完美融入行内，而不是把这一行的上下行距粗暴地撑开。
 
 ### 3. 长英文与折行
 这里有一串超级长的、没有空格的恶魔级连续英文单词：Supercalifragilisticexpialidocious. 它应该在容器边缘优雅地自动折行，而不是直接横向冲出屏幕。
