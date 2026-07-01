@@ -16,5 +16,7 @@ export default defineConfig({
       // ⚡️ 方案 2-2：如果上面还不行，可以尝试把默认的 cssMinify 换成 esbuild（更守规矩）
       cssMinify: 'esbuild' 
     }
-  }
+  },
+  integrations: [
+  ]
 });

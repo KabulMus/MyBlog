@@ -127,7 +127,7 @@ body {
 
 .nav-container {
 	width: 100%;
-	max-width: 1200px;
+	max-width: 800px;
 	margin: 0 auto;
 	padding: 0 20px;
 	display: flex;
@@ -974,4 +974,343 @@ footer a:hover {
     color: var(--text-sub);
     font-family: 'Inter', 'JetBrains Mono', monospace;
     font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：100% 强制将搜索框边框修改为主题蓝
+   ========================================================================== */
+
+/* 1. 默认状态下的边框 */
+#search .pagefind-ui .pagefind-ui__search-input {
+    border: 1px solid var(--primary-blue) !important;
+    box-shadow: var(--card-shadow)
+}
+
+/* 2. 鼠标悬停（Hover）状态下的边框 */
+#search .pagefind-ui .pagefind-ui__search-input:hover {
+    border-color: var(--primary-blue) !important;
+}
+
+/* 3. 鼠标点击输入（Focus）聚焦状态下的边框 */
+#search .pagefind-ui .pagefind-ui__search-input:focus {
+    border-color: var(--primary-blue) !important;
+    outline: none !important;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：100% 强制将搜索框背景修改为主题卡片背景
+   ========================================================================== */
+#search .pagefind-ui .pagefind-ui__search-input {
+    background-color: var(--card-bg) !important;
+}
+/* ==========================================================================
+   🎯 专项死磕：默认未选中为 --text-sub，悬停与选中才为 --primary-blue
+   ========================================================================== */
+#search .pagefind-ui .pagefind-ui__search-input {
+    border-radius: 16px !important; 
+    
+    /* 1. ⚡️ 默认（未选中）状态：使用副文本色，粗细保持 2px 统一 */
+    border: 2px solid var(--item-border) !important;
+    transition: border-color 0.2s ease !important; /* 让颜色切换有丝滑的过渡动效 */
+}
+
+/* 2. ⚡️ 鼠标悬停（Hover）状态：秒变主题蓝 */
+#search .pagefind-ui .pagefind-ui__search-input:hover {
+    border-color: var(--primary-blue) !important;
+}
+
+/* 3. ⚡️ 鼠标点击输入（Focus/选中）状态：秒变主题蓝 */
+#search .pagefind-ui .pagefind-ui__search-input:focus {
+    border-color: var(--primary-blue) !important;
+    outline: none !important;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：输入框主体文字、光标与占位符颜色调整
+   ========================================================================== */
+/* 1. ⚡️ 修改用户输入的文字颜色，以及闪烁的光标颜色 */
+#search .pagefind-ui .pagefind-ui__search-input {
+    color: var(--text-main) !important;
+    caret-color: var(--primary-blue) !important; /* 让光标变成你的品牌蓝，小细节拉满 */
+}
+
+/* 2. ⚡️ 强行渗透并修改原生的“Search”占位符文字颜色 */
+#search .pagefind-ui .pagefind-ui__search-input::placeholder {
+    color: var(--text-sub) !important;
+    opacity: 0.8 !important; /* 稍微给一点透明度，让它更有呼吸感 */
+}
+
+/* ==========================================================================
+   🎯 专项死磕：搜索结果、标题、摘要及提示信息的文字颜色
+   ========================================================================== */
+/* 1. ⚡️ 搜索结果的“找到 XX 条结果”提示语颜色 */
+#search .pagefind-ui .pagefind-ui__message {
+    color: var(--text-sub) !important;
+}
+
+/* 2. ⚡️ 搜索出的文章标题链接颜色（默认主文本色，悬停变品牌蓝） */
+#search .pagefind-ui .pagefind-ui__result-link {
+    font-size: 1.2rem !important;
+    color: var(--text-main) !important;
+    transition: color 0.2s ease !important;
+}
+#search .pagefind-ui .pagefind-ui__result-link:hover {
+    color: var(--primary-blue) !important;
+}
+
+/* 3. ⚡️ 文章正文内容摘要的文字颜色 */
+#search .pagefind-ui .pagefind-ui__result-excerpt {
+    font-size: 1rem !important;
+    color: var(--text-sub) !important;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：100% 强制修改搜索结果之间的分割线颜色
+   ========================================================================== */
+#search .pagefind-ui .pagefind-ui__result {
+    /* 1. ⚡️ 将原生的顶边框颜色强行改成你自己的线条变量 */
+    border-top: 1px dashed var(--item-border) !important;
+}
+
+/* 2. ⚡️ 顺手把最上面第一条线抹掉，防止跟输入框离得太近不好看 */
+#search .pagefind-ui .pagefind-ui__result:first-child {
+    border-top: none !important;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：抹掉最后一条线 + 「加载更多」按钮纯净适配
+   ========================================================================== */
+
+/* 1. ⚡️ 斩草除根：抹掉搜索结果最后一条多余的虚线线 */
+#search .pagefind-ui .pagefind-ui__result:last-child {
+    border-bottom: none !important;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：「加载更多」按钮内部文字绝对垂直居中重构
+   ========================================================================== */
+#search .pagefind-ui .pagefind-ui__button {
+    background: transparent !important;                    
+    background-color: var(--card-bg) !important;            
+    border: 1px solid var(--item-border) !important;        
+    color: var(--text-sub) !important;                      
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    border-radius: var(--card-radius) !important;          
+    box-shadow: var(--card-shadow) !important;              
+    
+    /* ⚡️ 铁腕居中魔改核心：彻底废除内部可能导致倾斜的 padding，改用高度和行高对齐 */
+    display: block !important;
+    width: max-content !important;
+    margin: 2rem auto !important; 
+    
+    height: 40px !important;                               /* 1. 锁死总高度为 40px */
+    padding: 0 2.5rem !important;                          /* 2. ⚡️ 上下 padding 设为 0，左右留空间 */
+    line-height: 38px !important;                          /* 3. ⚡️ 行高 = 40px 减去 2px(上下各1px的边框线)，文字绝对被扣在正中心 */
+    text-align: center !important;                         /* 4. 水平也绝对居中 */
+    
+    transition: all 0.2s ease !important;                   
+}
+
+/* 3. ⚡️ 按钮悬停（Hover）与激活时，瞬间绽放全站统一的高亮特效 */
+#search .pagefind-ui .pagefind-ui__button:hover {
+    border-color: var(--primary-blue) !important;           /* 边框变为品牌蓝 */
+    color: var(--on-primary) !important;                  /* 文字变为品牌蓝 */
+    background-color: var(--primary-blue) !important;        /* 底色变成你的亮暗色浅亮背景，动感十足 */
+    box-shadow: var(--card-hover-shadow) !important;        /* 同步你的悬停卡片阴影 */
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：彻底干掉自带 Roboto，100% 注入你的 Inter + Noto Sans SC
+   ========================================================================== */
+
+/* 1. ⚡️ 让 Pagefind 顶层变量优先继承你的字体 */
+#search {
+    --pagefind-ui-font: 'Inter', 'Noto Sans SC', sans-serif !important;
+}
+
+/* 2. ⚡️ 暴力全覆盖：强行把 Pagefind 内部的所有文本节点（输入框、标题、摘要、按钮、提示语）全部锁死为你的字体 */
+#search .pagefind-ui,
+#search .pagefind-ui *,
+#search .pagefind-ui__search-input,
+#search .pagefind-ui__result-link,
+#search .pagefind-ui__result-excerpt,
+#search .pagefind-ui__message,
+#search .pagefind-ui__button {
+    font-family: 'Inter', 'Noto Sans SC', sans-serif !important;
+}
+
+/* ==========================================================================
+   🎯 专项死磕：彻底消除搜索结果标题 hover 时的双下划线 Bug
+   ========================================================================== */
+/* 1. ⚡️ 强行剥离 Pagefind 原生自带的下划线和边框样式（包括默认和 hover 状态） */
+#search .pagefind-ui .pagefind-ui__result-link,
+#search .pagefind-ui .pagefind-ui__result-link:hover,
+#search .pagefind-ui .pagefind-ui__result-link:active,
+#search .pagefind-ui .pagefind-ui__result-link:focus {
+    text-decoration: none !important;      /* 抹去原生下划线 */
+    border-bottom: none !important;        /* 抹去可能冲突的底边框 */
+    box-shadow: none !important;           /* 抹去可能存在的各种微阴影线条 */
+}
+
+/* ==========================================================================
+   💎 Pagefind 搜索框视觉终极完美收官版（Icons 字体 + 25.6px 黄金对齐）
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   🔒 核心母体：将表单行强制设为绝对定位母体
+   -------------------------------------------------------------------------- */
+#search .pagefind-ui .pagefind-ui__form {
+    position: relative !important;
+}
+
+/* --------------------------------------------------------------------------
+   🔍 左侧大 Boss：100% 空降你的 'Icons' 连字放大镜
+   -------------------------------------------------------------------------- */
+/* 1. 物理粉碎原厂自带的任何残留伪元素 */
+#search .pagefind-ui .pagefind-ui__form::before,
+#search .pagefind-ui .pagefind-ui__form::after {
+    content: none !important;
+    background: none !important;
+    background-image: none !important;
+    mask: none !important;
+    -webkit-mask: none !important;
+}
+
+/* 2. 用最高优先级 ::before 强行灌入你的专属放大镜 */
+#search .pagefind-ui .pagefind-ui__form::before {
+    content: "search" !important;             /* 连字映射单词 */
+    display: block !important;
+    visibility: visible !important;
+    font-family: "Icons" !important;           /* 绑定你的 Icons 字体 */
+    
+    /* 清洗继承干扰 */
+    font-style: normal !important;
+    font-weight: normal !important;
+    line-height: 1 !important;
+    text-transform: none !important;
+    -webkit-font-smoothing: antialiased !important;
+    
+    opacity: 0.8;                          /* ⚡️ 核心：彻底抹掉原厂的 0.5 半透明 */
+
+    /* 🎯 黄金像素对齐 */
+    position: absolute !important;
+    top: 25.6px !important;                    /* ⚡️ 精准卡死你的黄金高度 */
+    left: 14px !important;                     /* 距离左边框 14px */
+    width: 32px !important;
+    height: 32px !important;
+    transform: translateY(-50%) !important;
+    
+    font-size: 1.2rem !important;
+    color: var(--text-sub) !important;         /* 默认副文本色 */
+    transition: color 0.2s ease, opacity 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    z-index: 99 !important;
+    pointer-events: none !important;
+}
+
+/* 3. 联动高亮：点进输入框时，放大镜丝滑变蓝 */
+#search .pagefind-ui .pagefind-ui__form:focus-within::before {
+    color: var(--primary-blue) !important;
+    opacity: 1;                             /* ⚡️ 核心：恢复半透明度 */
+}
+
+/* 4. 强制给输入框腾出左侧间距，防止文字与放大镜重叠 */
+#search .pagefind-ui .pagefind-ui__search-input {
+    padding-left: 2.8rem !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   ✕ 右侧清除按钮：钢筋混凝土卡死，两边绝对水平对称
+   -------------------------------------------------------------------------- */
+#search .pagefind-ui .pagefind-ui__search-clear {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    font-size: 0 !important;
+    visibility: hidden !important;
+    
+    /* 🎯 黄金像素对称 */
+    position: absolute !important;
+    top: 25.6px !important;                    /* ⚡️ 同步使用你的 25.6px，确保两端绝对齐平 */
+    right: 14px !important;                    /* 距离右边框 14px */
+    width: 32px !important;
+    height: 32px !important;
+    transform: translateY(-50%) !important;
+    
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: 10 !important;
+}
+
+/* 叉号字符本身 */
+#search .pagefind-ui .pagefind-ui__search-clear::before {
+    content: "close" !important;
+    font-family: 'Icons' !important;
+    font-size: 0.95rem !important;
+    color: var(--text-sub) !important;
+    visibility: visible !important;
+    
+    display: block !important;
+    width: 20px !important;
+    height: 20px !important;
+    line-height: 20px !important;
+    text-align: center !important;
+    
+    position: static !important;
+    transform: none !important;
+    transition: color 0.2s ease !important;
+}
+
+/* 悬停变品牌蓝 */
+#search .pagefind-ui .pagefind-ui__search-clear:hover::before {
+    color: var(--primary-blue) !important;
+}
+
+/* ==========================================================================
+   🎨 视觉升华：彻底干掉难看的亮黄色高亮，换上高级感全站配色
+   ========================================================================== */
+
+#search .pagefind-ui .pagefind-ui__result-excerpt mark {
+    /* 1. ⚡️ 先把原厂自带的刺眼黄色背景和黑字彻底剥离 */
+    background-color: transparent !important;
+    color: inherit !important;
+    
+    /* 2. ⚡️ 方案 A：高级淡蓝果冻背景 + 品牌蓝文字（推荐，极具现代感） */
+    color: var(--primary-blue) !important;                /* 文字直接变成你的品牌蓝 */
+    font-weight: 600 !important;                           /* 让关键词稍微加粗，更醒目 */
+}
+
+/* 如果你还想顺便改一下搜索结果里“跳转链接”的悬停颜色，可以把这个也加上 */
+#search .pagefind-ui .pagefind-ui__result-link:hover {
+    color: var(--primary-blue) !important;
+    text-decoration: none !important;                      /* 取消土土的下划线 */
+}
+
+/* ==========================================================================
+   📏 间距优化：大幅收紧搜索结果文字与分割线之间的距离
+   ========================================================================== */
+
+/* 1. 缩减每个搜索结果单项的上下内边距（直接决定了文字到分割线的距离） */
+#search .pagefind-ui .pagefind-ui__result {
+    padding-top: 12px !important;     /* 原生可能比较大，缩减到 12px */
+    padding-bottom: 16px !important;  /* 同步缩减底部，让内容紧贴下方的分割线 */
+}
+
+/* 2. 顺便缩减结果标题和下面摘要文字之间的空隙，让整体更紧凑 */
+#search .pagefind-ui .pagefind-ui__result-inner {
+    gap: 6px !important;              /* 如果 Pagefind 内部用了 Flex 布局，直接用 gap 锁死文字间距 */
+}
+
+#search .pagefind-ui .pagefind-ui__result-title {
+    margin-bottom: 4px !important;    /* 传统布局下的标题底部间距微调 */
 }

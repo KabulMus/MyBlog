@@ -19,9 +19,16 @@ const sortedPosts = allPosts.sort((a, b) => {
 });
 ---
 
-<Layout title="Ethan Shaw 的博客">
-    
-    <div class="blog-list-wrapper">
+<Layout
+    title="Ethan Shaw 的博客" 
+    brandUrl="https://www.ethan929.com/" 
+    brandText='<img src="https://i2.hdslb.com/bfs/face/fc65f0eb630fe0b35f46062548b7184f40eefeb9.jpg" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
+>
+    <div class="blog-list-wrapper" data-pagefind-ignore>
+        <div class="search-container">
+            <div id="search"></div>
+        </div>
+
         <ul class="post-list">
             {sortedPosts.map((post) => {
                 const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
@@ -47,3 +54,19 @@ const sortedPosts = allPosts.sort((a, b) => {
     </div>
 
 </Layout>
+
+<link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+<script src="/pagefind/pagefind-ui.js" is:inline></script>
+
+<script is:inline>
+    // ⚡️ 新增：监听页面加载完成后，直接初始化原生搜索框
+    window.addEventListener('DOMContentLoaded', (event) => {
+        if (typeof PagefindUI !== 'undefined') {
+            new PagefindUI({ 
+                element: "#search", 
+                showImages: false,
+                translations: { placeholder: "输入关键词搜索文章..." }
+            });
+        }
+    });
+</script>

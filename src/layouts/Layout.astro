@@ -5,9 +5,11 @@ interface Props {
 	title?: string;
 	description?: string;
 	frontmatter?: any; 
+	brandUrl?: string;
+	brandText?: string;
 }
 
-const { frontmatter, title } = Astro.props;
+const { frontmatter, title, brandUrl = "/", brandText } = Astro.props;
 const pageTitle = frontmatter?.title || title || "我的博客";
 const pageDate = formatDate(frontmatter?.date || "");
 
@@ -24,8 +26,7 @@ function formatDate(dateStr: string) {
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<link rel="icon" href="/public/favicon.webp" type="image/webp"/>
 		<link 
 			rel="stylesheet" 
 			href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" 
@@ -39,9 +40,18 @@ function formatDate(dateStr: string) {
 	<body>
 		<nav class="navbar" id="top-nav">
 			<div class="nav-container">
-				<a href="/" class="nav-brand">
-					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M31 36L19 24L31 12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-				</a>
+				<a href={brandUrl} class="nav-brand">
+                    {
+                        /* ⚡️ 如果传了 brandText，就用 Fragment 渲染传进来的复杂 HTML，
+                           否则显示其他 markdown 文章页默认的返回箭头 */
+                        brandText ? (
+                            <Fragment set:html={brandText} />
+                        ) : (
+                            <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M31 36L19 24L31 12"/></svg>
+
+                        )
+                    }
+                </a>
 				
 				<div class="nav-links desktop-only">
 					<a href="/" data-text="博客" class="active">博客</a>
@@ -75,7 +85,7 @@ function formatDate(dateStr: string) {
 					<h1>{pageTitle}</h1> 
 					{pageDate && (
 						<span class="tagline">
-							<icons>date</icons> {formatDate(pageDate)}
+							<icons data-pagefind-ignore>date</icons> {formatDate(pageDate)}
 						</span>
 					)}
 				</div>
