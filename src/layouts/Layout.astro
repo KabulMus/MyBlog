@@ -9,8 +9,15 @@ interface Props {
 
 const { frontmatter, title } = Astro.props;
 const pageTitle = frontmatter?.title || title || "我的博客";
-// ⚡️ 核心提取：抓取当前文章 frontmatter 里的日期字段
-const pageDate = frontmatter?.date || "";
+const pageDate = formatDate(frontmatter?.date || "");
+
+
+// 🛠️ 核心：定义一个通用的日期格式化函数
+function formatDate(dateStr: string) {
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g, '.');
+}
+
 ---
 <!doctype html>
 <html lang="zh-CN"> 
@@ -19,28 +26,46 @@ const pageDate = frontmatter?.date || "";
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
+		<link 
+			rel="stylesheet" 
+			href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" 
+			crossorigin="anonymous"
+		/>
 		<meta name="generator" content={Astro.generator} />
-		<title>{pageTitle}</title> </head>
+		<title>{pageTitle}</title>
+
+		<script src="/js/core.js" is:inline></script>
+	</head>
 	<body>
 		<nav class="navbar" id="top-nav">
 			<div class="nav-container">
 				<a href="/" class="nav-brand">
 					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M31 36L19 24L31 12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
 				</a>
+				
 				<div class="nav-links desktop-only">
-					<a href="#bilibili" data-text="哔哩哔哩">哔哩哔哩</a>
-					<a href="#rednote" data-text="小红书">小红书</a>
-					<a href="#youtube" data-text="YouTube">YouTube</a>
-					<span class="nav-divider"></span>
-					<a href="/blog" data-text="博客">博客</a>
-					<a href="#" data-text="频道列表" class="active">频道列表</a>
-					<a href="toolkit" data-text="工具箱">工具箱</a>
-					<a href="support" data-text="联系支持">联系支持</a>
-					<a href="charlie" data-text="关于周深">关于周深</a>
+					<a href="/" data-text="博客" class="active">博客</a>
+					<a href="https://www.ethan929.com/channels/" data-text="频道列表">频道列表</a>
+					<a href="https://www.ethan929.com/toolkit/" data-text="工具箱">工具箱</a>
+					<a href="https://www.ethan929.com/support/" data-text="联系支持">联系支持</a>
+					<a href="https://www.ethan929.com/charlie/" data-text="关于周深">关于周深</a>
 				</div>
+
 				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label="菜单">
-					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M7.94971 11.9497H39.9497" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.94971 23.9497H39.9497" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.94971 35.9497H39.9497" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+					<svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+						<path d="M7.94971 11.9497H39.9497" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M7.94971 23.9497H39.9497" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M7.94971 35.9497H39.9497" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
 				</button>
+			</div>
+
+			<div class="nav-dropdown" id="nav-dropdown">
+				<a href="/" onclick="toggleMenu(false)" data-text="博客" class="active">博客</a>
+				<a href="https://www.ethan929.com/channels/" onclick="toggleMenu(false)" data-text="频道列表">频道列表</a>
+				<a href="https://www.ethan929.com/toolkit/" onclick="toggleMenu(false)" data-text="工具箱">工具箱</a>
+				<a href="https://www.ethan929.com/support/" onclick="toggleMenu(false)" data-text="联系支持">联系支持</a>
+				<a href="https://www.ethan929.com/charlie/" onclick="toggleMenu(false)" data-text="关于周深">关于周深</a>
 			</div>
 		</nav>
 
@@ -48,7 +73,11 @@ const pageDate = frontmatter?.date || "";
 			<section class="hero-content">
 				<div>
 					<h1>{pageTitle}</h1> 
-					{pageDate && <span class="page-hero-date">{pageDate}</span>}
+					{pageDate && (
+						<span class="tagline">
+							<icons>date</icons> {formatDate(pageDate)}
+						</span>
+					)}
 				</div>
 			</section>
 		</header>
@@ -58,33 +87,14 @@ const pageDate = frontmatter?.date || "";
 		</main>
 
 		<footer>
-			<p>©2026 Ethan Shaw</p>
+			<p><icons>CO</icons>2026 Ethan Shaw</p>
 			<p>Built with love for Charlie and you all</p>
 		</footer>
+
+		<button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="切换亮暗模式">
+			<svg viewBox="0 0 48 48">
+				<path d="M9.15039 9.15088L11.3778 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 24H6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.15039 38.8495L11.3778 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 38.8495L36.6221 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M44.9996 24H41.8496" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 9.15088L36.6221 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 3V6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24C12 30.6274 17.3726 36 24 36Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 45.0001V41.8501" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</button>
 	</body>
-
-	<button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="切换亮暗模式">
-		<svg viewBox="0 0 48 48">
-			<path d="M9.15039 9.15088L11.3778 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 24H6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.15039 38.8495L11.3778 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 38.8495L36.6221 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M44.9996 24H41.8496" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 9.15088L36.6221 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 3V6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24C12 30.6274 17.3726 36 24 36Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 45.0001V41.8501" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-		</svg>
-	</button>
 </html>
-
-<script>
-    function initHeadingAnchors() {
-        const headings = document.querySelectorAll('.typography-body h2, .typography-body h3, .typography-body h4');
-        headings.forEach((heading: any) => {
-            if (!heading.id) {
-                heading.id = heading.textContent.trim().toLowerCase().replace(/\s+/g, '-');
-            }
-            heading.style.cursor = 'pointer';
-            heading.addEventListener('click', () => {
-                const id = heading.id;
-                history.pushState(null, '', `#${id}`);
-                heading.scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-    }
-    document.addEventListener('DOMContentLoaded', initHeadingAnchors);
-    document.addEventListener('astro:page-load', initHeadingAnchors);
-</script>

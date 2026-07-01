@@ -5,7 +5,13 @@ import Layout from '../layouts/Layout.astro';
 const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
 const allPosts: any[] = Object.values(markdownFiles);
 
-// 2. 纯粹按照时间戳由新到旧进行物理排序（一排到底，不切片）
+// 🛠️ 核心：定义一个通用的日期格式化函数
+function formatDate(dateStr: string) {
+    if (!dateStr) return '';
+    return dateStr.replace(/-/g, '.');
+}
+
+// 2. 物理排序
 const sortedPosts = allPosts.sort((a, b) => {
     const dateA = new Date(a.frontmatter?.date || 0).getTime();
     const dateB = new Date(b.frontmatter?.date || 0).getTime();
@@ -13,26 +19,30 @@ const sortedPosts = allPosts.sort((a, b) => {
 });
 ---
 
-<Layout title="我的博客">
+<Layout title="Ethan Shaw 的博客">
     
     <div class="blog-list-wrapper">
         <ul class="post-list">
             {sortedPosts.map((post) => {
                 const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
                 return (
-                    /* ⚡️ 核心回归：复用优雅的卡片容器类名 post-item */
                     <li class="post-item">
                         <a href={postUrl} class="post-title-link">
                             <h3>{post.frontmatter?.title || '未命名文章'}</h3>
                         </a>
-                        {post.frontmatter?.date && <span class="post-date">{post.frontmatter.date}</span>}
+                        {/* src/pages/index.astro 里的日期渲染部分 */}
+                        {post.frontmatter?.date && (
+                            <span class="post-date">
+                                <icons>date</icons> {formatDate(post.frontmatter.date)}
+                            </span>
+                        )}
                     </li>
                 );
             })}
         </ul>
 
         {sortedPosts.length === 0 && (
-            <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章，快去 src/pages/blog/ 写一篇吧！</p>
+            <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章</p>
         )}
     </div>
 
