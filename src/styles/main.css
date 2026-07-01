@@ -106,7 +106,7 @@ body {
     line-break: strict;
     font-feature-settings: "liga" 1, "calt" 1, "halt" 1, "chws" 1;
     transition: background-color 0.3s ease, color 0.3s ease;
-    user-select: none; /* 默认所有文本不可选中 */
+    user-select: text; /* 默认所有文本不可选中 */
 }
 
 .navbar {
@@ -123,6 +123,7 @@ body {
     transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease;
     box-shadow: var(--card-shadow);
     border-bottom: 1px solid var(--item-border);
+    user-select: none;
 }
 
 .nav-container {
@@ -332,6 +333,7 @@ footer {
     margin: auto;
     margin-top: 80px; padding: 60px 0 30px; border-top: 1px solid var(--item-border);
     text-align: center;
+    user-select: none;
 }
 
 footer p {
