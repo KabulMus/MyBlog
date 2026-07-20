@@ -13,6 +13,7 @@
 /* --- 2. 颜色变量 --- */
 :root {
     --primary-blue: #1e66c6;
+    --primary-purple: #7463f1;
     --bg-light: #f1f5f9;
     --text-main: #1D1D1F;
     --text-sub: #6b7280;
@@ -43,6 +44,7 @@
 /* 深色模式变量 */
 :root[data-theme='dark'] {
     --primary-blue: #93c5fd;
+    --primary-purple: #aaa2e9;
     --bg-light: #0f172a;
     --text-main: #F5F5F7;
     --text-sub: #94a3b8;
@@ -56,6 +58,7 @@
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme='light']) {
         --primary-blue: #93c5fd;
+        --primary-purple: #aaa2e9;
         --bg-light: #0f172a;
         --text-main: #F5F5F7;
         --text-sub: #94a3b8;
@@ -384,7 +387,7 @@ footer a:hover {
 .page-hero h1 {
     font-size: 2.8rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--primary-blue) 0%, #7463f1 100%);
+    background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
