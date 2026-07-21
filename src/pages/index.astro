@@ -20,7 +20,7 @@ const sortedPosts = allPosts.sort((a, b) => {
 ---
 
 <Layout
-    title="Ethan Shaw 的博客" 
+    title="Ethan’s Blog" 
     brandUrl="https://www.ethan929.com/" 
     brandText='<img src="https://i2.hdslb.com/bfs/face/fc65f0eb630fe0b35f46062548b7184f40eefeb9.jpg" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
 >
@@ -65,8 +65,18 @@ const sortedPosts = allPosts.sort((a, b) => {
             new PagefindUI({ 
                 element: "#search", 
                 showImages: false,
-                translations: { placeholder: "输入关键词搜索文章..." }
+                translations: { placeholder: "输入关键词搜索文章……" }
             });
+
+            // 🌟 解决气泡问题：初始化后，移除搜索框内所有元素的 title 属性
+            const searchEl = document.querySelector("#search");
+            if (searchEl) {
+                // 移除搜索框本身以及内部所有子元素的 title
+                searchEl.removeAttribute('title');
+                searchEl.querySelectorAll('[title]').forEach(el => {
+                    el.removeAttribute('title');
+                });
+            }
         }
     });
 </script>

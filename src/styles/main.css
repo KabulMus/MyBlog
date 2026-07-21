@@ -1,7 +1,10 @@
 /* --- 1. 字体声明 --- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@100..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+/* Inter & Noto Sans SC */ @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Noto+Sans+SC:wght@100..900&display=swap');
+/* Playfair Display & Noto Serif SC */ @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
+/* Google Sans Flex */ @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+/* Barlow & Montserrat */ @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+/* Playfair Display SC */ @import url('https://fonts.googleapis.com/css2?family=Playfair+Display+SC:wght@900&display=swap');
+/* Encode Sans SC */ @import url('https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wght@100..900&display=swap');
 /* Musical - 乐谱符号字体 */
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
@@ -9,7 +12,7 @@
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
 /* 统一 Inter 可变字体声明 */
 @font-face { font-family: 'Icons'; src: url('/public/fonts/Icons-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: auto; font-feature-settings: "liga" 1; }
-/* Noto Sans SC - 思源黑体 Variable Font */
+
 /* --- 2. 颜色变量 --- */
 :root {
     --primary-blue: #1e66c6;
@@ -387,6 +390,7 @@ footer a:hover {
 .page-hero h1 {
     font-size: 2.8rem;
     font-weight: 800;
+    font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -914,7 +918,7 @@ footer a:hover {
     margin: 2rem 0;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 /* 1. 卡片容器：必须加上 position: relative 作为边界锁！ */
@@ -956,7 +960,7 @@ footer a:hover {
 
 .post-title-link h3 {
     font-size: 1.35rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-main);
     margin: 0 0 8px 0;
     padding: 0 !important; /* 强制清空可能继承的任何缩进 */
@@ -992,9 +996,35 @@ footer a:hover {
    ========================================================================== */
 
 /* 1. 默认状态下的边框 */
+/* 1. 默认状态下的边框与文字对齐修正 */
 #search .pagefind-ui .pagefind-ui__search-input {
-    border: 1px solid var(--primary-blue) !important;
-    box-shadow: var(--card-shadow)
+    border: 2px solid var(--primary-blue) !important;
+    box-shadow: var(--card-shadow);
+    background-color: var(--card-bg) !important;
+    border-radius: 16px !important; 
+    transition: border-color 0.2s ease !important;
+    color: var(--text-main) !important;
+    caret-color: var(--primary-blue) !important;
+
+    /* ⚡️ 核心修复：强制统一高度、行高与上下内边距 */
+    height: 51.2px !important;                  /* 1. 锁定输入框总高度 */
+    line-height: 51.2px !important;              /* 2. 强制单行文本行高与高度一致，实现绝对垂直居中 */
+    padding-top: 0 !important;                /* 3. 清空原生的上下 padding 干扰 */
+    padding-bottom: 0 !important;
+    padding-left: 40px !important;             /* 4. 留出左侧放大镜图标的空间 */
+    padding-right: 40px !important;            /* 5. 留出右侧清除按钮的空间 */
+    box-sizing: border-box !important;        /* 6. 确保 border 不挤压内部高度 */
+}
+
+/* 2. ⚡️ 强行同步占位符（Placeholder）的行高与对齐方式 */
+#search .pagefind-ui .pagefind-ui__search-input::placeholder {
+    font-weight: 500;
+    color: var(--text-sub) !important;
+    opacity: 0.8 !important;
+    
+    /* ⚡️ 同步对齐属性 */
+    line-height: normal !important;            /* 占位符在部分浏览器下用 normal 能更好地垂直对齐 */
+    vertical-align: middle !important;
 }
 
 /* 2. 鼠标悬停（Hover）状态下的边框 */
@@ -1006,49 +1036,6 @@ footer a:hover {
 #search .pagefind-ui .pagefind-ui__search-input:focus {
     border-color: var(--primary-blue) !important;
     outline: none !important;
-}
-
-/* ==========================================================================
-   🎯 专项死磕：100% 强制将搜索框背景修改为主题卡片背景
-   ========================================================================== */
-#search .pagefind-ui .pagefind-ui__search-input {
-    background-color: var(--card-bg) !important;
-}
-/* ==========================================================================
-   🎯 专项死磕：默认未选中为 --text-sub，悬停与选中才为 --primary-blue
-   ========================================================================== */
-#search .pagefind-ui .pagefind-ui__search-input {
-    border-radius: 16px !important; 
-    
-    /* 1. ⚡️ 默认（未选中）状态：使用副文本色，粗细保持 2px 统一 */
-    border: 2px solid var(--item-border) !important;
-    transition: border-color 0.2s ease !important; /* 让颜色切换有丝滑的过渡动效 */
-}
-
-/* 2. ⚡️ 鼠标悬停（Hover）状态：秒变主题蓝 */
-#search .pagefind-ui .pagefind-ui__search-input:hover {
-    border-color: var(--primary-blue) !important;
-}
-
-/* 3. ⚡️ 鼠标点击输入（Focus/选中）状态：秒变主题蓝 */
-#search .pagefind-ui .pagefind-ui__search-input:focus {
-    border-color: var(--primary-blue) !important;
-    outline: none !important;
-}
-
-/* ==========================================================================
-   🎯 专项死磕：输入框主体文字、光标与占位符颜色调整
-   ========================================================================== */
-/* 1. ⚡️ 修改用户输入的文字颜色，以及闪烁的光标颜色 */
-#search .pagefind-ui .pagefind-ui__search-input {
-    color: var(--text-main) !important;
-    caret-color: var(--primary-blue) !important; /* 让光标变成你的品牌蓝，小细节拉满 */
-}
-
-/* 2. ⚡️ 强行渗透并修改原生的“Search”占位符文字颜色 */
-#search .pagefind-ui .pagefind-ui__search-input::placeholder {
-    color: var(--text-sub) !important;
-    opacity: 0.8 !important; /* 稍微给一点透明度，让它更有呼吸感 */
 }
 
 /* ==========================================================================
@@ -1065,6 +1052,7 @@ footer a:hover {
     color: var(--text-main) !important;
     transition: color 0.2s ease !important;
 }
+
 #search .pagefind-ui .pagefind-ui__result-link:hover {
     color: var(--primary-blue) !important;
 }
@@ -1087,10 +1075,6 @@ footer a:hover {
 #search .pagefind-ui .pagefind-ui__result:first-child {
     border-top: none !important;
 }
-
-/* ==========================================================================
-   🎯 专项死磕：抹掉最后一条线 + 「加载更多」按钮纯净适配
-   ========================================================================== */
 
 /* 1. ⚡️ 斩草除根：抹掉搜索结果最后一条多余的虚线线 */
 #search .pagefind-ui .pagefind-ui__result:last-child {
@@ -1137,11 +1121,7 @@ footer a:hover {
    ========================================================================== */
 
 /* 1. ⚡️ 让 Pagefind 顶层变量优先继承你的字体 */
-#search {
-    --pagefind-ui-font: 'Inter', 'Noto Sans SC', sans-serif !important;
-}
-
-/* 2. ⚡️ 暴力全覆盖：强行把 Pagefind 内部的所有文本节点（输入框、标题、摘要、按钮、提示语）全部锁死为你的字体 */
+#search,
 #search .pagefind-ui,
 #search .pagefind-ui *,
 #search .pagefind-ui__search-input,
@@ -1164,10 +1144,6 @@ footer a:hover {
     border-bottom: none !important;        /* 抹去可能冲突的底边框 */
     box-shadow: none !important;           /* 抹去可能存在的各种微阴影线条 */
 }
-
-/* ==========================================================================
-   💎 Pagefind 搜索框视觉终极完美收官版（Icons 字体 + 25.6px 黄金对齐）
-   ========================================================================== */
 
 /* --------------------------------------------------------------------------
    🔒 核心母体：将表单行强制设为绝对定位母体
@@ -1205,13 +1181,7 @@ footer a:hover {
     
     opacity: 0.8;                          /* ⚡️ 核心：彻底抹掉原厂的 0.5 半透明 */
 
-    /* 🎯 黄金像素对齐 */
-    position: absolute !important;
-    top: 25.6px !important;                    /* ⚡️ 精准卡死你的黄金高度 */
-    left: 14px !important;                     /* 距离左边框 14px */
-    width: 32px !important;
-    height: 32px !important;
-    transform: translateY(-50%) !important;
+    left: 20px !important;                     /* 距离左边框 14px */
     
     font-size: 1.2rem !important;
     color: var(--text-sub) !important;         /* 默认副文本色 */
@@ -1230,12 +1200,6 @@ footer a:hover {
     opacity: 1;                             /* ⚡️ 核心：恢复半透明度 */
 }
 
-/* 4. 强制给输入框腾出左侧间距，防止文字与放大镜重叠 */
-#search .pagefind-ui .pagefind-ui__search-input {
-    padding-left: 2.8rem !important;
-}
-
-
 /* --------------------------------------------------------------------------
    ✕ 右侧清除按钮：钢筋混凝土卡死，两边绝对水平对称
    -------------------------------------------------------------------------- */
@@ -1247,13 +1211,7 @@ footer a:hover {
     font-size: 0 !important;
     visibility: hidden !important;
     
-    /* 🎯 黄金像素对称 */
-    position: absolute !important;
-    top: 25.6px !important;                    /* ⚡️ 同步使用你的 25.6px，确保两端绝对齐平 */
-    right: 14px !important;                    /* 距离右边框 14px */
-    width: 32px !important;
-    height: 32px !important;
-    transform: translateY(-50%) !important;
+    right: 20px !important;                    /* 距离右边框 14px */
     
     display: flex !important;
     align-items: center !important;
@@ -1315,13 +1273,4 @@ footer a:hover {
 #search .pagefind-ui .pagefind-ui__result {
     padding-top: 12px !important;     /* 原生可能比较大，缩减到 12px */
     padding-bottom: 16px !important;  /* 同步缩减底部，让内容紧贴下方的分割线 */
-}
-
-/* 2. 顺便缩减结果标题和下面摘要文字之间的空隙，让整体更紧凑 */
-#search .pagefind-ui .pagefind-ui__result-inner {
-    gap: 6px !important;              /* 如果 Pagefind 内部用了 Flex 布局，直接用 gap 锁死文字间距 */
-}
-
-#search .pagefind-ui .pagefind-ui__result-title {
-    margin-bottom: 4px !important;    /* 传统布局下的标题底部间距微调 */
 }

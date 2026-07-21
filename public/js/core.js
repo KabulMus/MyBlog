@@ -1,29 +1,74 @@
-// 图标资源
+// 图标资源不变
 const ICONS = {
     sun: '<path d="M9.15039 9.15088L11.3778 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 24H6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.15039 38.8495L11.3778 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 38.8495L36.6221 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M44.9996 24H41.8496" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 9.15088L36.6221 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 3V6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24C12 30.6274 17.3726 36 24 36Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 45.0001V41.8501" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>',
     moon: '<path d="M28.0527 4.41085C22.5828 5.83695 18.5455 10.8106 18.5455 16.7273C18.5455 23.7564 24.2436 29.4545 31.2727 29.4545C37.1894 29.4545 42.1631 25.4172 43.5891 19.9473C43.8585 21.256 44 22.6115 44 24C44 35.0457 35.0457 44 24 44C12.9543 44 4 35.0457 4 24C4 12.9543 12.9543 4 24 4C25.3885 4 26.744 4.14149 28.0527 4.41085Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>'
 };
 
-// 亮暗模式切换
+// 提取出一个公共的渲染函数，负责更新 DOM、图标和赞赏码
+function applyTheme(theme) {
+    const html = document.documentElement;
+    html.setAttribute('data-theme', theme);
+
+    const isDark = theme === 'dark';
+
+    // 1. 更新所有图标 (注意：暗黑模式下显示太阳图标提示用户切回亮色，亮色模式下显示月亮)
+    const svgs = document.querySelectorAll('.theme-toggle-btn svg, .nav-theme-toggle svg');
+    svgs.forEach(s => s.innerHTML = isDark ? ICONS.sun : ICONS.moon);
+
+    // 2. 更新赞赏码
+    const qrImg = document.querySelector('.modal-qr');
+    const qrSource = document.querySelector('#modal-overlay picture source');
+    if (qrImg) qrImg.src = isDark ? "images/reward_code_dark.webp" : "images/reward_code.webp";
+    if (qrSource) qrSource.srcset = isDark ? "images/reward_code_dark.webp" : "images/reward_code.webp";
+}
+
+// 获取当前系统的主题状态
+function getSystemTheme() {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+// 【核心逻辑】初始化主题
+function initTheme() {
+    const savedTheme = localStorage.getItem('user-theme');
+    
+    if (savedTheme) {
+        // 如果用户之前主动选过，用用户的
+        applyTheme(savedTheme);
+    } else {
+        // 否则跟随系统
+        applyTheme(getSystemTheme());
+    }
+}
+
+// 【核心逻辑】亮暗模式手动切换按钮
 function toggleTheme() {
     const html = document.documentElement;
     const currentTheme = html.getAttribute('data-theme');
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDarkNow = currentTheme === 'dark' || (!currentTheme && systemDark);
-
-    const newTheme = isDarkNow ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
     
-    // 更新图标
-    const svgs = document.querySelectorAll('.theme-toggle-btn svg, .nav-theme-toggle svg');
-    svgs.forEach(s => s.innerHTML = isDarkNow ? ICONS.sun : ICONS.moon);
+    // 切换取反
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
     
-    // 更新赞赏码（如果存在）
-    const qrImg = document.querySelector('.modal-qr');
-    const qrSource = document.querySelector('#modal-overlay picture source');
-    if (qrImg) qrImg.src = isDarkNow ? "images/reward_code.webp" : "images/reward_code_dark.webp";
-    if (qrSource) qrSource.srcset = isDarkNow ? "images/reward_code.webp" : "images/reward_code_dark.webp";
+    // 应用新主题
+    applyTheme(newTheme);
+    
+    // 记住用户的选择
+    localStorage.setItem('user-theme', newTheme);
 }
+
+// 【核心逻辑】监听系统主题变化
+// 当系统切换深浅色时，优先遵循系统的切换
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    const newSystemTheme = e.matches ? 'dark' : 'light';
+    
+    // 只要系统变了，直接强制跟随系统，并清除用户之前的局部缓存锁
+    // 这样就能实现你说的“在切换系统深浅主题后，优先遵循系统的切换”
+    applyTheme(newSystemTheme);
+    localStorage.removeItem('user-theme'); 
+});
+
+// 页面加载时立即执行初始化
+// 建议把这段 initTheme() 的调用放在 HTML 的 <body> 顶部或者 <head> 里面，防止页面闪烁
+document.addEventListener('DOMContentLoaded', initTheme);
 
 // 弹窗控制
 function toggleModal(id, show) {
