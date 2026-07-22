@@ -181,10 +181,17 @@ body {
 	padding: 5px;
 	align-items: center;
 	justify-content: center;
-	transition: color 0.2s ease;
+    stroke: var(--text-main);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+	transition: color 0.2s ease, font-weight 0.2s ease, stroke 0.2s ease, stroke-width 0.2s ease;
+
 }
 
-.menu-toggle.active { color: var(--primary-blue); }
+.menu-toggle:hover { color: var(--primary-blue); stroke-width: 6; }
+
+.menu-toggle.active { color: var(--primary-blue); stroke-width: 6; }
 
 .menu-toggle svg { width: 24px; height: 24px; stroke: currentColor; }
 
