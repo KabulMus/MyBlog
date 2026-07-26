@@ -312,7 +312,8 @@ body {
 }
 
 /* --- 6. 按钮与切换器 --- */
-.theme-toggle-btn {
+.theme-toggle-btn,
+.lang-toggle-btn {
     position: fixed; right: 25px; width: 44px; height: 44px; z-index: 101;
     border-radius: 50%; background: var(--card-bg); color: var(--text-main);
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -324,10 +325,13 @@ body {
 }
 
 .theme-toggle-btn { bottom: 25px; }
-.theme-toggle-btn svg { 
+.lang-toggle-btn { bottom: 80px; }
+.theme-toggle-btn svg,
+.lang-toggle-btn svg { 
     width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; 
 }
-.theme-toggle-btn:hover { 
+.theme-toggle-btn:hover,
+.lang-toggle-btn:hover { 
     transform: scale(1.1); color: var(--primary-blue); box-shadow: var(--card-hover-shadow); 
 }
 
@@ -341,6 +345,7 @@ body {
 
 /* --- 7. 页脚 --- */
 footer {
+    font-size: 0.85rem;
     width: 90%;
     max-width: 800px;
     margin: auto;
@@ -350,7 +355,6 @@ footer {
 }
 
 footer p {
-    font-size: 0.85rem;
     color: var(--text-sub);
     margin: 4px 0;
     text-decoration: none;
@@ -358,7 +362,6 @@ footer p {
 }
 
 footer a {
-    font-size: 0.85rem;
     color: var(--primary-blue);
     text-decoration: none;
 	border-bottom: 1.5px solid transparent; /* 默认下划线为透明 */
@@ -961,6 +964,7 @@ footer a:hover {
 }
 /* 3. 卡片内部标题：彻底纯净，去掉正文标题可能污染的 padding、井号或缩进 */
 .post-title-link {
+    text-align: justify;
     text-decoration: none;
     display: block;
 }
@@ -971,7 +975,6 @@ footer a:hover {
     color: var(--text-main);
     margin: 0 0 8px 0;
     padding: 0 !important; /* 强制清空可能继承的任何缩进 */
-    text-align: left;
     transition: color 0.2s ease;
 }
 
@@ -998,6 +1001,10 @@ footer a:hover {
     font-variant-numeric: tabular-nums;
 }
 
+html[lang='en-US'] .typography-body, .page-hero, .post-title-link {
+    text-align: left;
+}
+
 /* ==========================================================================
    🎯 专项死磕：100% 强制将搜索框边框修改为主题蓝
    ========================================================================== */
@@ -1005,7 +1012,7 @@ footer a:hover {
 /* 1. 默认状态下的边框 */
 /* 1. 默认状态下的边框与文字对齐修正 */
 #search .pagefind-ui .pagefind-ui__search-input {
-    border: 2px solid var(--primary-blue) !important;
+    border: 2px solid var(--item-border) !important;
     box-shadow: var(--card-shadow);
     background-color: var(--card-bg) !important;
     border-radius: 16px !important; 
@@ -1050,7 +1057,10 @@ footer a:hover {
    ========================================================================== */
 /* 1. ⚡️ 搜索结果的“找到 XX 条结果”提示语颜色 */
 #search .pagefind-ui .pagefind-ui__message {
+    font-weight: 400 !important;
     color: var(--text-sub) !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 /* 2. ⚡️ 搜索出的文章标题链接颜色（默认主文本色，悬停变品牌蓝） */

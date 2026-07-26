@@ -9,20 +9,49 @@ interface Props {
 	brandText?: string;
 }
 
-const { frontmatter, title, brandUrl = "/", brandText } = Astro.props;
-const pageTitle = frontmatter?.title || title || "我的博客";
+const { frontmatter, title, brandUrl, brandText } = Astro.props;
+const currentPath = Astro.url.pathname.replace(/\/+$/, "") || "/";
+const isEnglishRoute = currentPath.includes('/en-US');
+const htmlLang = isEnglishRoute ? 'en-US' : 'zh-CN';
+const resolvedBrandUrl = brandUrl || (isEnglishRoute ? '/en-US' : '/');
+const langSwitchHref = getLangSwitchHref(currentPath);
+const langSwitchLabel = isEnglishRoute ? '切换到中文' : 'Switch to English';
+const navLabels = isEnglishRoute
+    ? { blog: 'Blog', channels: 'Channels', toolkit: 'Toolkit', support: 'Support', charlie: 'About Charlie' }
+    : { blog: '博客', channels: '频道列表', toolkit: '工具箱', support: '联系支持', charlie: '关于周深' };
+const menuAriaLabel = isEnglishRoute ? 'Menu' : '菜单';
+const themeAriaLabel = isEnglishRoute ? 'Toggle theme' : '切换亮暗模式';
+const pageTitle = frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客');
 const pageDate = formatDate(frontmatter?.date || "");
 
-
-// 🛠️ 核心：定义一个通用的日期格式化函数
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '.');
 }
 
+function getLangSwitchHref(pathname: string) {
+    const normalized = pathname.replace(/\/+$/, "") || "/";
+
+    if (normalized === "/") return "/en-US";
+    if (normalized === "/en-US") return "/";
+    if (normalized === "/blog") return "/blog/en-US";
+    if (normalized === "/blog/en-US") return "/blog";
+
+    if (normalized.includes('/en-US')) {
+        return normalized.replace('/en-US', '');
+    }
+
+    if (normalized.startsWith('/blog/')) {
+        const [, , ...rest] = normalized.split('/');
+        return `/blog/en-US/${rest.join('/')}`;
+    }
+
+    return normalized;
+}
+
 ---
 <!doctype html>
-<html lang="zh-CN"> 
+<html lang={htmlLang}> 
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
@@ -40,7 +69,7 @@ function formatDate(dateStr: string) {
 	<body>
 		<nav class="navbar" id="top-nav">
 			<div class="nav-container">
-				<a href={brandUrl} class="nav-brand">
+				<a href={resolvedBrandUrl} class="nav-brand">
                     {
                         /* ⚡️ 如果传了 brandText，就用 Fragment 渲染传进来的复杂 HTML，
                            否则显示其他 markdown 文章页默认的返回箭头 */
@@ -54,24 +83,24 @@ function formatDate(dateStr: string) {
                 </a>
 				
 				<div class="nav-links desktop-only">
-					<a href="/" data-text="博客" class="active">博客</a>
-					<a href="https://www.ethan929.com/channels/" data-text="频道列表">频道列表</a>
-					<a href="https://www.ethan929.com/toolkit/" data-text="工具箱">工具箱</a>
-					<a href="https://www.ethan929.com/support/" data-text="联系支持">联系支持</a>
-					<a href="https://www.ethan929.com/charlie/" data-text="关于周深">关于周深</a>
+					<a href={isEnglishRoute ? '/en-US' : '/'} data-text={navLabels.blog} class="active">{navLabels.blog}</a>
+					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/channels/' : 'https://www.ethan929.com/channels/'} data-text={navLabels.channels}>{navLabels.channels}</a>
+					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/toolkit/' : 'https://www.ethan929.com/toolkit/'} data-text={navLabels.toolkit}>{navLabels.toolkit}</a>
+					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/support/' : 'https://www.ethan929.com/support/'} data-text={navLabels.support}>{navLabels.support}</a>
+					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/charlie/' : 'https://www.ethan929.com/charlie/'} data-text={navLabels.charlie}>{navLabels.charlie}</a>
 				</div>
 
-				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label="菜单">
+				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label={menuAriaLabel}>
 					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M7.94971 11.9497H39.9497"/><path d="M7.94971 23.9497H39.9497"/><path d="M7.94971 35.9497H39.9497"/></svg>
 				</button>
 			</div>
 
 			<div class="nav-dropdown" id="nav-dropdown">
-				<a href="/" onclick="toggleMenu(false)" data-text="博客" class="active">博客</a>
-				<a href="https://www.ethan929.com/channels/" onclick="toggleMenu(false)" data-text="频道列表">频道列表</a>
-				<a href="https://www.ethan929.com/toolkit/" onclick="toggleMenu(false)" data-text="工具箱">工具箱</a>
-				<a href="https://www.ethan929.com/support/" onclick="toggleMenu(false)" data-text="联系支持">联系支持</a>
-				<a href="https://www.ethan929.com/charlie/" onclick="toggleMenu(false)" data-text="关于周深">关于周深</a>
+				<a href={isEnglishRoute ? '/en-US' : '/'} onclick="toggleMenu(false)" data-text={navLabels.blog} class="active">{navLabels.blog}</a>
+				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/channels/' : 'https://www.ethan929.com/channels/'} onclick="toggleMenu(false)" data-text={navLabels.channels}>{navLabels.channels}</a>
+				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/toolkit/' : 'https://www.ethan929.com/toolkit/'} onclick="toggleMenu(false)" data-text={navLabels.toolkit}>{navLabels.toolkit}</a>
+				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/support/' : 'https://www.ethan929.com/support/'} onclick="toggleMenu(false)" data-text={navLabels.support}>{navLabels.support}</a>
+				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/charlie/' : 'https://www.ethan929.com/charlie/'} onclick="toggleMenu(false)" data-text={navLabels.charlie}>{navLabels.charlie}</a>
 			</div>
 		</nav>
 
@@ -97,7 +126,15 @@ function formatDate(dateStr: string) {
 			<p>Built with love for Charlie and you all</p>
 		</footer>
 
-		<button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="切换亮暗模式">
+		<a href={langSwitchHref} class="lang-toggle-btn" aria-label={langSwitchLabel} title={langSwitchLabel}>
+			<svg width="24" height="24" viewBox="0 0 48 48" fill="none">
+				<path d="M24 44.0002C35.0457 44.0002 44 35.0459 44 24.0002C44 12.9545 35.0457 4.00024 24 4.00024C12.9543 4.00024 4 12.9545 4 24.0002C4 35.0459 12.9543 44.0002 24 44.0002Z" stroke="currentColor" stroke-width="4" />
+				<path d="M6 30.9856C8.63192 32.041 10.5266 32.041 11.6839 30.9856C13.4199 29.4025 11.9219 24.5978 14.3532 23.2727C16.7844 21.9476 20.4886 27.8214 23.9508 25.8887C27.4129 23.9559 23.6246 18.8023 26.0272 16.713C28.4298 14.6237 31.554 16.98 32.1001 13.4865C32.6462 9.99304 29.5521 11.5082 28.9584 8.20693C28.5625 6.00611 28.5625 4.84884 28.9584 4.73511" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+				<path d="M29.0209 43.3505C27.1468 41.4325 26.4721 39.6497 26.9969 38.0019C27.7841 35.5303 29.0826 35.6764 29.6488 34.1482C30.2149 32.6199 28.6156 30.4433 32.1643 28.5826C34.5301 27.3421 37.783 28.7794 41.9228 32.8944" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+			</svg>
+		</a>
+
+		<button class="theme-toggle-btn" onclick="toggleTheme()" aria-label={themeAriaLabel}>
 			<svg viewBox="0 0 48 48">
 				<path d="M9.15039 9.15088L11.3778 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 24H6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.15039 38.8495L11.3778 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 38.8495L36.6221 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M44.9996 24H41.8496" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 9.15088L36.6221 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 3V6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24C12 30.6274 17.3726 36 24 36Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 45.0001V41.8501" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 			</svg>

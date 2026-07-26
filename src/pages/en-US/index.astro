@@ -1,17 +1,14 @@
 ---
-import Layout from '../layouts/Layout.astro';
+import Layout from '../../layouts/Layout.astro';
 
-// 1. 读取 blog 文件夹里的所有 markdown 文章
-const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
+const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
 const allPosts: any[] = Object.values(markdownFiles);
 
-// 🛠️ 核心：定义一个通用的日期格式化函数
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '.');
 }
 
-// 2. 物理排序
 const sortedPosts = allPosts.sort((a, b) => {
     const dateA = new Date(a.frontmatter?.date || 0).getTime();
     const dateB = new Date(b.frontmatter?.date || 0).getTime();
@@ -20,8 +17,8 @@ const sortedPosts = allPosts.sort((a, b) => {
 ---
 
 <Layout
-    title="Ethan’s Blog" 
-    brandUrl="https://www.ethan929.com/" 
+    title="Ethan’s Blog"
+    brandUrl="https://www.ethan929.com/"
     brandText='<img src="https://i2.hdslb.com/bfs/face/fc65f0eb630fe0b35f46062548b7184f40eefeb9.jpg" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
 >
     <div class="blog-list-wrapper" data-pagefind-ignore>
@@ -31,13 +28,12 @@ const sortedPosts = allPosts.sort((a, b) => {
 
         <ul class="post-list">
             {sortedPosts.map((post) => {
-                const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
+                const postUrl = post.url || `/blog/en-US/${post.file?.split('/').pop()?.replace('.md', '')}`;
                 return (
                     <li class="post-item">
                         <a href={postUrl} class="post-title-link">
-                            <h3>{post.frontmatter?.title || '未命名文章'}</h3>
+                            <h3>{post.frontmatter?.title || 'Untitled post'}</h3>
                         </a>
-                        {/* src/pages/index.astro 里的日期渲染部分 */}
                         {post.frontmatter?.date && (
                             <span class="post-date">
                                 <icons>date</icons> {formatDate(post.frontmatter.date)}
@@ -49,33 +45,27 @@ const sortedPosts = allPosts.sort((a, b) => {
         </ul>
 
         {sortedPosts.length === 0 && (
-            <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章</p>
+            <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">No posts yet</p>
         )}
     </div>
-
 </Layout>
 
 <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
 
 <script is:inline>
-    // ⚡️ 新增：监听页面加载完成后，直接初始化原生搜索框
-    window.addEventListener('DOMContentLoaded', (event) => {
+    window.addEventListener('DOMContentLoaded', () => {
         if (typeof PagefindUI !== 'undefined') {
-            new PagefindUI({ 
-                element: "#search", 
+            new PagefindUI({
+                element: '#search',
                 showImages: false,
-                translations: { placeholder: "搜索博文……" }
+                translations: { placeholder: 'Search posts…' }
             });
 
-            // 🌟 解决气泡问题：初始化后，移除搜索框内所有元素的 title 属性
-            const searchEl = document.querySelector("#search");
+            const searchEl = document.querySelector('#search');
             if (searchEl) {
-                // 移除搜索框本身以及内部所有子元素的 title
                 searchEl.removeAttribute('title');
-                searchEl.querySelectorAll('[title]').forEach(el => {
-                    el.removeAttribute('title');
-                });
+                searchEl.querySelectorAll('[title]').forEach(el => el.removeAttribute('title'));
             }
         }
     });
