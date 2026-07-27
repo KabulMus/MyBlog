@@ -1,22 +1,32 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
-// 1. 读取 blog 文件夹里的所有 markdown 文章
+const postsPerPage = 8;
 const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
 const allPosts: any[] = Object.values(markdownFiles);
 
-// 🛠️ 核心：定义一个通用的日期格式化函数
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '.');
 }
 
-// 2. 物理排序
+function buildPageHref(page: number, basePath = '/') {
+    const path = basePath === '/' ? '/' : basePath;
+    return `${path}?page=${page}`;
+}
+
 const sortedPosts = allPosts.sort((a, b) => {
     const dateA = new Date(a.frontmatter?.date || 0).getTime();
     const dateB = new Date(b.frontmatter?.date || 0).getTime();
     return dateB - dateA;
 });
+
+const totalPages = Math.max(1, Math.ceil(sortedPosts.length / postsPerPage));
+const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+const requestedPage = Number(Astro.url.searchParams.get('page') || '1');
+const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
+const prevPage = Math.max(1, currentPage - 1);
+const nextPage = Math.min(totalPages, currentPage + 1);
 ---
 
 <Layout
@@ -30,14 +40,14 @@ const sortedPosts = allPosts.sort((a, b) => {
         </div>
 
         <ul class="post-list">
-            {sortedPosts.map((post) => {
+            {sortedPosts.map((post, index) => {
+                const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
                 return (
-                    <li class="post-item">
+                    <li class="post-item" data-page={postPage}>
                         <a href={postUrl} class="post-title-link">
                             <h3>{post.frontmatter?.title || '未命名文章'}</h3>
                         </a>
-                        {/* src/pages/index.astro 里的日期渲染部分 */}
                         {post.frontmatter?.date && (
                             <span class="post-date">
                                 <icons>date</icons> {formatDate(post.frontmatter.date)}
@@ -51,6 +61,115 @@ const sortedPosts = allPosts.sort((a, b) => {
         {sortedPosts.length === 0 && (
             <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章</p>
         )}
+
+        {totalPages > 1 && (
+            <nav class="pagination" aria-label="分页导航" data-total-pages={totalPages}>
+                <a
+                    href={buildPageHref(prevPage)}
+                    class={`pagination-nav-button ${currentPage === 1 ? 'is-disabled' : ''}`}
+                    data-page={prevPage}
+                    aria-label="上一页"
+                    aria-disabled={currentPage === 1 ? 'true' : 'false'}
+                >
+                    <svg viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M31 36L19 24L31 12"/>
+                    </svg>
+                </a>
+
+                {totalPages >= 10 ? (
+                    <div class="desktop-compact-group">
+                        {pageNumbers.filter((page) => page <= 2).map((page) => (
+                            <a
+                                href={buildPageHref(page)}
+                                class={`pagination-link ${page === currentPage ? 'active' : ''}`}
+                                data-page={page}
+                                aria-current={page === currentPage ? 'page' : undefined}
+                            >
+                                {page}
+                            </a>
+                        ))}
+                        <input
+                            class="pagination-input"
+                            type="number"
+                            inputmode="numeric"
+                            min="1"
+                            max={totalPages}
+                            value={currentPage}
+                            aria-label="跳转到指定页"
+                        />
+                        {pageNumbers.filter((page) => page > totalPages - 2).map((page) => (
+                            <a
+                                href={buildPageHref(page)}
+                                class={`pagination-link ${page === currentPage ? 'active' : ''}`}
+                                data-page={page}
+                                aria-current={page === currentPage ? 'page' : undefined}
+                            >
+                                {page}
+                            </a>
+                        ))}
+                    </div>
+                ) : (
+                    <div class="desktop-full-group">
+                        {pageNumbers.map((page) => (
+                            <a
+                                href={buildPageHref(page)}
+                                class={`pagination-link ${page === currentPage ? 'active' : ''}`}
+                                data-page={page}
+                                aria-current={page === currentPage ? 'page' : undefined}
+                            >
+                                {page}
+                            </a>
+                        ))}
+                    </div>
+                )}
+
+                {totalPages > 3 && (
+                    <div class="mobile-compact-group">
+                        {pageNumbers.filter((page) => page <= 1).map((page) => (
+                            <a
+                                href={buildPageHref(page)}
+                                class={`pagination-link ${page === currentPage ? 'active' : ''}`}
+                                data-page={page}
+                                aria-current={page === currentPage ? 'page' : undefined}
+                            >
+                                {page}
+                            </a>
+                        ))}
+                        <input
+                            class="pagination-input"
+                            type="number"
+                            inputmode="numeric"
+                            min="1"
+                            max={totalPages}
+                            value={currentPage}
+                            aria-label="跳转到指定页"
+                        />
+                        {pageNumbers.filter((page) => page > totalPages - 1).map((page) => (
+                            <a
+                                href={buildPageHref(page)}
+                                class={`pagination-link ${page === currentPage ? 'active' : ''}`}
+                                data-page={page}
+                                aria-current={page === currentPage ? 'page' : undefined}
+                            >
+                                {page}
+                            </a>
+                        ))}
+                    </div>
+                )}
+
+                <a
+                    href={buildPageHref(nextPage)}
+                    class={`pagination-nav-button ${currentPage === totalPages ? 'is-disabled' : ''}`}
+                    data-page={nextPage}
+                    aria-label="下一页"
+                    aria-disabled={currentPage === totalPages ? 'true' : 'false'}
+                >
+                    <svg viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M19 12L31 24L19 36"/>
+                    </svg>
+                </a>
+            </nav>
+        )}
     </div>
 
 </Layout>
@@ -59,24 +178,141 @@ const sortedPosts = allPosts.sort((a, b) => {
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
 
 <script is:inline>
-    // ⚡️ 新增：监听页面加载完成后，直接初始化原生搜索框
-    window.addEventListener('DOMContentLoaded', (event) => {
+    function getPageFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        const page = Number(params.get('page') || '1');
+        return Number.isFinite(page) && page > 0 ? page : 1;
+    }
+
+    function showPage(page) {
+        const list = document.querySelector('.post-list');
+        if (!list) return;
+
+        list.classList.add('is-transitioning');
+
+        window.setTimeout(() => {
+            document.querySelectorAll('.post-list .post-item').forEach((item) => {
+                const itemPage = Number(item.getAttribute('data-page') || '1');
+                item.classList.toggle('is-hidden', itemPage !== page);
+            });
+
+            document.querySelectorAll('.pagination-link').forEach((link) => {
+                const linkPage = Number(link.getAttribute('data-page') || '1');
+                const isCurrent = linkPage === page;
+                link.classList.toggle('active', isCurrent);
+                if (isCurrent) {
+                    link.setAttribute('aria-current', 'page');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            });
+
+            const pagination = document.querySelector('.pagination');
+            const totalPages = Number(pagination?.getAttribute('data-total-pages') || '1');
+            const prevPage = Math.max(1, page - 1);
+            const nextPage = Math.min(totalPages, page + 1);
+
+            document.querySelectorAll('.pagination-nav-button').forEach((button) => {
+                const isPrev = button.getAttribute('aria-label') === '上一页';
+                const targetPage = isPrev ? prevPage : nextPage;
+                const href = `/?page=${targetPage}`;
+                button.setAttribute('data-page', String(targetPage));
+                button.setAttribute('href', href);
+
+                const isDisabled = targetPage < 1 || targetPage > totalPages || targetPage === page;
+                button.classList.toggle('is-disabled', isDisabled);
+                button.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+            });
+
+            document.querySelectorAll('.pagination-input').forEach((input) => {
+                input.value = page;
+            });
+
+            list.classList.remove('is-transitioning');
+        }, 160);
+    }
+
+    function smoothScrollToTop() {
+        const startY = window.pageYOffset || document.documentElement.scrollTop || 0;
+        if (startY <= 2) return;
+
+        const duration = 280;
+        const startTime = performance.now();
+
+        const step = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            window.scrollTo(0, startY * (1 - eased));
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        };
+
+        requestAnimationFrame(step);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
         if (typeof PagefindUI !== 'undefined') {
-            new PagefindUI({ 
-                element: "#search", 
+            new PagefindUI({
+                element: "#search",
                 showImages: false,
                 translations: { placeholder: "搜索博文……" }
             });
 
-            // 🌟 解决气泡问题：初始化后，移除搜索框内所有元素的 title 属性
             const searchEl = document.querySelector("#search");
             if (searchEl) {
-                // 移除搜索框本身以及内部所有子元素的 title
                 searchEl.removeAttribute('title');
                 searchEl.querySelectorAll('[title]').forEach(el => {
                     el.removeAttribute('title');
                 });
             }
         }
+
+        var initialPage = getPageFromUrl();
+        sessionStorage.setItem('blogHomePage', String(initialPage));
+        showPage(initialPage);
+
+        document.querySelectorAll('.pagination-link, .pagination-nav-button').forEach((link) => {
+            link.addEventListener('click', (event) => {
+                if (link.classList.contains('is-disabled')) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.preventDefault();
+                const nextPage = Number(link.getAttribute('data-page') || '1');
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('page', String(nextPage));
+                history.pushState({}, '', nextUrl);
+                sessionStorage.setItem('blogHomePage', String(nextPage));
+                showPage(nextPage);
+                smoothScrollToTop();
+            });
+        });
+
+        document.querySelectorAll('.pagination-input').forEach((input) => {
+            input.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') return;
+
+                event.preventDefault();
+                const targetPage = Number(input.value);
+                if (!Number.isFinite(targetPage) || targetPage < 1) return;
+
+                const pageNum = Math.min(targetPage, Number(input.max || '1'));
+                const nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('page', String(pageNum));
+                history.pushState({}, '', nextUrl);
+                sessionStorage.setItem('blogHomePage', String(pageNum));
+                showPage(pageNum);
+                smoothScrollToTop();
+                input.blur();
+            });
+        });
+    });
+
+    window.addEventListener('popstate', () => {
+        showPage(getPageFromUrl());
     });
 </script>

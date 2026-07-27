@@ -920,6 +920,121 @@ footer a:hover {
    ⚡️ 终极卡片热区锁死（完美实现全卡片点击跳转）
    ========================================================================== */
 
+.pagination {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 2rem 0 0;
+}
+
+.desktop-compact-group,
+.desktop-full-group,
+.mobile-compact-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.desktop-compact-group,
+.desktop-full-group {
+    display: flex;
+}
+
+.mobile-compact-group {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        gap: 0.45rem;
+    }
+
+    .desktop-compact-group,
+    .desktop-full-group {
+        display: none;
+    }
+
+    .mobile-compact-group {
+        display: flex;
+    }
+
+    .pagination-link,
+    .pagination-nav-button,
+    .pagination-input {
+        width: 2rem;
+        height: 2rem;
+    }
+}
+
+.pagination-link,
+.pagination-nav-button,
+.pagination-input {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    border-radius: 999px;
+    background: var(--card-bg);
+    color: var(--text-sub) !important;
+    border: 1px solid var(--item-border) !important;
+    box-shadow: var(--card-shadow);
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-feature-settings: normal;
+}
+
+.pagination-link:hover,
+.pagination-nav-button:hover {
+    transform: scale(1.1) !important;
+    color: var(--primary-blue);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.pagination-link.active {
+    background: var(--primary-blue) !important;
+    color: var(--on-primary) !important;
+    border-color: var(--primary-blue) !important;
+    box-shadow: var(--card-shadow);
+}
+
+.pagination-input {
+    width: 3.5rem;
+    padding: 0 0.6rem;
+    text-align: center;
+    background: var(--primary-blue) !important;
+    color: var(--on-primary) !important;
+    outline: none;
+    caret-color: var(--on-primary) !important;
+    appearance: textfield;
+}
+
+.pagination-input::-webkit-outer-spin-button,
+.pagination-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.pagination-nav-button svg {
+    width: 1rem;
+    height: 1rem;
+    stroke: currentColor;
+    stroke-width: 4;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.pagination-nav-button.is-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
 
 .typography-body ul.post-list {
     list-style: none;
@@ -940,6 +1055,18 @@ footer a:hover {
     border: 1px solid var(--item-border);
     box-shadow: var(--card-shadow);
     transition: box-shadow 0.2s ease; /* 顺便带上丝滑过渡 */
+}
+
+.post-item.is-hidden {
+    display: none !important;
+}
+
+.post-list {
+    transition: opacity 0.2s ease;
+}
+
+.post-list.is-transitioning {
+    opacity: 0.4;
 }
 
 /* 2. 撑满整张卡片的绝对定位点击层 */
