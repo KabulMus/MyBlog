@@ -923,52 +923,46 @@ footer a:hover {
 .pagination {
     display: flex;
     justify-content: center;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
     margin: 2rem 0 0;
 }
 
-.desktop-compact-group,
-.desktop-full-group,
-.mobile-compact-group {
+.pagination-side {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    flex-wrap: wrap;
+    flex: 1;
 }
 
-.desktop-compact-group,
-.desktop-full-group {
-    display: flex;
+.pagination-side:first-child {
+    justify-content: flex-end;
 }
 
-.mobile-compact-group {
-    display: none;
+.pagination-side:last-child {
+    justify-content: flex-start;
 }
 
-@media (max-width: 768px) {
-    .pagination {
-        gap: 0.45rem;
-    }
-
-    .desktop-compact-group,
-    .desktop-full-group {
-        display: none;
-    }
-
-    .mobile-compact-group {
-        display: flex;
-    }
-
-    .pagination-link,
-    .pagination-nav-button,
-    .pagination-input {
-        width: 2rem;
-        height: 2rem;
-    }
+.pagination-start,
+.pagination-end {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-sub);
+    line-height: 1;
 }
 
-.pagination-link,
+.pagination-start {
+    margin-right: 0.4rem;
+}
+
+.pagination-end {
+    margin-left: 0.4rem;
+}
+
 .pagination-nav-button,
 .pagination-input {
     display: inline-flex;
@@ -1006,7 +1000,6 @@ footer a:hover {
 
 .pagination-input {
     width: 3.5rem;
-    padding: 0 0.6rem;
     text-align: center;
     background: var(--primary-blue) !important;
     color: var(--on-primary) !important;
