@@ -3,7 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 
 const postsPerPage = 8;
 const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
-const allPosts: any[] = Object.values(markdownFiles);
+const allPosts: any[] = Object.values(markdownFiles).filter((p: any) => !p.frontmatter?.draft);
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
@@ -15,11 +15,31 @@ function buildPageHref(page: number, basePath = '/en-US') {
     return `${path}?page=${page}`;
 }
 
+function smartQuotes(text: string): string {
+    return text
+        .replace( /"([^"]*)"/g, '\u201C$1\u201D')
+        .replace(/'([^']*)'/g, '\u2018$1\u2019')
+        .replace(/'/g, '\u2019');
+}
+
+const tagNames: Record<string, string> = {
+    life: 'Life', channel: 'Channel', insync: 'In-sync', rant: 'Rant',
+    tutorial: 'Tutorial', essays: 'Essays', academic: 'Academic', nation: 'Nation', achievement: 'Achievement',
+};
+
 const sortedPosts = allPosts.sort((a, b) => {
     const dateA = new Date(a.frontmatter?.date || 0).getTime();
     const dateB = new Date(b.frontmatter?.date || 0).getTime();
     return dateB - dateA;
 });
+
+const tagOrder = ['life', 'channel', 'insync', 'rant', 'tutorial', 'essays', 'academic', 'nation', 'achievement'];
+const allTags = [...new Set(sortedPosts.flatMap(p => p.frontmatter?.tags || []))]
+    .sort((a, b) => {
+        const ia = tagOrder.indexOf(a);
+        const ib = tagOrder.indexOf(b);
+        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
 
 const totalPages = Math.max(1, Math.ceil(sortedPosts.length / postsPerPage));
 const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -30,7 +50,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 ---
 
 <Layout
-    title="Ethan’s Blog"
+    title="Ethan's Blog"
     brandUrl="https://www.ethan929.com/en-US/"
     brandText='<img src="https://i2.hdslb.com/bfs/face/fc65f0eb630fe0b35f46062548b7184f40eefeb9.jpg" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
 >
@@ -39,14 +59,28 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             <div id="search"></div>
         </div>
 
+        <div class="tag-filter-bar">
+            {allTags.map(tag => (
+                <button class={`tag-filter-btn tag-filter-btn--${tag}`} data-tag={tag}>{tagNames[tag] || tag}</button>
+            ))}
+        </div>
+
         <ul class="post-list">
             {sortedPosts.map((post, index) => {
                 const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = post.url || `/blog/en-US/${post.file?.split('/').pop()?.replace('.md', '')}`;
                 return (
-                    <li class="post-item" data-page={postPage}>
+                    <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')}>
+                        <span class="post-index">{sortedPosts.length - index}</span>
+                        {post.frontmatter?.tags?.length > 0 && (
+                            <div class="post-tags">
+                                {post.frontmatter.tags.map((tag: string) => (
+                                    <span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+                                ))}
+                            </div>
+                        )}
                         <a href={postUrl} class="post-title-link">
-                            <h3>{post.frontmatter?.title || 'Untitled post'}</h3>
+                            <h3>{smartQuotes(post.frontmatter?.title || 'Untitled post')}</h3>
                         </a>
                         {post.frontmatter?.date && (
                             <span class="post-date">
@@ -112,6 +146,8 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
 
 <script is:inline>
+    var activeTags = [];
+
     function getPageFromUrl() {
         const params = new URLSearchParams(window.location.search);
         const page = Number(params.get('page') || '1');
@@ -127,7 +163,10 @@ const nextPage = Math.min(totalPages, currentPage + 1);
         window.setTimeout(() => {
             document.querySelectorAll('.post-list .post-item').forEach((item) => {
                 const itemPage = Number(item.getAttribute('data-page') || '1');
-                item.classList.toggle('is-hidden', itemPage !== page);
+                const itemTags = (item.getAttribute('data-tags') || '').split(',').filter(Boolean);
+                const matchesTag = activeTags.length === 0 || activeTags.some(function(t) { return itemTags.includes(t); });
+                const matchesPage = itemPage === page;
+                item.classList.toggle('is-hidden', !matchesTag || !matchesPage);
             });
 
             document.querySelectorAll('.pagination-link').forEach((link) => {
@@ -202,9 +241,30 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             }
         }
 
-        var initialPage = getPageFromUrl();
+    var initialPage = getPageFromUrl();
         sessionStorage.setItem('blogHomePage', String(initialPage));
         showPage(initialPage);
+
+        document.querySelectorAll('.tag-filter-btn').forEach((btn) => {
+            btn.addEventListener('click', function() {
+                var tag = this.getAttribute('data-tag') || '';
+                var idx = activeTags.indexOf(tag);
+                if (idx === -1) {
+                    activeTags.push(tag);
+                } else {
+                    activeTags.splice(idx, 1);
+                }
+                var nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('page', '1');
+                history.pushState({}, '', nextUrl);
+                sessionStorage.setItem('blogHomePage', '1');
+                document.querySelectorAll('.tag-filter-btn').forEach(function(b) {
+                    b.classList.toggle('active', activeTags.indexOf(b.getAttribute('data-tag') || '') !== -1);
+                });
+                showPage(1);
+                smoothScrollToTop();
+            });
+        });
 
         document.querySelectorAll('.pagination-link, .pagination-nav-button').forEach((link) => {
             link.addEventListener('click', (event) => {

@@ -21,13 +21,26 @@ const navLabels = isEnglishRoute
     : { blog: '博客', channels: '频道列表', toolkit: '工具箱', support: '联系支持', charlie: '关于周深' };
 const menuAriaLabel = isEnglishRoute ? 'Menu' : '菜单';
 const themeAriaLabel = isEnglishRoute ? 'Toggle theme' : '切换亮暗模式';
-const pageTitle = frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客');
+function smartQuotes(text: string): string {
+    return text
+        .replace( /"([^"]*)"/g, '\u201C$1\u201D')
+        .replace(/'([^']*)'/g, '\u2018$1\u2019')
+        .replace(/'/g, '\u2019');
+}
+
+const pageTitle = smartQuotes(frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客'));
 const pageDate = formatDate(frontmatter?.date || "");
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '.');
 }
+
+const tagNames: Record<string, string> = isEnglishRoute
+    ? { life: 'Life', channel: 'Channel', insync: 'In-sync', rant: 'Rant',
+        tutorial: 'Tutorial', essays: 'Essays', academic: 'Academic', nation: 'Nation', achievement: 'Achievement' }
+    : { life: '生活', channel: '频道', insync: '同频', rant: '吐槽',
+        tutorial: '教程', essays: '随笔', academic: '学业', nation: '家国', achievement: '成就' };
 
 function getLangSwitchHref(pathname: string) {
     const normalized = pathname.replace(/\/+$/, "") || "/";
@@ -113,6 +126,13 @@ function getLangSwitchHref(pathname: string) {
 							<icons data-pagefind-ignore>date</icons> {formatDate(pageDate)}
 						</span>
 					)}
+					{frontmatter?.tags?.length > 0 && (
+						<div class="article-tags">
+							{frontmatter.tags.map((tag: string) => (
+								<span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+							))}
+						</div>
+					)}
 				</div>
 			</section>
 		</header>
@@ -122,7 +142,8 @@ function getLangSwitchHref(pathname: string) {
 		</main>
 
 		<footer>
-			<p><icons>CO</icons>2026 Ethan Shaw</p>
+			<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/info' : 'https://www.ethan929.com/info'}>{isEnglishRoute ? 'Tech & Copyright' : '技术与版权'}</a>
+			<p><icons>©</icons>2026 Ethan Shaw</p>
 			<p>Built with love for Charlie and you all</p>
 		</footer>
 

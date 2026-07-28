@@ -42,6 +42,34 @@
     --qqmusic-bg: #00eb81;
     --wyy-bg: #dd001b;
     --spotify-bg: #1ed760;
+    /* --- 标签颜色（亮色模式） --- */
+    --tag-channel: var(--primary-blue);
+    --tag-channel-bg: rgba(30, 102, 198, 0.1);
+    --tag-channel-border: rgba(30, 102, 198, 0.3);
+    --tag-insync: #b45309;
+    --tag-insync-bg: rgba(180, 83, 9, 0.1);
+    --tag-insync-border: rgba(180, 83, 9, 0.3);
+    --tag-academic: #58cc02;
+    --tag-academic-bg: rgba(88, 204, 2, 0.1);
+    --tag-academic-border: rgba(88, 204, 2, 0.3);
+    --tag-life: var(--text-sub);
+    --tag-life-bg: rgba(107, 114, 128, 0.1);
+    --tag-life-border: rgba(107, 114, 128, 0.3);
+    --tag-nation: #ef4444;
+    --tag-nation-bg: rgba(239, 68, 68, 0.1);
+    --tag-nation-border: rgba(239, 68, 68, 0.3);
+    --tag-tutorial: #a855f7;
+    --tag-tutorial-bg: rgba(168, 85, 247, 0.1);
+    --tag-tutorial-border: rgba(168, 85, 247, 0.3);
+    --tag-achievement: #06b6d4;
+    --tag-achievement-bg: rgba(6, 182, 212, 0.1);
+    --tag-achievement-border: rgba(6, 182, 212, 0.3);
+    --tag-essays: #4f46e5;
+    --tag-essays-bg: rgba(79, 70, 229, 0.1);
+    --tag-essays-border: rgba(79, 70, 229, 0.3);
+    --tag-rant: #f43f5e;
+    --tag-rant-bg: rgba(244, 63, 94, 0.1);
+    --tag-rant-border: rgba(244, 63, 94, 0.3);
 }
 
 /* 深色模式变量 */
@@ -57,6 +85,29 @@
     --card-hover-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7);
     --item-border: rgba(255, 255, 255, 0.08);
     --on-primary: #0f172a; /* 深色模式下设为与背景相同的深蓝色/黑色 */
+    /* --- 标签颜色（深色模式） --- */
+    --tag-channel-bg: rgba(147, 197, 253, 0.15);
+    --tag-channel-border: rgba(147, 197, 253, 0.3);
+    --tag-insync: #e9c15c;
+    --tag-insync-bg: rgba(251, 191, 36, 0.15);
+    --tag-insync-border: rgba(251, 191, 36, 0.3);
+    --tag-academic-bg: rgba(88, 204, 2, 0.15);
+    --tag-life-bg: rgba(148, 163, 184, 0.15);
+    --tag-nation: #f87171;
+    --tag-nation-bg: rgba(248, 113, 113, 0.15);
+    --tag-nation-border: rgba(248, 113, 113, 0.3);
+    --tag-tutorial: #c084fc;
+    --tag-tutorial-bg: rgba(192, 132, 252, 0.15);
+    --tag-tutorial-border: rgba(192, 132, 252, 0.3);
+    --tag-achievement: #2dd4bf;
+    --tag-achievement-bg: rgba(45, 212, 191, 0.15);
+    --tag-achievement-border: rgba(45, 212, 191, 0.3);
+    --tag-essays: #818cf8;
+    --tag-essays-bg: rgba(129, 140, 248, 0.15);
+    --tag-essays-border: rgba(129, 140, 248, 0.3);
+    --tag-rant: #fb7185;
+    --tag-rant-bg: rgba(251, 113, 133, 0.15);
+    --tag-rant-border: rgba(251, 113, 133, 0.3);
 }
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme='light']) {
@@ -71,6 +122,29 @@
         --card-hover-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7);
         --item-border: rgba(255, 255, 255, 0.08);
         --on-primary: #0f172a;
+        /* --- 标签颜色（跟随系统深色） --- */
+        --tag-channel-bg: rgba(147, 197, 253, 0.15);
+        --tag-channel-border: rgba(147, 197, 253, 0.3);
+        --tag-insync: #e9c15c;
+        --tag-insync-bg: rgba(251, 191, 36, 0.15);
+        --tag-insync-border: rgba(251, 191, 36, 0.3);
+        --tag-academic-bg: rgba(88, 204, 2, 0.15);
+        --tag-life-bg: rgba(148, 163, 184, 0.15);
+        --tag-nation: #f87171;
+        --tag-nation-bg: rgba(248, 113, 113, 0.15);
+        --tag-nation-border: rgba(248, 113, 113, 0.3);
+        --tag-tutorial: #c084fc;
+        --tag-tutorial-bg: rgba(192, 132, 252, 0.15);
+        --tag-tutorial-border: rgba(192, 132, 252, 0.3);
+        --tag-achievement: #2dd4bf;
+        --tag-achievement-bg: rgba(45, 212, 191, 0.15);
+        --tag-achievement-border: rgba(45, 212, 191, 0.3);
+        --tag-essays: #818cf8;
+        --tag-essays-bg: rgba(129, 140, 248, 0.15);
+        --tag-essays-border: rgba(129, 140, 248, 0.3);
+        --tag-rant: #fb7185;
+        --tag-rant-bg: rgba(251, 113, 133, 0.15);
+        --tag-rant-border: rgba(251, 113, 133, 0.3);
     }
 }
 
@@ -441,7 +515,7 @@ footer a:hover {
 }
 
 .typography-body p, .typography-body li {
-    margin-bottom: 0.8rem;
+    margin: 0.4rem 0;
 }
 
 .typography-body h1, .typography-body h2,
@@ -454,22 +528,22 @@ footer a:hover {
 
 .typography-body h1 {
     font-size: 1.8rem;
-    margin-bottom: 0.6rem;
+    margin: 0.6rem 0;
 }
 
 .typography-body h2 {
     font-size: 1.6rem;
-    margin-bottom: 0.5rem;
+    margin: 0.5rem 0;
 }
 
 .typography-body h3 {
     font-size: 1.3rem;
-    margin-bottom: 0.4rem;
+    margin: 0.4rem 0;
 }
 
 .typography-body h4, .typography-body h5, .typography-body h6 {
     font-size: 1rem;
-    margin-bottom: 0.3rem;
+    margin: 0.3rem 0;
 }
 /* ==========================================================================
    🛠️ 终极隔离：仅在纯文章正文内启用悬停变色与井号（彻底不波及卡片）
@@ -524,11 +598,10 @@ footer a:hover {
 }
 
 .typography-body ul, .typography-body ol {
-    margin-top: 0.2rem;
+    margin: 0.2rem 0;
     padding-left: 1.8rem;
 }
 
-.typography-body li { margin-bottom: 0.2rem; }
 /* ==========================================================================
    ✅ 任务列表（Task List）纯静态美化展示 - 变量色彩 SVG 遮罩版
    ========================================================================== */
@@ -741,7 +814,7 @@ footer a:hover {
 /* 所有单元格的基础间距与无竖线规范 */
 .typography-body th,
 .typography-body td {
-    padding: 14px 16px;                 /* 保持舒适的上下留白 */
+    padding: 10px 16px;                 /* 保持舒适的上下留白 */
     color: var(--text-main);
     
     /* ⚡️ 修正：彻底删除了 text-align 相关的样式，完全听从 Markdown 的控制 */
@@ -839,8 +912,13 @@ footer a:hover {
 }
 
 /* C. 用我们的伪元素，重新定义一个完全受 CSS 变量控制、不污染目录的高级页眉 */
+html[lang='zh-CN'] .typography-body .footnotes::before {
+    content: "注释";
+}
+html[lang='en-US'] .typography-body .footnotes::before {
+    content: "Notes";
+}
 .typography-body .footnotes::before {
-    content: "注释"; /* 这样你想改什么中文都可以随便改了 */
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
@@ -1041,17 +1119,35 @@ footer a:hover {
 
 /* 1. 卡片容器：必须加上 position: relative 作为边界锁！ */
 .post-item {
-    position: relative; /* ⚡️ 就是这句！把内部暴走的 ::before 热区牢牢锁在卡片骨架里 */
+    position: relative;
     background-color: var(--card-bg);
     border-radius: var(--card-radius);
     padding: 20px 24px;
     border: 1px solid var(--item-border);
     box-shadow: var(--card-shadow);
-    transition: box-shadow 0.2s ease; /* 顺便带上丝滑过渡 */
+    transition: box-shadow 0.2s ease;
+    overflow: hidden;
 }
 
 .post-item.is-hidden {
     display: none !important;
+}
+
+.post-index {
+    position: absolute;
+    z-index: 0;
+    right: 24px;
+    bottom: -30px;
+    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+    font-size: 10rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-sub);
+    opacity: 0.1;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.05em;
 }
 
 .post-list {
@@ -1411,3 +1507,115 @@ html[lang='en-US'] .typography-body, .page-hero, .post-title-link {
     padding-top: 12px !important;     /* 原生可能比较大，缩减到 12px */
     padding-bottom: 16px !important;  /* 同步缩减底部，让内容紧贴下方的分割线 */
 }
+
+/* --- end of file --- */
+
+/* ==========================================================================
+   🏷️ 文章标签（Tags）
+   ========================================================================== */
+.tag {
+    z-index: 1;
+    display: inline-block;
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    background: rgba(107, 114, 128, 0.1);
+    color: var(--text-sub);
+}
+
+.tag-channel { background: var(--tag-channel-bg); color: var(--tag-channel); }
+.tag-insync { background: var(--tag-insync-bg); color: var(--tag-insync); }
+.tag-academic { background: var(--tag-academic-bg); color: var(--tag-academic); }
+.tag-life { background: var(--tag-life-bg); color: var(--tag-life); }
+.tag-nation { background: var(--tag-nation-bg); color: var(--tag-nation); }
+.tag-tutorial { background: var(--tag-tutorial-bg); color: var(--tag-tutorial); }
+.tag-achievement { background: var(--tag-achievement-bg); color: var(--tag-achievement); }
+.tag-essays { background: var(--tag-essays-bg); color: var(--tag-essays); }
+.tag-rant { background: var(--tag-rant-bg); color: var(--tag-rant); }
+
+/* 列表页卡片内的标签容器 */
+.post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+/* 文章详情页的标签 */
+.article-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 0 32px;
+}
+
+/* --- 标签筛选栏 --- */
+.tag-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 0.8rem;
+    margin-bottom: 1.5rem;
+    justify-content: flex-start;
+    position: relative;
+    z-index: 1;
+}
+
+.tag-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--item-border);
+    background: var(--card-bg);
+    color: var(--text-sub);
+    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--card-shadow);
+    user-select: none;
+}
+
+.tag-filter-btn:hover {
+    transform: scale(1.05);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.tag-filter-btn.active {
+    background: var(--tag-life-bg) !important;
+    border-color: var(--tag-life) !important;
+    color: var(--tag-life) !important;
+}
+
+.tag-filter-btn--channel { color: var(--tag-channel); border-color: var(--tag-channel-border); }
+.tag-filter-btn--channel.active { background: var(--tag-channel-bg) !important; border-color: var(--tag-channel) !important; color: var(--tag-channel) !important; }
+
+.tag-filter-btn--insync { color: var(--tag-insync); border-color: var(--tag-insync-border); }
+.tag-filter-btn--insync.active { background: var(--tag-insync-bg) !important; border-color: var(--tag-insync) !important; color: var(--tag-insync) !important; }
+
+.tag-filter-btn--academic { color: var(--tag-academic); border-color: var(--tag-academic-border); }
+.tag-filter-btn--academic.active { background: var(--tag-academic-bg) !important; border-color: var(--tag-academic) !important; color: var(--tag-academic) !important; }
+
+.tag-filter-btn--life { color: var(--tag-life); border-color: var(--tag-life-border); }
+.tag-filter-btn--life.active { background: var(--tag-life-bg) !important; border-color: var(--tag-life) !important; color: var(--tag-life) !important; }
+
+.tag-filter-btn--nation { color: var(--tag-nation); border-color: var(--tag-nation-border); }
+.tag-filter-btn--nation.active { background: var(--tag-nation-bg) !important; border-color: var(--tag-nation) !important; color: var(--tag-nation) !important; }
+
+.tag-filter-btn--tutorial { color: var(--tag-tutorial); border-color: var(--tag-tutorial-border); }
+.tag-filter-btn--tutorial.active { background: var(--tag-tutorial-bg) !important; border-color: var(--tag-tutorial) !important; color: var(--tag-tutorial) !important; }
+
+.tag-filter-btn--achievement { color: var(--tag-achievement); border-color: var(--tag-achievement-border); }
+.tag-filter-btn--achievement.active { background: var(--tag-achievement-bg) !important; border-color: var(--tag-achievement) !important; color: var(--tag-achievement) !important; }
+
+.tag-filter-btn--essays { color: var(--tag-essays); border-color: var(--tag-essays-border); }
+.tag-filter-btn--essays.active { background: var(--tag-essays-bg) !important; border-color: var(--tag-essays) !important; color: var(--tag-essays) !important; }
+
+.tag-filter-btn--rant { color: var(--tag-rant); border-color: var(--tag-rant-border); }
+.tag-filter-btn--rant.active { background: var(--tag-rant-bg) !important; border-color: var(--tag-rant) !important; color: var(--tag-rant) !important; }
