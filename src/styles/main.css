@@ -5,12 +5,14 @@
 /* Barlow & Montserrat */ @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 /* Playfair Display SC */ @import url('https://fonts.googleapis.com/css2?family=Playfair+Display+SC:wght@900&display=swap');
 /* Encode Sans SC */ @import url('https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wght@100..900&display=swap');
+/* JetBrains Mono */ @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
 /* Musical - 乐谱符号字体 */
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Semibold.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
-/* 统一 Inter 可变字体声明 */
+/* 统一 Icons 声明 */
 @font-face { font-family: 'Icons'; src: url('/public/fonts/Icons-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: auto; font-feature-settings: "liga" 1; }
 
 /* --- 2. 颜色变量 --- */
