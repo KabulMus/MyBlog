@@ -161,12 +161,19 @@ ___
 
 ## Footnotes
 
-A sentence with a footnote[^1].
+A sentence[^1] with a footnote[^2].
 
 [^1]: This is the footnote content with additional explanation.
+[^2]: The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. The text is only for test purpose. 
 
 ---
 
-## Conclusion
+## Long Text Layout Test
+
+This is a paragraph for testing left-aligned English typesetting. Unlike Chinese justification, English text benefits from a ragged right edge that maintains consistent inter-word spacing. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump! The five boxing wizards jump quickly. Sphinx of black quartz, judge my vow.
+
+When numbers and symbols are mixed in — like version 4.5.2, price $1,234.56, or model numbers like A17 Pro and Snapdragon 8 Gen 3 — left alignment keeps everything readable without awkward gaps. URLs like https://example.com/path/to/page and email addresses like user@example.com are also common in English text.
+
+This is also a good place to observe how the browser handles line wrapping with long words like "antidisestablishment" or "floccinaucinihilipilification", as well as hyphenated terms like "state-of-the-art" and "user-friendly interface". End of test.
 
 This post demonstrates all common Markdown syntax elements and includes all 9 tags for testing the tag filter feature.
