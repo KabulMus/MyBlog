@@ -1199,7 +1199,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     gap: 1rem;
     max-width: 800px;
     margin: 3rem auto 0;
-    padding: 1.5rem 0;
+    padding: 1.5rem 2rem;
 }
 
 .post-nav-link {
@@ -1294,12 +1294,29 @@ html[lang='en-US'] .typography-body .footnotes::before {
     font-weight: 700;
     color: var(--text-main);
     line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-clamp: 2;
-    transition: all 0.2s ease;
+    max-height: calc(1.4em * 2);
     overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+/* Previous：中文两端对齐（尾行左对齐），英文左对齐 */
+.post-nav-link.prev .post-nav-title {
+    text-align: justify;
+    text-align-last: left;
+}
+
+html[lang='en-US'] .post-nav-link.prev .post-nav-title {
+    text-align: left;
+}
+
+/* Next：中文两端对齐（尾行右对齐），英文右对齐 */
+.post-nav-link.next .post-nav-title {
+    text-align: justify;
+    text-align-last: right;
+}
+
+html[lang='en-US'] .post-nav-link.next .post-nav-title {
+    text-align: right;
 }
 
 .post-nav-link:hover .post-nav-title {

@@ -253,6 +253,45 @@ function getLangSwitchHref(pathname: string) {
 					}
 				}
 			}
+
+			// 可靠的 JS 两行省略号
+			function clampNavTitles() {
+				document.querySelectorAll('.post-nav-title').forEach(function(el) {
+					var lineHeight = parseFloat(window.getComputedStyle(el).lineHeight) || 22;
+					var maxHeight = lineHeight * 2;
+					var fullText = el.getAttribute('data-full-text');
+					if (fullText === null) {
+						fullText = el.textContent;
+						el.setAttribute('data-full-text', fullText);
+					}
+					el.style.maxHeight = maxHeight + 'px';
+					el.textContent = fullText;
+					// 加 1px 容差，避免刚好两行时被误判为溢出
+					if (el.scrollHeight <= el.clientHeight + 1) return;
+					// 二分截断直到不超过两行
+					var low = 0, high = fullText.length;
+					while (low < high) {
+						var mid = Math.ceil((low + high) / 2);
+						el.textContent = fullText.slice(0, mid) + '…';
+						if (el.scrollHeight <= el.clientHeight + 1) {
+							low = mid;
+						} else {
+							high = mid - 1;
+						}
+					}
+					// 回退到最近的词边界（空格），避免切断单词
+					var cut = low;
+					var lastSpace = fullText.lastIndexOf(' ', cut);
+					if (lastSpace > cut * 0.5) {
+						cut = lastSpace;
+					}
+					el.textContent = fullText.slice(0, cut).replace(/\s+$/, '') + '…';
+				});
+			}
+
+			document.addEventListener('DOMContentLoaded', clampNavTitles);
+			window.addEventListener('load', clampNavTitles);
+			window.addEventListener('resize', clampNavTitles);
 		})();
 	</script>
 	</body>
