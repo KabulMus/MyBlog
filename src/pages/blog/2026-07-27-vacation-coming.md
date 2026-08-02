@@ -2,7 +2,9 @@
 layout: '../../layouts/Layout.astro'
 title: '终于快熬出头了...'
 date: '2026-07-27'
-tags: ['rant', 'academic']
+draft: false
+category: 'thoughts'
+tags: ['rant']
 ---
 
 终于！

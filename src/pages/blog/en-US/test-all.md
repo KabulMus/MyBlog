@@ -2,7 +2,9 @@
 layout: '../../../layouts/Layout.astro'
 title: '🧪 Full Syntax Test Post'
 date: '2026-07-29'
-tags: ['life', 'channel', 'academic', 'insync', 'nation', 'tutorial', 'achievement', 'essays', 'rant']
+draft: true
+category: 'achievements'
+tags: ['channel', 'insync', 'tutorial', 'rant', 'article']
 ---
 
 ## Heading Levels
@@ -22,6 +24,8 @@ tags: ['life', 'channel', 'academic', 'insync', 'nation', 'tutorial', 'achieveme
 Normal paragraph here, with **bold text**, *italic text*, ~~strikethrough~~, ***bold italic***, <mark>highlighted text</mark>, `inline code`, <sub>subscript</sub> and <sup>superscript</sup>.
 
 A long text for line wrap testing. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. 中日文混排没有问题。
+
+## The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. 
 
 ---
 

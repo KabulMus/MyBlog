@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { tagNamesEn } from '../../config/tags';
+import { categories, categoryNamesEn as categoryNames, catOrder } from '../../config/categories';
 
 const postsPerPage = 8;
 const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
@@ -22,10 +24,7 @@ function smartQuotes(text: string): string {
         .replace(/'/g, '\u2019');
 }
 
-const tagNames: Record<string, string> = {
-    life: 'Life', channel: 'Channel', insync: 'In-sync', rant: 'Rant',
-    tutorial: 'Tutorial', essays: 'Essays', academic: 'Academic', nation: 'Nation', achievement: 'Achievement',
-};
+const tagNames = tagNamesEn;
 
 const sortedPosts = allPosts.sort((a, b) => {
     const dateA = new Date(a.frontmatter?.date || 0).getTime();
@@ -33,13 +32,23 @@ const sortedPosts = allPosts.sort((a, b) => {
     return dateB - dateA;
 });
 
-const tagOrder = ['life', 'channel', 'insync', 'rant', 'tutorial', 'essays', 'academic', 'nation', 'achievement'];
-const allTags = [...new Set(sortedPosts.flatMap(p => p.frontmatter?.tags || []))]
-    .sort((a, b) => {
-        const ia = tagOrder.indexOf(a);
-        const ib = tagOrder.indexOf(b);
-        return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+// 动态提取 tag → 归属分类：文章分在哪个分类，其 tag 就出现在该分类的筛选里（一个 tag 可属多分类）
+const tagToCats: Record<string, string[]> = {};
+sortedPosts.forEach((post: any) => {
+    const cat = post.frontmatter?.category;
+    if (!cat) return;
+    (post.frontmatter?.tags || []).forEach((tag: string) => {
+        if (!tagToCats[tag]) tagToCats[tag] = [];
+        if (tagToCats[tag].indexOf(cat) === -1) tagToCats[tag].push(cat);
     });
+});
+// 按分类固定顺序分组排序，同分类内按显示名排序
+const allTags: string[] = Object.keys(tagToCats).sort((a: string, b: string) => {
+    const ca = catOrder[tagToCats[a][0]] ?? 99;
+    const cb = catOrder[tagToCats[b][0]] ?? 99;
+    if (ca !== cb) return ca - cb;
+    return String(tagNames[a] || a).localeCompare(String(tagNames[b] || b));
+});
 
 const totalPages = Math.max(1, Math.ceil(sortedPosts.length / postsPerPage));
 const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -59,10 +68,22 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             <div id="search"></div>
         </div>
 
-        <div class="tag-filter-bar">
-            {allTags.map(tag => (
-                <button class={`tag-filter-btn tag-filter-btn--${tag}`} data-tag={tag}>{tagNames[tag] || tag}</button>
+        <div class="cat-filter-bar" data-pagefind-ignore>
+            {categories.map((cat: any) => (
+                <button class={`cat-filter-btn cat-filter-btn--${cat.id}`} data-cat={cat.id}>{cat.en}</button>
             ))}
+        </div>
+
+        <div class="tag-filter-bar" data-pagefind-ignore id="tag-filter-bar">
+            <div class="tag-filter-bar-inner">
+            {allTags.map(tag => (
+                <button
+                    class={`tag-filter-btn tag-filter-btn--${tag}`}
+                    data-tag={tag}
+                    data-cats={(tagToCats[tag] || []).join(',')}
+                >{tagNames[tag] || tag}</button>
+            ))}
+            </div>
         </div>
 
         <ul class="post-list">
@@ -70,12 +91,16 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = post.url || `/blog/en-US/${post.file?.split('/').pop()?.replace('.md', '')}`;
                 return (
-                    <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')}>
+                    <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-category={post.frontmatter?.category || ''}>
                         <span class="post-index">{sortedPosts.length - index}</span>
-                        {post.frontmatter?.tags?.length > 0 && (
-                            <div class="post-tags">
-                                {post.frontmatter.tags.map((tag: string) => (
-                                    <span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+                        {post.frontmatter?.category && (
+                            <div class="post-tags" data-pagefind-ignore>
+                                <span class={`tag cat-tag cat-${post.frontmatter.category}`}>{categoryNames[post.frontmatter.category] || post.frontmatter.category}</span>
+                                {post.frontmatter.tags?.length > 0 && post.frontmatter.tags.map((tag: string, i: number) => (
+                                    <Fragment key={tag}>
+                                        {i > 0 && <span class="tag-sep" aria-hidden="true">·</span>}
+                                        <span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+                                    </Fragment>
                                 ))}
                             </div>
                         )}
@@ -84,7 +109,13 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                         </a>
                         {post.frontmatter?.date && (
                             <span class="post-date">
-                                <icons>date</icons> {formatDate(post.frontmatter.date)}
+                                <svg class="date-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M7,14.5h3c.55,0,1-.45,1-1s-.45-1-1-1h-3c-.55,0-1,.45-1,1s.45,1,1,1Z"/>
+                                    <path d="M14,14.5h3c.55,0,1-.45,1-1s-.45-1-1-1h-3c-.55,0-1,.45-1,1s.45,1,1,1Z"/>
+                                    <path d="M14,18.5h3c.55,0,1-.45,1-1s-.45-1-1-1h-3c-.55,0-1,.45-1,1s.45,1,1,1Z"/>
+                                    <path d="M20.5,2.99h-3.5v-.5c0-.55-.45-1-1-1s-1,.45-1,1v.5h-6v-.5c0-.55-.45-1-1-1s-1,.45-1,1v.5h-3.5c-1.1,0-2,.9-2,2v15.51c0,1.1.9,2,2,2h17.01c1.1,0,2-.9,2-2V5c0-1.1-.9-2-2-2ZM20.5,20.5H3.5v-9.51h17.01v9.51ZM20.5,9H3.5v-4h3.5v1.5c0,.55.45,1,1,1s1-.45,1-1v-1.5h6v1.5c0,.55.45,1,1,1s1-.45,1-1v-1.5h3.5v4Z"/>
+                                    <path d="M7,18.5h3c.55,0,1-.45,1-1s-.45-1-1-1h-3c-.55,0-1,.45-1,1s.45,1,1,1Z"/>
+                                </svg> {formatDate(post.frontmatter.date)}
                             </span>
                         )}
                     </li>
@@ -146,7 +177,18 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 <script src="/pagefind/pagefind-ui.js" is:inline></script>
 
 <script is:inline>
+    var activeCategory = '';
     var activeTags = [];
+
+    // tag 筛选栏展开/收起：只切换 CSS class，动画全部由 @keyframes 驱动
+    // （grid-template-rows 0fr↔1fr 平滑展开，并自然推挤下方卡片滑动）
+    function setTagBar(tagBar, open) {
+        if (!tagBar) return;
+        if (open && tagBar.classList.contains('is-open')) return; // 已展开，无需重播
+        tagBar.classList.remove('is-open', 'is-closing');
+        void tagBar.offsetWidth; // 强制 reflow，确保动画每次都能重新触发
+        tagBar.classList.add(open ? 'is-open' : 'is-closing');
+    }
 
     function getPageFromUrl() {
         const params = new URLSearchParams(window.location.search);
@@ -163,10 +205,12 @@ const nextPage = Math.min(totalPages, currentPage + 1);
         window.setTimeout(() => {
             document.querySelectorAll('.post-list .post-item').forEach((item) => {
                 const itemPage = Number(item.getAttribute('data-page') || '1');
+                const itemCategory = item.getAttribute('data-category') || '';
                 const itemTags = (item.getAttribute('data-tags') || '').split(',').filter(Boolean);
+                const matchesCat = !activeCategory || itemCategory === activeCategory;
                 const matchesTag = activeTags.length === 0 || activeTags.some(function(t) { return itemTags.includes(t); });
                 const matchesPage = itemPage === page;
-                item.classList.toggle('is-hidden', !matchesTag || !matchesPage);
+                item.classList.toggle('is-hidden', !matchesCat || !matchesTag || !matchesPage);
             });
 
             document.querySelectorAll('.pagination-link').forEach((link) => {
@@ -231,7 +275,13 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             new PagefindUI({
                 element: '#search',
                 showImages: false,
-                translations: { placeholder: 'Search posts…' }
+                translations: { placeholder: 'Search posts…' },
+                processTerm: (term) => {
+                    // 中文片段按精确短语匹配（配合 unigram 索引）：
+                    // 索引用零宽空格 U+200B 分隔，查询用普通空格分隔再包引号；
+                    // 英文查询不含 CJK，不受影响
+                    return term.replace(/[\u4e00-\u9fff\u3400-\u4dbf]+/g, function(m) { return '"' + m.split('').join(' ') + '"'; });
+                }
             });
 
             const searchEl = document.querySelector('#search');
@@ -244,6 +294,45 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     var initialPage = getPageFromUrl();
         sessionStorage.setItem('blogHomePage', String(initialPage));
         showPage(initialPage);
+
+        document.querySelectorAll('.cat-filter-btn').forEach((btn) => {
+            btn.addEventListener('click', function() {
+                var cat = this.getAttribute('data-cat') || '';
+                // 再次点击已选中的分类则取消选择（回到全部）；点其他分类则切换
+                activeCategory = activeCategory === cat ? '' : cat;
+                activeTags = [];
+                document.querySelectorAll('.cat-filter-btn').forEach(function(b) {
+                    b.classList.toggle('is-active', b.getAttribute('data-cat') === activeCategory);
+                });
+                var tagBar = document.getElementById('tag-filter-bar');
+                var wasOpen = tagBar.classList.contains('is-open');
+                if (activeCategory) {
+                    // 显示分类：只显示该分类下的 tag（一个 tag 可属多分类）
+                    document.querySelectorAll('.tag-filter-btn').forEach(function(b) {
+                        var cats = (b.getAttribute('data-cats') || '').split(',').filter(Boolean);
+                        b.style.display = cats.indexOf(activeCategory) !== -1 ? '' : 'none';
+                    });
+                    if (wasOpen) {
+                        // 已展开（分类间切换）：保持展开，仅 tag 组淡入过渡，不重播栏动画
+                        var inner = tagBar.querySelector('.tag-filter-bar-inner');
+                        inner.classList.remove('switch-in');
+                        void inner.offsetWidth;
+                        inner.classList.add('switch-in');
+                    } else {
+                        setTagBar(tagBar, true);
+                    }
+                } else {
+                    // 取消分类：保持当前 tag 显示，随整个栏一起收起（渐隐，无闪现也不瞬间消失）
+                    setTagBar(tagBar, false);
+                }
+                var nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('page', '1');
+                history.pushState({}, '', nextUrl);
+                sessionStorage.setItem('blogHomePage', '1');
+                showPage(1);
+                smoothScrollToTop();
+            });
+        });
 
         document.querySelectorAll('.tag-filter-btn').forEach((btn) => {
             btn.addEventListener('click', function() {

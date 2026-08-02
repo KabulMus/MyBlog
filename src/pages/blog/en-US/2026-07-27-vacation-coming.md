@@ -2,7 +2,9 @@
 layout: '../../../layouts/Layout.astro'
 title: 'Finally about to survive this...'
 date: '2026-07-27'
-tags: ['rant', 'academic']
+draft: false
+category: 'thoughts'
+tags: ['rant']
 ---
 
 Finally!

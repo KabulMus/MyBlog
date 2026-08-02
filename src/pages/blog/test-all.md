@@ -2,7 +2,9 @@
 layout: '../../layouts/Layout.astro'
 title: '🧪 全语法测试文章'
 date: '2026-07-29'
-tags: ['life', 'channel', 'academic', 'insync', 'nation', 'tutorial', 'achievement', 'essays', 'rant']
+draft: true
+category: 'achievements'
+tags: ['channel', 'insync', 'tutorial', 'rant', 'article']
 ---
 
 ## 标题层级
@@ -22,6 +24,8 @@ tags: ['life', 'channel', 'academic', 'insync', 'nation', 'tutorial', 'achieveme
 普通段落，这里是 **粗体文字**，*斜体文字*，~~删除线~~，***粗斜体***，<mark>高亮文字</mark>，`行内代码`，<sub>下标</sub> 和 <sup>上标</sup>。
 
 这是一段很长的文本用来测试自动换行效果。The quick brown fox jumps over the lazy dog. 敏捷的棕色狐狸跳过了懒惰的狗。中日文混排测试：日本語のテスト文章です。
+
+## The quick brown fox jumps over the lazy dog. 敏捷的棕色狐狸跳过了懒惰的狗。中日文混排测试：日本語のテスト文章です。
 
 ---
 

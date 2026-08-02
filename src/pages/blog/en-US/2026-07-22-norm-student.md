@@ -2,7 +2,9 @@
 layout: '../../../layouts/Layout.astro'
 title: 'Imagine heading to school under the scorching July sun... /s'
 date: '2026-07-22'
-tags: ['rant', 'academic']
+draft: false
+category: 'thoughts'
+tags: ['rant']
 ---
 
 our No.1 High School is SOOOO amazing!!!
