@@ -3,7 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: 'Imagine heading to school under the scorching July sun... /s'
 date: '2026-07-22'
 draft: false
-category: 'thoughts'
+category: ['essays']
 tags: ['rant']
 ---
 

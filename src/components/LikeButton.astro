@@ -1,0 +1,104 @@
+---
+/**
+ * 点赞按钮
+ * - variant="float"：桌面端 hero 右侧的裸爱心（无框，直接可点）
+ * - 默认（full）：移动端篇末（无框爱心 + 引导文案）
+ * 数据来自 Cloudflare Pages Function：/api/likes/<slug>
+ * 同一 slug 的多个实例共享状态、同步刷新。
+ * 样式在 main.css 的「点赞区」一节统一维护。
+ */
+interface Props {
+  slug: string;
+  lang?: 'zh' | 'en';
+}
+
+const { slug, lang = 'zh' } = Astro.props;
+const isEn = lang === 'en';
+---
+
+<div class="like-section" data-like-slug={slug} data-pagefind-ignore>
+  <button class="like-btn" type="button" aria-pressed="false" aria-label={isEn ? 'Like this post' : '点赞这篇文章'}>
+    <svg class="like-heart" viewBox="0 0 48 48" aria-hidden="true">
+      <path d="M15 8C8.92487 8 4 12.9249 4 19C4 30 17 40 24 42.3262C31 40 44 30 44 19C44 12.9249 39.0751 8 33 8C29.2797 8 25.9907 9.8469 24 12.6738C22.0093 9.8469 18.7203 8 15 8Z"/>
+    </svg>
+    <span class="like-count">0</span>
+  </button>
+</div>
+
+<script>
+	interface LikeData {
+		slug: string;
+		count: number;
+		liked: boolean;
+	}
+
+	const isEn = (document.documentElement.lang || '').toLowerCase().indexOf('en') === 0;
+	const groups = Array.from(document.querySelectorAll<HTMLElement>('[data-like-slug]'));
+	if (groups.length) {
+		const bySlug = new Map<string, HTMLElement[]>();
+		groups.forEach((g) => {
+			const slug = g.dataset.likeSlug || '';
+			const arr = bySlug.get(slug) || [];
+			arr.push(g);
+			bySlug.set(slug, arr);
+		});
+
+		function render(slug: string, count: number, liked: boolean) {
+			(bySlug.get(slug) || []).forEach((g) => {
+				const btn = g.querySelector<HTMLButtonElement>('.like-btn');
+				const countEl = g.querySelector<HTMLElement>('.like-count');
+				const textEl = g.querySelector<HTMLElement>('.like-text');
+				if (!btn || !countEl) return;
+				countEl.textContent = String(count);
+				btn.classList.toggle('is-liked', liked);
+				btn.setAttribute('aria-pressed', String(liked));
+				if (textEl) {
+					textEl.textContent = liked ? (isEn ? 'Liked' : '已赞') : (isEn ? 'Like' : '点赞');
+				}
+			});
+		}
+
+		async function load(slug: string) {
+			try {
+				const res = await fetch(`/api/likes/${encodeURIComponent(slug)}`);
+				const data = (await res.json()) as LikeData;
+				render(slug, data.count, data.liked);
+			} catch {
+				/* 静态降级：保持初始 0 */
+			}
+		}
+
+		groups.forEach((g) => {
+			const btn = g.querySelector<HTMLButtonElement>('.like-btn');
+			if (!btn) return;
+			btn.addEventListener('click', async () => {
+				const slug = g.dataset.likeSlug || '';
+				if (btn.classList.contains('is-pending')) return;
+				(bySlug.get(slug) || []).forEach((x) => x.querySelector('.like-btn')?.classList.add('is-pending'));
+				try {
+					const res = await fetch(`/api/likes/${encodeURIComponent(slug)}`, { method: 'POST' });
+					const data = (await res.json()) as LikeData;
+					render(slug, data.count, data.liked);
+					// 点赞成功瞬间播放一次心跳，animationend 后移除，避免常驻动画干扰 hover
+					if (data.liked) {
+						(bySlug.get(slug) || []).forEach((x) => {
+							const b = x.querySelector<HTMLButtonElement>('.like-btn');
+							if (!b) return;
+							b.classList.remove('like-pop');
+							void b.offsetWidth; // 强制 reflow，连续点击也能重播
+							b.classList.add('like-pop');
+							const clearPop = () => b.classList.remove('like-pop');
+							b.addEventListener('animationend', clearPop, { once: true });
+							setTimeout(clearPop, 500); // 兜底：极端情况下 animationend 未触发也能移除
+						});
+					}
+				} catch {
+					/* 失败保持原状 */
+				}
+				(bySlug.get(slug) || []).forEach((x) => x.querySelector('.like-btn')?.classList.remove('is-pending'));
+			});
+		});
+
+		bySlug.forEach((_arr, slug) => load(slug));
+	}
+</script>

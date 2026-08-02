@@ -3,7 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: '🧪 Full Syntax Test Post'
 date: '2026-07-29'
 draft: true
-category: 'achievements'
+category: ['achievements']
 tags: ['channel', 'insync', 'tutorial', 'rant', 'article']
 ---
 

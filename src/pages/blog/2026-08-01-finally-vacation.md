@@ -3,7 +3,7 @@ layout: '../../layouts/Layout.astro'
 title: '耶——放假了！！！'
 date: '2026-08-01'
 draft: false
-category: 'thoughts'
+category: ['essays']
 tags: ['rant']
 ---
 

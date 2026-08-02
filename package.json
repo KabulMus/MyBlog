@@ -19,6 +19,7 @@
     "remark-math": "^6.0.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
     "pagefind": "^1.5.2"
   }
 }

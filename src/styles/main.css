@@ -1,5 +1,18 @@
 /* --- 1. 字体声明 --- */
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&family=Playfair+Display+SC:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&family=Playfair+Display+SC:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+/* --- 对于 Source Serif 4 的设置：12 个子集 @font-face（italic×6 + normal×6，顺序均为 cyrillic-ext/cyrillic/greek/vietnamese/latin-ext/latin），unicode-range 按需加载 --- */
+@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFK2_tTDB4M7-auWDN0ahZJW1gewti_Wo7H.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFK2_tTDB4M7-auWDN0ahZJW1gewtG_Wo7H.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFK2_tTDB4M7-auWDN0ahZJW1gewta_Wo7H.woff2) format('woff2');unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF}
+@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFK2_tTDB4M7-auWDN0ahZJW1gewtq_Wo7H.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFK2_tTDB4M7-auWDN0ahZJW1gewtu_Wo7H.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Source Serif 4';font-style:italic;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFK2_tTDB4M7-auWDN0ahZJW1gewtW_Wg.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFI2_tTDB4M7-auWDN0ahZJW1gW8tenXg.woff2) format('woff2');unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}
+@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFI2_tTDB4M7-auWDN0ahZJW1gf8tenXg.woff2) format('woff2');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFI2_tTDB4M7-auWDN0ahZJW1gY8tenXg.woff2) format('woff2');unicode-range:U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF}
+@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFI2_tTDB4M7-auWDN0ahZJW1gU8tenXg.woff2) format('woff2');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFI2_tTDB4M7-auWDN0ahZJW1gV8tenXg.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'Source Serif 4';font-style:normal;font-weight:200 900;font-display:swap;size-adjust:105%;src:url(https://fonts.gstatic.com/s/sourceserif4/v14/vEFI2_tTDB4M7-auWDN0ahZJW1gb8tc.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 /* Musical - 乐谱符号字体 */
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Regular.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
@@ -55,9 +68,9 @@
     --cat-studio: #1e66c6;             /* 原「频道」蓝 */
     --cat-studio-bg: rgba(30, 102, 198, 0.12);
     --cat-studio-border: rgba(30, 102, 198, 0.35);
-    --cat-thoughts: #4f46e5;           /* 原「随笔」靛蓝 */
-    --cat-thoughts-bg: rgba(79, 70, 229, 0.12);
-    --cat-thoughts-border: rgba(79, 70, 229, 0.35);
+    --cat-essays: #4f46e5;             /* 原「随笔」靛蓝 */
+    --cat-essays-bg: rgba(79, 70, 229, 0.12);
+    --cat-essays-border: rgba(79, 70, 229, 0.35);
     --cat-achievements: #06b6d4;         /* 原「成就」青 */
     --cat-achievements-bg: rgba(6, 182, 212, 0.12);
     --cat-achievements-border: rgba(6, 182, 212, 0.35);
@@ -104,9 +117,9 @@
     --cat-studio: #93c5fd;             /* 原「频道」暗色 */
     --cat-studio-bg: rgba(147, 197, 253, 0.15);
     --cat-studio-border: rgba(147, 197, 253, 0.35);
-    --cat-thoughts: #818cf8;           /* 原「随笔」暗色 */
-    --cat-thoughts-bg: rgba(129, 140, 248, 0.15);
-    --cat-thoughts-border: rgba(129, 140, 248, 0.35);
+    --cat-essays: #818cf8;             /* 原「随笔」暗色 */
+    --cat-essays-bg: rgba(129, 140, 248, 0.15);
+    --cat-essays-border: rgba(129, 140, 248, 0.35);
     --cat-achievements: #2dd4bf;         /* 原「成就」暗色 */
     --cat-achievements-bg: rgba(45, 212, 191, 0.15);
     --cat-achievements-border: rgba(45, 212, 191, 0.35);
@@ -152,9 +165,9 @@
         --cat-studio: #93c5fd;             /* 原「频道」暗色 */
         --cat-studio-bg: rgba(147, 197, 253, 0.15);
         --cat-studio-border: rgba(147, 197, 253, 0.35);
-        --cat-thoughts: #818cf8;           /* 原「随笔」暗色 */
-        --cat-thoughts-bg: rgba(129, 140, 248, 0.15);
-        --cat-thoughts-border: rgba(129, 140, 248, 0.35);
+        --cat-essays: #818cf8;             /* 原「随笔」暗色 */
+        --cat-essays-bg: rgba(129, 140, 248, 0.15);
+        --cat-essays-border: rgba(129, 140, 248, 0.35);
         --cat-achievements: #2dd4bf;         /* 原「成就」暗色 */
         --cat-achievements-bg: rgba(45, 212, 191, 0.15);
         --cat-achievements-border: rgba(45, 212, 191, 0.35);
@@ -173,10 +186,6 @@
         --tag-rant-border: rgba(251, 113, 133, 0.3);
         --mark-cyan: #2dd4bf60;
     }
-}
-
-num {
-    font-variant-numeric: tabular-nums;
 }
 
 /* --- 3. 基础复位 --- */
@@ -572,8 +581,20 @@ footer a:hover {
     padding: 0 32px;
 }
 
-.typography-body p, .typography-body li {
-    margin: 0.3rem 0;
+.typography-body p {
+    margin: 0.3rem 0 0.6rem;
+}
+
+.typography-body li {
+    margin: 0.2rem 0;
+}
+
+/* 中文斜体：用 Noto Serif SC 衬线体呈现（避免对无斜体字形做伪斜体机械倾斜变换） */
+html[lang='zh-CN'] .typography-body em,
+html[lang='zh-CN'] .typography-body i {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-style: italic;
+    font-synthesis: none; /* 禁止浏览器合成伪斜体/伪粗体 */
 }
 
 .typography-body h1, .typography-body h2,
@@ -591,7 +612,7 @@ footer a:hover {
 
 .typography-body h2 {
     font-size: 1.6rem;
-    margin: 1rem 0 0.4rem;
+    margin: 1rem 0 0.6rem;
 }
 
 .typography-body h3 {
@@ -672,7 +693,6 @@ footer a:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 0.5rem;
 }
 
 /* 2. 核心重绘：废除动态表单外壳 */
@@ -907,7 +927,7 @@ footer a:hover {
 /* 所有单元格的基础间距与无竖线规范 */
 .typography-body th,
 .typography-body td {
-    padding: 10px 16px;                 /* 保持舒适的上下留白 */
+    padding: 8px 16px;                 /* 保持舒适的上下留白 */
     color: var(--text-main);
     
     /* ⚡️ 修正：彻底删除了 text-align 相关的样式，完全听从 Markdown 的控制 */
@@ -919,7 +939,7 @@ footer a:hover {
 
 /* ⚡️ 中间分割线：表头下方横线设置为纤细的 1px */
 .typography-body th {
-    font-weight: 600;
+    font-weight: 700;
     background-color: transparent;      
     border-bottom: 1px solid var(--text-sub); 
 }
@@ -1309,6 +1329,15 @@ html[lang='en-US'] .typography-body .footnotes::before {
 .post-nav-link.is-disabled .post-nav-label {
     color: var(--text-sub);
 }
+/* 禁用占位提示（第一篇/最后一篇）：用斜体 + 500 字重区分于真实文章标题（700） */
+.post-nav-link.is-disabled .post-nav-title {
+    font-style: italic;
+    font-weight: 400;
+}
+/* 中文无斜体字形，伪斜体不自然：返回正体，仅靠 500 字重区分 */
+html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
+    font-style: normal;
+}
 
 .post-nav-label {
     font-size: 0.8rem;
@@ -1390,6 +1419,83 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
 
 .post-nav > span:empty {
     flex: 1;
+}
+
+/* ==========================================================================
+   ❤️ 文章点赞（Like Button）— 正文末尾左对齐，仅爱心 + 点赞数
+   ========================================================================== */
+.like-section {
+    display: flex;
+    align-items: flex-start;
+    margin: 2.5rem 0 0;
+    position: relative;
+}
+
+/* 裸爱心按钮：无框无底，纯图标 + 数字 */
+.like-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    color: var(--text-sub);
+    font-family: 'Encode Sans', 'Inter', 'Noto Sans SC', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.25s ease, transform 0.25s ease;
+    user-select: none;
+}
+
+.like-btn .like-heart {
+    width: 1.35em;
+    height: 1.35em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.6;   /* viewBox 由 24 放大到 48，描边同步 ×2 保持视觉一致 */
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    --pop-end: 1;        /* 动画结束帧缩放（非 hover） */
+    transition: transform 0.25s ease, fill 0.2s ease;
+}
+
+.like-btn:hover .like-heart {
+    --pop-end: 1.15;     /* hover 时动画结束帧 = hover 放大值，动画结束无缝衔接，无瞬跳 */
+    transform: scale(1.15);
+}
+
+/* 点赞数：等宽数字，左对齐 */
+.like-count {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    text-align: left;
+}
+
+/* 已点赞：心形实心红（复用 tag-nation 红，亮暗自动适配） */
+.like-btn.is-liked {
+    color: var(--tag-nation);
+}
+.like-btn.is-liked .like-heart {
+    fill: currentColor;
+    stroke: currentColor;
+}
+.like-btn.is-pending {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* 点赞瞬间的心跳动画 */
+@keyframes likePop {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.3); }
+    60%  { transform: scale(0.92); }
+    100% { transform: scale(var(--pop-end)); }   /* 结束帧跟随 hover：hover 1.15 / 非 hover 1 */
+}
+
+/* 心跳动画改为 JS 临时添加 like-pop 触发，播完即移除，不与 hover 的 transform 冲突 */
+.like-btn.like-pop .like-heart {
+    animation: likePop 0.45s ease;
 }
 
 .post-list.is-transitioning {
@@ -1775,16 +1881,40 @@ html[lang='en-US'] .post-title-link {
 }
 .cat-tag.cat-music { background: var(--cat-music-bg); color: var(--cat-music); }
 .cat-tag.cat-studio { background: var(--cat-studio-bg); color: var(--cat-studio); }
-.cat-tag.cat-thoughts { background: var(--cat-thoughts-bg); color: var(--cat-thoughts); }
+.cat-tag.cat-essays { background: var(--cat-essays-bg); color: var(--cat-essays); }
 .cat-tag.cat-achievements { background: var(--cat-achievements-bg); color: var(--cat-achievements); }
 
-/* tag 之间的分隔号：独立 flex 项，靠 gap 两侧对称自然居中，无需 margin */
+/* tag 之间的分隔号（实心圆点 SVG）：独立 flex 项，靠 gap 两侧对称自然居中 */
 .tag-sep {
     color: var(--text-sub);
     opacity: 0.5;
     user-select: none;
-    font-family: 'Inter', sans-serif;
-    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    align-self: center;           /* 覆盖父容器 baseline 对齐，使分隔符与标签垂直居中 */
+}
+.tag-sep svg {
+    width: 5px;
+    height: 5px;
+    fill: currentColor;           /* 继承 .tag-sep 的颜色 */
+    display: block;
+}
+
+/* 不同 cat 组之间的大分隔符号（竖线 SVG）：比同组内的圆点更醒目，区分标签分组 */
+.tag-group-sep {
+    color: var(--text-sub);
+    opacity: 0.5;
+    user-select: none;
+    margin: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    align-self: center;           /* 覆盖父容器 baseline 对齐，使分隔符与标签垂直居中 */
+}
+.tag-group-sep svg {
+    width: 10px;
+    height: 20px;
+    fill: currentColor;           /* 继承 .tag-group-sep 的颜色 */
+    display: block;
 }
 
 /* 列表页卡片内的标签容器 */
@@ -1804,6 +1934,7 @@ html[lang='en-US'] .post-title-link {
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 12px;
+    margin-left: -2px;
     padding: 0 32px;
     align-items: baseline;   /* 分类框与纯文字 tag 按文字基线对齐，避免垂直偏移 */
 }
@@ -1838,11 +1969,11 @@ html[lang='en-US'] .post-title-link {
     to   { opacity: 1; transform: translateY(0); }
 }
 .tag-filter-bar.is-open {
-    animation: tagBarOpen 0.5s ease forwards;
+    animation: tagBarOpen 0.3s ease forwards;
     pointer-events: auto;
 }
 .tag-filter-bar.is-closing {
-    animation: tagBarClose 0.5s ease forwards;
+    animation: tagBarClose 0.3s ease forwards;
 }
 @keyframes tagBarOpen {
     from { grid-template-rows: 0fr; opacity: 0; margin-top: 0; margin-bottom: 0; transform: translateY(-6px); }
@@ -1913,8 +2044,8 @@ html[lang='en-US'] .cat-filter-btn {
 .cat-filter-btn--music.is-active { background: var(--cat-music-bg) !important; border-color: var(--cat-music) !important; color: var(--cat-music) !important; }
 .cat-filter-btn--studio { color: var(--cat-studio); border-color: var(--cat-studio-border); }
 .cat-filter-btn--studio.is-active { background: var(--cat-studio-bg) !important; border-color: var(--cat-studio) !important; color: var(--cat-studio) !important; }
-.cat-filter-btn--thoughts { color: var(--cat-thoughts); border-color: var(--cat-thoughts-border); }
-.cat-filter-btn--thoughts.is-active { background: var(--cat-thoughts-bg) !important; border-color: var(--cat-thoughts) !important; color: var(--cat-thoughts) !important; }
+.cat-filter-btn--essays { color: var(--cat-essays); border-color: var(--cat-essays-border); }
+.cat-filter-btn--essays.is-active { background: var(--cat-essays-bg) !important; border-color: var(--cat-essays) !important; color: var(--cat-essays) !important; }
 .cat-filter-btn--achievements { color: var(--cat-achievements); border-color: var(--cat-achievements-border); }
 .cat-filter-btn--achievements.is-active { background: var(--cat-achievements-bg) !important; border-color: var(--cat-achievements) !important; color: var(--cat-achievements) !important; }
 
@@ -1949,6 +2080,7 @@ html[lang='en-US'] .cat-filter-btn {
 .toc .toc-item,
 .toc-popup .toc-item {
     height: auto;
+    margin: 0.3rem 0; /* 覆盖正文 .typography-body li 的 0.2rem：目录项间距略宽更舒适 */
 }
 
 .toc .toc-item a,

@@ -3,7 +3,7 @@ layout: '../../layouts/Layout.astro'
 title: '什么叫七月份顶着个大太阳去一中上课。。。'
 date: '2026-07-22'
 draft: false
-category: 'thoughts'
+category: ['essays']
 tags: ['rant']
 ---
 

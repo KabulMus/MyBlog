@@ -1,0 +1,12 @@
+# Cloudflare Pages + Functions 配置（点赞系统 KV 绑定）
+name = "blog"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+# 点赞 KV namespace 绑定
+# 创建：npx wrangler kv namespace create LIKES
+# 然后把输出的 id 填到下面；部署到 dashboard 时也可在 Pages 项目
+# Settings → Functions → KV namespace bindings 添加（binding 名 LIKES）
+[[kv_namespaces]]
+binding = "LIKES"
+id = "cc35b4d8e99144febd88aff09b3138e2"

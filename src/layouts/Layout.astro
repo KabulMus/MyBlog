@@ -1,7 +1,8 @@
 ---
 import '../styles/main.css'
-import { tagNamesZh, tagNamesEn } from '../config/tags';
-import { getCategoryName } from '../config/categories';
+import LikeButton from '../components/LikeButton.astro';
+import { tagNamesZh, tagNamesEn, tagCats, groupTagsByCat } from '../config/tags';
+import { getCategoryName, toCatArray } from '../config/categories';
 
 interface Props {
 	title?: string;
@@ -76,6 +77,9 @@ function formatDate(dateStr: string) {
     if (!dateStr) return '';
     return dateStr.replace(/-/g, '.');
 }
+
+// 文章点赞：从路径取 slug（如 /blog/2026-07-01-hi → 2026-07-01-hi）
+const articleSlug = currentPath.startsWith('/blog') ? (currentPath.split('/').pop() || '') : '';
 
 const tagNames: Record<string, string> = isEnglishRoute ? tagNamesEn : tagNamesZh;
 
@@ -174,21 +178,26 @@ function getLangSwitchHref(pathname: string) {
 							</svg> {formatDate(pageDate)}
 						</span>
 					)}
-					{(frontmatter?.category || frontmatter?.tags?.length > 0) && (
-						<div class="article-tags" data-pagefind-ignore>
-							{frontmatter?.category && (
-								<span class={`tag cat-tag cat-${frontmatter.category}`}>
-									{getCategoryName(frontmatter.category, isEnglishRoute ? 'en' : 'zh')}
-								</span>
-							)}
-							{frontmatter?.tags?.length > 0 && frontmatter.tags.map((tag: string, i: number) => (
-								<Fragment key={tag}>
-									{i > 0 && <span class="tag-sep" aria-hidden="true">·</span>}
-									<span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
-								</Fragment>
-							))}
-						</div>
-					)}
+					{(() => {
+						const grouped = groupTagsByCat(toCatArray(frontmatter?.category), frontmatter?.tags || [], tagCats);
+						if (grouped.length === 0) return null;
+						return (
+							<div class="article-tags" data-pagefind-ignore>
+								{grouped.map((group, gi: number) => (
+									<Fragment key={'cat-' + group.cat}>
+										{gi > 0 && <span class="tag-group-sep" aria-hidden="true"><svg viewBox="0 0 12 24"><rect x="5.25" y="2" width="1.5" height="20" rx=".75" ry=".75"/></svg></span>}
+										<span class={`tag cat-tag cat-${group.cat}`}>{getCategoryName(group.cat, isEnglishRoute ? 'en' : 'zh')}</span>
+										{group.tags.map((tag: string, ti: number) => (
+											<Fragment key={tag}>
+												{ti > 0 && <span class="tag-sep" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></span>}
+												<span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+											</Fragment>
+										))}
+									</Fragment>
+								))}
+							</div>
+						);
+					})()}
 				</div>
 			</section>
 		</header>
@@ -207,6 +216,7 @@ function getLangSwitchHref(pathname: string) {
 			)}
 			<div class="post-body">
 				<slot />
+				{articleSlug && <LikeButton slug={articleSlug} lang={isEnglishRoute ? 'en' : 'zh'} />}
 			</div>
 		</main>
 
@@ -227,7 +237,7 @@ function getLangSwitchHref(pathname: string) {
 							<svg viewBox="0 0 48 48" aria-hidden="true" class="post-nav-arrow"><path d="M31 36L19 24L31 12"/></svg>
 							{isEnglishRoute ? 'Previous' : '上一篇'}
 						</span>
-						<span class="post-nav-title">{isEnglishRoute ? 'This is the first post' : '这是第一篇'}</span>
+						<span class="post-nav-title">{isEnglishRoute ? 'This is the first post' : '此为第一篇'}</span>
 					</div>
 				)}
 				{nextPost ? (
@@ -245,7 +255,7 @@ function getLangSwitchHref(pathname: string) {
 							{isEnglishRoute ? 'Next' : '下一篇'}
 							<svg viewBox="0 0 48 48" aria-hidden="true" class="post-nav-arrow"><path d="M19 12L31 24L19 36"/></svg>
 						</span>
-						<span class="post-nav-title">{isEnglishRoute ? 'This is the last post' : '这是最后一篇'}</span>
+						<span class="post-nav-title">{isEnglishRoute ? 'This is the last post' : '此为最后一篇'}</span>
 					</div>
 				)}
 			</nav>

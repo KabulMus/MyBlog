@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { tagNamesEn } from '../../config/tags';
-import { categories, categoryNamesEn as categoryNames, catOrder } from '../../config/categories';
+import { tagNamesEn, tagCats, groupTagsByCat, tagOrder } from '../../config/tags';
+import { categories, categoryNamesEn as categoryNames, catOrder, toCatArray } from '../../config/categories';
 
 const postsPerPage = 8;
 const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
@@ -32,21 +32,28 @@ const sortedPosts = allPosts.sort((a, b) => {
     return dateB - dateA;
 });
 
-// 动态提取 tag → 归属分类：文章分在哪个分类，其 tag 就出现在该分类的筛选里（一个 tag 可属多分类）
+// tag → 归属分类：优先用词典显式配置的 cats；未配置的 tag 再从文章动态提取
+//（文章可属于多个分类，动态提取时其 tag 归属到文章的所有分类）
 const tagToCats: Record<string, string[]> = {};
+Object.entries(tagCats).forEach(([tag, cats]) => { tagToCats[tag] = [...cats]; });
 sortedPosts.forEach((post: any) => {
-    const cat = post.frontmatter?.category;
-    if (!cat) return;
+    const cats = toCatArray(post.frontmatter?.category);
+    if (cats.length === 0) return;
     (post.frontmatter?.tags || []).forEach((tag: string) => {
+        if (tagToCats[tag]) return; // 已由词典配置，跳过动态提取
         if (!tagToCats[tag]) tagToCats[tag] = [];
-        if (tagToCats[tag].indexOf(cat) === -1) tagToCats[tag].push(cat);
+        cats.forEach((cat: string) => {
+            if (tagToCats[tag].indexOf(cat) === -1) tagToCats[tag].push(cat);
+        });
     });
 });
-// 按分类固定顺序分组排序，同分类内按显示名排序
+// 按 tagOrder 显式排序（分类分组，组内按配置顺序；未收录的排末尾）
+const orderIndex: Record<string, number> = {};
+tagOrder.forEach((t: string, i: number) => { orderIndex[t] = i; });
 const allTags: string[] = Object.keys(tagToCats).sort((a: string, b: string) => {
-    const ca = catOrder[tagToCats[a][0]] ?? 99;
-    const cb = catOrder[tagToCats[b][0]] ?? 99;
-    if (ca !== cb) return ca - cb;
+    const ia = orderIndex[a] ?? 9999;
+    const ib = orderIndex[b] ?? 9999;
+    if (ia !== ib) return ia - ib;
     return String(tagNames[a] || a).localeCompare(String(tagNames[b] || b));
 });
 
@@ -90,20 +97,32 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             {sortedPosts.map((post, index) => {
                 const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = post.url || `/blog/en-US/${post.file?.split('/').pop()?.replace('.md', '')}`;
+                const postCats = toCatArray(post.frontmatter?.category);
                 return (
-                    <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-category={post.frontmatter?.category || ''}>
+                    <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-categories={postCats.join(',')}>
                         <span class="post-index">{sortedPosts.length - index}</span>
-                        {post.frontmatter?.category && (
-                            <div class="post-tags" data-pagefind-ignore>
-                                <span class={`tag cat-tag cat-${post.frontmatter.category}`}>{categoryNames[post.frontmatter.category] || post.frontmatter.category}</span>
-                                {post.frontmatter.tags?.length > 0 && post.frontmatter.tags.map((tag: string, i: number) => (
-                                    <Fragment key={tag}>
-                                        {i > 0 && <span class="tag-sep" aria-hidden="true">·</span>}
-                                        <span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
-                                    </Fragment>
-                                ))}
-                            </div>
-                        )}
+                        {(() => {
+                            const grouped = postCats.length > 0
+                                ? groupTagsByCat(postCats, post.frontmatter?.tags || [], tagCats)
+                                : [];
+                            if (grouped.length === 0) return null;
+                            return (
+                                <div class="post-tags" data-pagefind-ignore>
+                                    {grouped.map((group, gi: number) => (
+                                        <Fragment key={'cat-' + group.cat}>
+                                            {gi > 0 && <span class="tag-group-sep" aria-hidden="true"><svg viewBox="0 0 12 24"><rect x="5.25" y="2" width="1.5" height="20" rx=".75" ry=".75"/></svg></span>}
+                                            <span class={`tag cat-tag cat-${group.cat}`}>{categoryNames[group.cat] || group.cat}</span>
+                                            {group.tags.map((tag: string, ti: number) => (
+                                                <Fragment key={tag}>
+                                                    {ti > 0 && <span class="tag-sep" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></span>}
+                                                    <span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+                                                </Fragment>
+                                            ))}
+                                        </Fragment>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                         <a href={postUrl} class="post-title-link">
                             <h3>{smartQuotes(post.frontmatter?.title || 'Untitled post')}</h3>
                         </a>
@@ -205,9 +224,9 @@ const nextPage = Math.min(totalPages, currentPage + 1);
         window.setTimeout(() => {
             document.querySelectorAll('.post-list .post-item').forEach((item) => {
                 const itemPage = Number(item.getAttribute('data-page') || '1');
-                const itemCategory = item.getAttribute('data-category') || '';
+                const itemCats = (item.getAttribute('data-categories') || '').split(',').filter(Boolean);
                 const itemTags = (item.getAttribute('data-tags') || '').split(',').filter(Boolean);
-                const matchesCat = !activeCategory || itemCategory === activeCategory;
+                const matchesCat = !activeCategory || itemCats.indexOf(activeCategory) !== -1;
                 const matchesTag = activeTags.length === 0 || activeTags.some(function(t) { return itemTags.includes(t); });
                 const matchesPage = itemPage === page;
                 item.classList.toggle('is-hidden', !matchesCat || !matchesTag || !matchesPage);
@@ -301,6 +320,10 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 // 再次点击已选中的分类则取消选择（回到全部）；点其他分类则切换
                 activeCategory = activeCategory === cat ? '' : cat;
                 activeTags = [];
+                // 清空逻辑状态时同步移除 tag 按钮的 active 高亮（避免切回分类时残留视觉）
+                document.querySelectorAll('.tag-filter-btn').forEach(function(b) {
+                    b.classList.remove('active');
+                });
                 document.querySelectorAll('.cat-filter-btn').forEach(function(b) {
                     b.classList.toggle('is-active', b.getAttribute('data-cat') === activeCategory);
                 });

@@ -3,7 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: 'Happy 12th debut anniversary, Charlie Zhou Shen!'
 date: '2026-07-25'
 draft: false
-category: 'music'
+category: ['music']
 tags: ['insync']
 ---
 

@@ -3,8 +3,8 @@ layout: '../../layouts/Layout.astro'
 title: '沃土计划'
 date: '2026-07-02'
 draft: false
-category: 'achievements'
-tags: ['academic', 'admission']
+category: ['achievements']
+tags: ['academic']
 ---
 
 Hmm... 有意思。

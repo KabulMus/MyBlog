@@ -3,7 +3,7 @@
 export const categories: { id: string; zh: string; en: string }[] = [
     { id: 'music', zh: '音乐', en: 'Music' },
     { id: 'studio', zh: '创作', en: 'Studio' },
-    { id: 'thoughts', zh: '随笔', en: 'Thoughts' },
+    { id: 'essays', zh: '随笔', en: 'Essays' },
     { id: 'achievements', zh: '成就', en: 'Achievements' },
 ];
 
@@ -12,6 +12,12 @@ export function getCategoryName(id: string, lang: 'zh' | 'en'): string {
     const cat = categories.find(c => c.id === id);
     if (!cat) return id;
     return lang === 'en' ? cat.en : cat.zh;
+}
+
+// 把单值或数组的分类字段统一成数组（frontmatter.category 现在可以是字符串或数组）
+export function toCatArray(cat: string | string[] | undefined | null): string[] {
+    if (Array.isArray(cat)) return cat.filter(Boolean);
+    return cat ? [cat] : [];
 }
 
 // 中文分类名映射（主页卡片显示用）

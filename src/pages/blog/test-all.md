@@ -3,7 +3,7 @@ layout: '../../layouts/Layout.astro'
 title: '🧪 全语法测试文章'
 date: '2026-07-29'
 draft: true
-category: 'achievements'
+category: ['achievements']
 tags: ['channel', 'insync', 'tutorial', 'rant', 'article']
 ---
 
@@ -178,6 +178,6 @@ ___
 
 The quick brown fox jumps over the lazy dog. 这只敏捷的棕色狐狸跳过了那只懒惰的狗。Pack my box with five dozen liquor jugs. 请在我的箱子里装入五打酒壶。12345 67890 各种各样的字符交织在一起 abcd 一二三四五，可以看到浏览器引擎如何 smartly handle 这种 mixed-language typesetting scenario。
 
-多一点文字来观察换行效果。重复一遍——根据排版理论，中文等宽方块字在两端对齐时能够获得非常整齐的左右边缘。但英文如果也使用两端对齐，则会在单词之间插入不规则的空白间隙，形成所谓的「河流」(rivers)，破坏阅读节奏。因此本站采用中文两端对齐、英文左对齐的混合策略，这是兼顾两种语言文字特性的最优解。End of test.
+0多一点文字来观察换行效果。重复一遍——根据排版理论，中文等宽方块字在两端对齐时能够获得非常整齐的左右边缘。但英文如果也使用两端对齐，则会在单词之间插入不规则的空白间隙，形成所谓的「河流」(rivers)，破坏阅读节奏。因此本站采用中文两端对齐、英文左对齐的混合策略，这是兼顾两种语言文字特性的最优解。End of test.
 
 以上就是 Markdown 所有常见语法的展示。这篇文章同时也打满了全部 9 种标签，用于测试标签筛选功能。

@@ -18,5 +18,8 @@ export default defineConfig({
     }
   },
   integrations: [
-  ]
+  ],
+  server: {
+    host: true
+  }
 });
