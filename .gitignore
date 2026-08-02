@@ -22,3 +22,6 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Cloudflare wrangler 本地状态（KV 模拟数据、缓存、观测日志），仅本地开发用
+.wrangler/
