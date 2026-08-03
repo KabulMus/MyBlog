@@ -560,6 +560,7 @@ footer a:hover {
 .page-hero .date {
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     font-size: 1rem;
     color: var(--text-sub);
     margin-top: 6px;
@@ -1553,26 +1554,48 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
 }
 
 /* 4. 列表页卡片专属的日期样式 */
-.post-date {
+/* 卡片元信息行：日期与点赞平级展示（统一字号/字体/颜色） */
+.post-meta {
     display: flex;
     align-items: center;
-    /* ⚡️ 0.875rem = 14px（整数像素），line-height 1.2 = 16.8px ≈ 文字字形高度，
-       使日历图标与文字视觉中心完全重合，消除缩放时亚像素取整导致的错位 */
+    gap: 14px;
     font-size: 0.875rem;
-    line-height: 1.2;
     font-weight: 500;
     color: var(--text-sub);
+    line-height: 1.2;
     font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
     font-variant-numeric: tabular-nums;
+    user-select: none;
 }
 
-/* 日期图标：跟随文字大小、继承当前颜色；父级 flex 的 align-items: center 会自动垂直居中 */
+/* 日期与点赞共用一个条目类：改此处 CSS，两者同步生效 */
+.post-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+/* 图标必须显式锁定尺寸（1em 随字号）：SVG 一旦失去显式宽高，
+   会按各自容器的内容摊派尺寸（日期旁文本长 → 89px，心形旁数字短 → 11px），
+   两图标就会大小漂移、永远对不齐。锁定 1em 才能让两者恒定同步。 */
+.post-meta-item .like-heart,
 .date svg.date-icon,
-.post-date svg.date-icon {
+.post-meta-item svg.date-icon {
     width: 1em;
     height: 1em;
     flex-shrink: 0;
-    margin-right: 4px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 3.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.post-like-meta.is-liked {
+    color: var(--tag-nation);
+}
+.post-like-meta.is-liked .like-heart {
+    fill: currentColor;
+    stroke: currentColor;
 }
 
 html[lang='en-US'] .typography-body,
@@ -1766,8 +1789,8 @@ html[lang='en-US'] .post-title-link {
     width: 1.2rem;
     height: 1.2rem;
     background-color: var(--text-sub) !important;   /* 默认副文本色 */
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M22.52,21.05h-.01l-3.82-3.82c1.37-1.69,2.2-3.85,2.2-6.19,0-5.44-4.42-9.86-9.86-9.86S1.18,5.6,1.18,11.04s4.42,9.86,9.86,9.86c2.34,0,4.49-.83,6.19-2.2l3.82,3.82c.21.21.47.3.74.3s.53-.1.74-.3c.4-.4.4-1.06,0-1.46ZM11.03,18.82c-4.3,0-7.78-3.49-7.78-7.78s3.49-7.78,7.78-7.78,7.78,3.49,7.78,7.78-3.49,7.78-7.78,7.78Z'/%3E%3Cpolygon fill='black' points='11.02 5.33 11.03 5.33 11.03 5.33 11.02 5.33'/%3E%3Cpath fill='black' d='M11.03,5.33c-1.39,0-2.68.54-3.67,1.51-.4.4-.4,1.06,0,1.46.4.4,1.06.4,1.46,0,1.17-1.17,3.23-1.17,4.4,0,.21.21.47.3.74.3s.53-.1.74-.3c.4-.4.4-1.06,0-1.46-.97-.97-2.28-1.51-3.67-1.51Z'/%3E%3C/svg%3E") no-repeat center / contain !important;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M22.52,21.05h-.01l-3.82-3.82c1.37-1.69,2.2-3.85,2.2-6.19,0-5.44-4.42-9.86-9.86-9.86S1.18,5.6,1.18,11.04s4.42,9.86,9.86,9.86c2.34,0,4.49-.83,6.19-2.2l3.82,3.82c.21.21.47.3.74.3s.53-.1.74-.3c.4-.4.4-1.06,0-1.46ZM11.03,18.82c-4.3,0-7.78-3.49-7.78-7.78s3.49-7.78,7.78-7.78,7.78,3.49,7.78,7.78-3.49,7.78-7.78,7.78Z'/%3E%3Cpolygon fill='black' points='11.02 5.33 11.03 5.33 11.03 5.33 11.02 5.33'/%3E%3Cpath fill='black' d='M11.03,5.33c-1.39,0-2.68.54-3.67,1.51-.4.4-.4,1.06,0,1.46.4.4,1.06.4,1.46,0,1.17-1.17,3.23-1.17,4.4,0,.21.21.47.3.74.3s.53-.1.74-.3c.4-.4.4-1.06,0-1.46-.97-.97-2.28-1.51-3.67-1.51Z'/%3E%3C/svg%3E") no-repeat center / contain !important;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z' fill='none' stroke='black' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M33.2216 33.2217L41.7069 41.707' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain !important;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z' fill='none' stroke='black' stroke-width='4' stroke-linejoin='round'/%3E%3Cpath d='M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M33.2216 33.2217L41.7069 41.707' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain !important;
     opacity: 0.8;                          /* ⚡️ 默认半透明度 */
     position: absolute;
     /* ⚡️ 固定在输入框中心（25.6px = 输入框 51.2px 高度的一半）。
@@ -1816,8 +1839,8 @@ html[lang='en-US'] .post-title-link {
     width: 20px !important;
     height: 20px !important;
     background-color: var(--text-sub) !important;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M13.4,12.01l7.26-7.26c.39-.39.39-1.02,0-1.4-.39-.39-1.02-.39-1.41,0l-7.26,7.26L4.74,3.33c-.39-.39-1.03-.39-1.41,0s-.39,1.03,0,1.41l7.26,7.26-7.26,7.26c-.39.39-.39,1.02,0,1.41.2.2.45.29.71.29s.51-.1.71-.29l7.26-7.26,7.26,7.26c.2.2.45.29.71.29s.51-.1.71-.29c.39-.39.39-1.02,0-1.41l-7.26-7.26h-.01Z'/%3E%3C/svg%3E") no-repeat center / contain !important;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M13.4,12.01l7.26-7.26c.39-.39.39-1.02,0-1.4-.39-.39-1.02-.39-1.41,0l-7.26,7.26L4.74,3.33c-.39-.39-1.03-.39-1.41,0s-.39,1.03,0,1.41l7.26,7.26-7.26,7.26c-.39.39-.39,1.02,0,1.41.2.2.45.29.71.29s.51-.1.71-.29l7.26-7.26,7.26,7.26c.2.2.45.29.71.29s.51-.1.71-.29c.39-.39.39-1.02,0-1.41l-7.26-7.26h-.01Z'/%3E%3C/svg%3E") no-repeat center / contain !important;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M8 8L40 40' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M8 40L40 8' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain !important;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M8 8L40 40' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M8 40L40 8' fill='none' stroke='black' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / contain !important;
     transition: background-color 0.2s ease !important;
 }
 

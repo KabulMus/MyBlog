@@ -162,3 +162,20 @@ function initHeadingAnchors() {
 }
 // 3. 页面加载完成后自动运行
 document.addEventListener('DOMContentLoaded', initHeadingAnchors);
+
+// 4. 首页卡片点赞数（只读展示：数量 + 是否已赞，不可点击）
+function loadCardLikes() {
+    document.querySelectorAll('[data-like-meta]').forEach((el) => {
+        const slug = el.dataset.likeMeta;
+        if (!slug) return;
+        const countEl = el.querySelector('.like-count');
+        fetch(`/api/likes/${encodeURIComponent(slug)}`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (countEl) countEl.textContent = String(data.count);
+                if (data.liked) el.classList.add('is-liked');
+            })
+            .catch(() => { /* 保持初始占位 */ });
+    });
+}
+document.addEventListener('DOMContentLoaded', loadCardLikes);
