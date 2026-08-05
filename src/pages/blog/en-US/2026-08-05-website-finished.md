@@ -1,6 +1,6 @@
 ---
 layout: '../../../layouts/Layout.astro'
-title: 'My website is finally basically finished!!'
+title: 'My website is finally ready!!'
 date: '2026-08-05'
 draft: false
 category: ['essays', 'studio']
@@ -15,7 +15,7 @@ Blog: **[blog.ethan929.com](https://blog.ethan929.com/en-US)**
 
 ## Some ramblings
 
-It's finally (almost) done😭😭😭
+It's finally live😭😭😭
 
 I started tinkering with this site back in May, and it's finally looking like somethin‘!!
 
