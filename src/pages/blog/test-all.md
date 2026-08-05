@@ -128,6 +128,7 @@ print(list(fibonacci(10)))
 图片测试（使用外部图片）：
 
 ![Placeholder](https://images.pexels.com/photos/31107292/pexels-photo-31107292.jpeg)
+*图注：这是来自外部图床的一张占位测试图片，用于演示图片说明文字*
 
 ---
 

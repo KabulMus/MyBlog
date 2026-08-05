@@ -1,0 +1,76 @@
+// 交互式生成一篇新文章（中文 + en-US 英文版两套模板）
+// 用法：npm run new
+import { createInterface } from 'node:readline/promises';
+import { stdin, stdout } from 'node:process';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+const rl = createInterface({ input: stdin, output: stdout });
+
+// 分类 → 可选 tag key（与 src/config/tags.ts 保持一致，改 tag 后请同步这里）
+const CAT_TAGS = {
+  music: ['insync', 'review', 'musictheory'],
+  studio: ['channel', 'tutorial', 'resource', 'video', 'code'],
+  essays: ['rant', 'article', 'note', 'quote'],
+  achievements: ['recap', 'academic', 'skill', 'award', 'habit'],
+};
+
+const dateStr = new Date().toISOString().slice(0, 10);
+
+const slugify = (s) =>
+  s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const arr = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+
+const fmtArr = (a, def) => (a.length ? `['${a.join("', '")}']` : def);
+
+console.log(`📝 新文章（日期 ${dateStr}）\n`);
+
+const titleZh = (await rl.question('中文标题：')).trim();
+const titleEn = (await rl.question('英文标题：')).trim();
+const slug =
+  (await rl.question('URL 后缀（英文，回车自动按英文标题生成）：')).trim() ||
+  slugify(titleEn) ||
+  'post';
+const category = arr(await rl.question('分类（music/studio/essays/achievements，逗号分隔，回车默认 essays）：'));
+// 可选 tag 提示：列出所填分类中含有的 tag key
+const availableTags = [...new Set(category.flatMap((c) => CAT_TAGS[c] || []))];
+const tagHint = availableTags.length ? `，可选：${availableTags.join(',')}` : '';
+const tags = arr(await rl.question(`标签（英文 key，逗号分隔${tagHint}）：`));
+const draft = (await rl.question('先存草稿？(y/N，默认 N 直接发布)：')).trim().toLowerCase() === 'y';
+
+const catArr = fmtArr(category, "['essays']");
+const tagArr = fmtArr(tags, '[]');
+
+const zhFile = join(process.cwd(), 'src', 'pages', 'blog', `${dateStr}-${slug}.md`);
+const enFile = join(process.cwd(), 'src', 'pages', 'blog', 'en-US', `${dateStr}-${slug}.md`);
+
+const zhContent = `---
+layout: '../../layouts/Layout.astro'
+title: '${titleZh}'
+date: '${dateStr}'
+draft: ${draft}
+category: ${catArr}
+tags: ${tagArr}
+---
+
+`;
+const enContent = `---
+layout: '../../../layouts/Layout.astro'
+title: '${titleEn.replace(/'/g, "\\'")}'
+date: '${dateStr}'
+draft: ${draft}
+category: ${catArr}
+tags: ${tagArr}
+---
+
+`;
+
+writeFileSync(zhFile, zhContent);
+console.log(`\n已创建：${zhFile}`);
+mkdirSync(join(process.cwd(), 'src', 'pages', 'blog', 'en-US'), { recursive: true });
+writeFileSync(enFile, enContent);
+console.log(`已创建：${enFile}`);
+
+console.log(`\n✅ 填好正文后运行：npm run pub  即可一键发布`);
+rl.close();

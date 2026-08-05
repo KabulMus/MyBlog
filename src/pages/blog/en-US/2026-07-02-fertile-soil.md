@@ -3,8 +3,8 @@ layout: '../../../layouts/Layout.astro'
 title: 'The Fertile Soil Program'
 date: '2026-07-02'
 draft: false
-category: ['achievements']
-tags: ['academic', 'skill']
+category: ['achievements', 'essays']
+tags: ['academic', 'rant']
 ---
 
 Hmm... interesting.

@@ -33,60 +33,34 @@
     --item-border: rgba(0, 0, 0, 0.08);
     --card-radius: 12px;
     --on-primary: #ffffff; /* 初始为白色 */
-    --bilibili-blue: #0cb6f2;
-	--bilibili-pink: #ff6699;
-	--xhs-red: #ff2442;
-	--youtube-red: #ff0033;
-	--discord-blurple: #5865f2;
-	--qq-brand: #0052d9;
-	--wechat-green: #07C160;
-	--duolingo-green: #58cc02;
-    --baidu-blue: #2932e1;
-    --weibo-orange: #ff8200;
-    --douyin-bg: #161823;
-    --douyin-text: #f9f9fa;
-    --qqmusic-bg: #00eb81;
-    --wyy-bg: #dd001b;
-    --spotify-bg: #1ed760;
-    /* --- 标签颜色（亮色模式） --- */
-    --tag-channel: var(--primary-blue);
-    --tag-channel-bg: rgba(30, 102, 198, 0.1);
-    --tag-channel-border: rgba(30, 102, 198, 0.3);
-    --tag-insync: #b45309;
-    --tag-insync-bg: rgba(180, 83, 9, 0.1);
-    --tag-insync-border: rgba(180, 83, 9, 0.3);
-    --tag-academic: #58cc02;
-    --tag-academic-bg: rgba(88, 204, 2, 0.1);
-    --tag-academic-border: rgba(88, 204, 2, 0.3);
-    --tag-default: var(--text-sub);
-    --tag-default-bg: rgba(107, 114, 128, 0.1);
-    --tag-default-border: rgba(107, 114, 128, 0.3);
-    /* --- 分类颜色（一级） --- */
-    --cat-music: #b45309;             /* 原「同频」琥珀 */
-    --cat-music-bg: rgba(180, 83, 9, 0.12);
-    --cat-music-border: rgba(180, 83, 9, 0.35);
-    --cat-studio: #1e66c6;             /* 原「频道」蓝 */
-    --cat-studio-bg: rgba(30, 102, 198, 0.12);
-    --cat-studio-border: rgba(30, 102, 198, 0.35);
-    --cat-essays: #4f46e5;             /* 原「随笔」靛蓝 */
-    --cat-essays-bg: rgba(79, 70, 229, 0.12);
-    --cat-essays-border: rgba(79, 70, 229, 0.35);
-    --cat-achievements: #06b6d4;         /* 原「成就」青 */
-    --cat-achievements-bg: rgba(6, 182, 212, 0.12);
-    --cat-achievements-border: rgba(6, 182, 212, 0.35);
-    --tag-nation: #ef4444;
-    --tag-nation-bg: rgba(239, 68, 68, 0.1);
-    --tag-nation-border: rgba(239, 68, 68, 0.3);
-    --tag-tutorial: #a855f7;
-    --tag-tutorial-bg: rgba(168, 85, 247, 0.1);
-    --tag-tutorial-border: rgba(168, 85, 247, 0.3);
-
-    --tag-essays: #4f46e5;
-    --tag-essays-bg: rgba(79, 70, 229, 0.1);
-    --tag-essays-border: rgba(79, 70, 229, 0.3);
-    --tag-rant: #f43f5e;
-    --tag-rant-bg: rgba(244, 63, 94, 0.1);
-    --tag-rant-border: rgba(244, 63, 94, 0.3);
+    /* --- 标签颜色（亮色模式）：按色相命名 --- */
+    --color-blue: var(--primary-blue);
+    --color-blue-bg: rgba(30, 102, 198, 0.1);
+    --color-blue-border: rgba(30, 102, 198, 0.3);
+    --color-amber: #b45309;
+    --color-amber-bg: rgba(180, 83, 9, 0.1);
+    --color-amber-border: rgba(180, 83, 9, 0.3);
+    --color-green: #58cc02;
+    --color-green-bg: rgba(88, 204, 2, 0.1);
+    --color-green-border: rgba(88, 204, 2, 0.3);
+    --color-gray: var(--text-sub);
+    --color-gray-bg: rgba(107, 114, 128, 0.1);
+    --color-gray-border: rgba(107, 114, 128, 0.3);
+    --color-cyan: #06b6d4;         /* 原「成就」青 */
+    --color-cyan-bg: rgba(6, 182, 212, 0.12);
+    --color-cyan-border: rgba(6, 182, 212, 0.35);
+    --color-red: #ef4444;
+    --color-red-bg: rgba(239, 68, 68, 0.1);
+    --color-red-border: rgba(239, 68, 68, 0.3);
+    --color-purple: #a855f7;
+    --color-purple-bg: rgba(168, 85, 247, 0.1);
+    --color-purple-border: rgba(168, 85, 247, 0.3);
+    --color-indigo: #4f46e5;
+    --color-indigo-bg: rgba(79, 70, 229, 0.1);
+    --color-indigo-border: rgba(79, 70, 229, 0.3);
+    --color-rose: #f43f5e;
+    --color-rose-bg: rgba(244, 63, 94, 0.1);
+    --color-rose-border: rgba(244, 63, 94, 0.3);
     --mark-cyan: #2dd4bfa0;
 }
 
@@ -103,39 +77,29 @@
     --card-hover-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7);
     --item-border: rgba(255, 255, 255, 0.08);
     --on-primary: #0f172a; /* 深色模式下设为与背景相同的深蓝色/黑色 */
-    /* --- 标签颜色（深色模式） --- */
-    --tag-channel-bg: rgba(147, 197, 253, 0.15);
-    --tag-channel-border: rgba(147, 197, 253, 0.3);
-    --tag-insync: #e9c15c;
-    --tag-insync-bg: rgba(251, 191, 36, 0.15);
-    --tag-insync-border: rgba(251, 191, 36, 0.3);
-    --tag-academic-bg: rgba(88, 204, 2, 0.15);
-    --tag-default-bg: rgba(148, 163, 184, 0.15);
-    --cat-music: #e9c15c;             /* 原「同频」暗色 */
-    --cat-music-bg: rgba(233, 193, 92, 0.15);
-    --cat-music-border: rgba(233, 193, 92, 0.35);
-    --cat-studio: #93c5fd;             /* 原「频道」暗色 */
-    --cat-studio-bg: rgba(147, 197, 253, 0.15);
-    --cat-studio-border: rgba(147, 197, 253, 0.35);
-    --cat-essays: #818cf8;             /* 原「随笔」暗色 */
-    --cat-essays-bg: rgba(129, 140, 248, 0.15);
-    --cat-essays-border: rgba(129, 140, 248, 0.35);
-    --cat-achievements: #2dd4bf;         /* 原「成就」暗色 */
-    --cat-achievements-bg: rgba(45, 212, 191, 0.15);
-    --cat-achievements-border: rgba(45, 212, 191, 0.35);
-    --tag-nation: #f87171;
-    --tag-nation-bg: rgba(248, 113, 113, 0.15);
-    --tag-nation-border: rgba(248, 113, 113, 0.3);
-    --tag-tutorial: #c084fc;
-    --tag-tutorial-bg: rgba(192, 132, 252, 0.15);
-    --tag-tutorial-border: rgba(192, 132, 252, 0.3);
-
-    --tag-essays: #818cf8;
-    --tag-essays-bg: rgba(129, 140, 248, 0.15);
-    --tag-essays-border: rgba(129, 140, 248, 0.3);
-    --tag-rant: #fb7185;
-    --tag-rant-bg: rgba(251, 113, 133, 0.15);
-    --tag-rant-border: rgba(251, 113, 133, 0.3);
+    /* --- 标签颜色（深色模式）：按色相命名 --- */
+    --color-blue-bg: rgba(147, 197, 253, 0.15);
+    --color-blue-border: rgba(147, 197, 253, 0.3);
+    --color-amber: #e9c15c;
+    --color-amber-bg: rgba(251, 191, 36, 0.15);
+    --color-amber-border: rgba(251, 191, 36, 0.3);
+    --color-green-bg: rgba(88, 204, 2, 0.15);
+    --color-gray-bg: rgba(148, 163, 184, 0.15);
+    --color-cyan: #2dd4bf;         /* 原「成就」暗色 */
+    --color-cyan-bg: rgba(45, 212, 191, 0.15);
+    --color-cyan-border: rgba(45, 212, 191, 0.35);
+    --color-red: #f87171;
+    --color-red-bg: rgba(248, 113, 113, 0.15);
+    --color-red-border: rgba(248, 113, 113, 0.3);
+    --color-purple: #c084fc;
+    --color-purple-bg: rgba(192, 132, 252, 0.15);
+    --color-purple-border: rgba(192, 132, 252, 0.3);
+    --color-indigo: #818cf8;
+    --color-indigo-bg: rgba(129, 140, 248, 0.15);
+    --color-indigo-border: rgba(129, 140, 248, 0.3);
+    --color-rose: #fb7185;
+    --color-rose-bg: rgba(251, 113, 133, 0.15);
+    --color-rose-border: rgba(251, 113, 133, 0.3);
     --mark-cyan: #2dd4bf60;
 }
 @media (prefers-color-scheme: dark) {
@@ -151,39 +115,29 @@
         --card-hover-shadow: 0 20px 40px -4px rgba(0, 0, 0, 0.7);
         --item-border: rgba(255, 255, 255, 0.08);
         --on-primary: #0f172a;
-        /* --- 标签颜色（跟随系统深色） --- */
-        --tag-channel-bg: rgba(147, 197, 253, 0.15);
-        --tag-channel-border: rgba(147, 197, 253, 0.3);
-        --tag-insync: #e9c15c;
-        --tag-insync-bg: rgba(251, 191, 36, 0.15);
-        --tag-insync-border: rgba(251, 191, 36, 0.3);
-        --tag-academic-bg: rgba(88, 204, 2, 0.15);
-        --tag-default-bg: rgba(148, 163, 184, 0.15);
-        --cat-music: #e9c15c;             /* 原「同频」暗色 */
-        --cat-music-bg: rgba(233, 193, 92, 0.15);
-        --cat-music-border: rgba(233, 193, 92, 0.35);
-        --cat-studio: #93c5fd;             /* 原「频道」暗色 */
-        --cat-studio-bg: rgba(147, 197, 253, 0.15);
-        --cat-studio-border: rgba(147, 197, 253, 0.35);
-        --cat-essays: #818cf8;             /* 原「随笔」暗色 */
-        --cat-essays-bg: rgba(129, 140, 248, 0.15);
-        --cat-essays-border: rgba(129, 140, 248, 0.35);
-        --cat-achievements: #2dd4bf;         /* 原「成就」暗色 */
-        --cat-achievements-bg: rgba(45, 212, 191, 0.15);
-        --cat-achievements-border: rgba(45, 212, 191, 0.35);
-        --tag-nation: #f87171;
-        --tag-nation-bg: rgba(248, 113, 113, 0.15);
-        --tag-nation-border: rgba(248, 113, 113, 0.3);
-        --tag-tutorial: #c084fc;
-        --tag-tutorial-bg: rgba(192, 132, 252, 0.15);
-        --tag-tutorial-border: rgba(192, 132, 252, 0.3);
-
-        --tag-essays: #818cf8;
-        --tag-essays-bg: rgba(129, 140, 248, 0.15);
-        --tag-essays-border: rgba(129, 140, 248, 0.3);
-        --tag-rant: #fb7185;
-        --tag-rant-bg: rgba(251, 113, 133, 0.15);
-        --tag-rant-border: rgba(251, 113, 133, 0.3);
+        /* --- 标签颜色（跟随系统深色）：按色相命名 --- */
+        --color-blue-bg: rgba(147, 197, 253, 0.15);
+        --color-blue-border: rgba(147, 197, 253, 0.3);
+        --color-amber: #e9c15c;
+        --color-amber-bg: rgba(251, 191, 36, 0.15);
+        --color-amber-border: rgba(251, 191, 36, 0.3);
+        --color-green-bg: rgba(88, 204, 2, 0.15);
+        --color-gray-bg: rgba(148, 163, 184, 0.15);
+        --color-cyan: #2dd4bf;         /* 原「成就」暗色 */
+        --color-cyan-bg: rgba(45, 212, 191, 0.15);
+        --color-cyan-border: rgba(45, 212, 191, 0.35);
+        --color-red: #f87171;
+        --color-red-bg: rgba(248, 113, 113, 0.15);
+        --color-red-border: rgba(248, 113, 113, 0.3);
+        --color-purple: #c084fc;
+        --color-purple-bg: rgba(192, 132, 252, 0.15);
+        --color-purple-border: rgba(192, 132, 252, 0.3);
+        --color-indigo: #818cf8;
+        --color-indigo-bg: rgba(129, 140, 248, 0.15);
+        --color-indigo-border: rgba(129, 140, 248, 0.3);
+        --color-rose: #fb7185;
+        --color-rose-bg: rgba(251, 113, 133, 0.15);
+        --color-rose-border: rgba(251, 113, 133, 0.3);
         --mark-cyan: #2dd4bf60;
     }
 }
@@ -215,7 +169,7 @@ body {
     color: var(--text-main);
     line-height: 1.6;
     line-break: strict;
-    font-feature-settings: "liga" 1, "calt" 1, "halt" 1, "chws" 1;
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 1;
     transition: background-color 0.3s ease, color 0.3s ease;
     user-select: text;
 }
@@ -551,6 +505,12 @@ footer a:hover {
     background: none;
 }
 
+/* 主页标题：收缩到文字宽度，让渐变完整铺满文字（保持原有左对齐，仅主页，文章页不受影响） */
+body:not(.is-article-page) .page-hero h1 {
+    width: max-content;
+    max-width: 100%;
+}
+
 @media (max-width: 768px) {
     .page-hero h1 {
         font-size: 2.2rem; /* 移动端适当缩小标题 */
@@ -590,7 +550,9 @@ footer a:hover {
     margin: 0.2rem 0;
 }
 
-/* 中文斜体：用 Noto Serif SC 衬线体呈现（避免对无斜体字形做伪斜体机械倾斜变换） */
+/* 中文斜体：用 Noto Serif SC 衬线体呈现（避免对无斜体字形做伪斜体机械倾斜变换）
+   注意：此处必须关闭 body 继承的 "halt"/"chws"（中文标点半宽特性）——
+   它们会在衬线斜体下把连续全角标点（如 ！！！）压成零宽重叠黏连 */
 html[lang='zh-CN'] .typography-body em,
 html[lang='zh-CN'] .typography-body i {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
@@ -756,8 +718,8 @@ html[lang='zh-CN'] .typography-body i {
    ========================================================================== */
 
 .typography-body blockquote {
-    margin: 2rem 0;                     /* 上下留足 2rem 的段落间距 */
-    padding: 16px 24px;                 /* 内部精致的四周留白 */
+    margin: 1rem 0;                     /* 上下留足 2rem 的段落间距 */
+    padding: 12px 24px;                 /* 内部精致的四周留白 */
     
     /* 1. 核心底色与边框：左侧一条优雅的品牌蓝粗线，搭配微微透明的淡色底盘 */
     border-left: 4px solid var(--primary-blue);
@@ -980,7 +942,9 @@ html[lang='zh-CN'] .typography-body i {
     transition: opacity 0.3s ease;
 }
 
-/* 3. 极客彩蛋：如果你用了高级 Markdown 语法或 HTML 写的图注（<small> 或 <figcaption>） */
+/* 3. 极客彩蛋：如果你用了高级 Markdown 语法或 HTML 写的图注（<small> 或 <figcaption>）
+   注意：图注也是 <em>，会被「中文斜体」规则套上宋体；这里必须用 font-family: inherit
+   覆盖，让它恢复正文字体，否则图注会变成衬线宋体小字 */
 .typography-body p:has(img) small,
 .typography-body p:has(img) em:last-child {
     display: block;
@@ -989,6 +953,29 @@ html[lang='zh-CN'] .typography-body i {
     color: var(--text-sub);             /* 淡淡的副文本色 */
     text-align: center;
     font-style: normal;                 /* 强制回正 */
+    font-family: inherit;               /* 覆盖中文斜体的宋体，恢复正文字体 */
+}
+
+/* ==========================================================================
+   🔤 拼音注音（Ruby Annotation）
+   Markdown 里直接写内联 HTML 即可：
+     <ruby>汉<rt>hàn</rt></ruby>
+     <ruby>周<rt>zhōu</rt>深<rt>shēn</rt></ruby>
+   ========================================================================== */
+.typography-body ruby {
+    ruby-align: center;                 /* 注音相对文字水平居中 */
+    ruby-position: over;                /* 注音位于文字上方 */
+}
+.typography-body ruby rt {
+    font-size: 0.8em;                  /* 注音约半个字高 */
+    font-weight: 500;
+    color: var(--text-sub);             /* 弱化灰色，不抢正文 */
+    font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    line-height: 0;
+    user-select: none;                  /* 注音不参与选中复制 */
+}
+.typography-body ruby rp {
+    display: none;                      /* 隐藏旧浏览器用的括号 */
 }
 
 .typography-body hr {
@@ -1473,9 +1460,9 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     text-align: left;
 }
 
-/* 已点赞：心形实心红（复用 tag-nation 红，亮暗自动适配） */
+/* 已点赞：心形实心红（复用 tag-red 红，亮暗自动适配） */
 .like-btn.is-liked {
-    color: var(--tag-nation);
+    color: var(--color-red);
 }
 .like-btn.is-liked .like-heart {
     fill: currentColor;
@@ -1535,7 +1522,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     font-weight: 700;
     color: var(--text-main);
     line-height: 1.4;
-    margin: 12px 0 8px 0;
+    margin: 12px 0 10px 0;
     transition: color 0.2s ease;
 }
 
@@ -1562,7 +1549,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-sub);
-    line-height: 1.2;
+    line-height: 1;
     font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
     font-variant-numeric: tabular-nums;
     user-select: none;
@@ -1591,7 +1578,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
 }
 
 .post-like-meta.is-liked {
-    color: var(--tag-nation);
+    color: var(--color-red);
 }
 .post-like-meta.is-liked .like-heart {
     fill: currentColor;
@@ -1820,9 +1807,17 @@ html[lang='en-US'] .post-title-link {
     border: none !important;
     border-radius: 0 !important;
     font-size: 0 !important;                    /* 隐藏原生文本，仅显示 ::before 的 SVG 图标 */
-    
-    right: 20px !important;                    /* 距离右边框 14px */
-    
+
+    /* 与左侧放大镜同款定位：固定距 form 顶部 25px + translateY(-50%)，
+       不依赖 Pagefind 原生样式，确保叉号与输入框绝对垂直居中、
+       且与放大镜垂直同位、水平对称 */
+    position: absolute !important;
+    top: 25px !important;
+    transform: translateY(-50%) !important;
+    right: 20px !important;                     /* 距离右边框 20px（与放大镜 left 20px 对称） */
+    width: 20px !important;
+    height: 20px !important;
+
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -1902,10 +1897,10 @@ html[lang='en-US'] .post-title-link {
     border-radius: 6px;
     font-weight: 700;
 }
-.cat-tag.cat-music { background: var(--cat-music-bg); color: var(--cat-music); }
-.cat-tag.cat-studio { background: var(--cat-studio-bg); color: var(--cat-studio); }
-.cat-tag.cat-essays { background: var(--cat-essays-bg); color: var(--cat-essays); }
-.cat-tag.cat-achievements { background: var(--cat-achievements-bg); color: var(--cat-achievements); }
+.cat-tag.cat-music { background: var(--color-amber-bg); color: var(--color-amber); }
+.cat-tag.cat-studio { background: var(--color-blue-bg); color: var(--color-blue); }
+.cat-tag.cat-essays { background: var(--color-indigo-bg); color: var(--color-indigo); }
+.cat-tag.cat-achievements { background: var(--color-cyan-bg); color: var(--color-cyan); }
 
 /* tag 之间的分隔号（实心圆点 SVG）：独立 flex 项，靠 gap 两侧对称自然居中 */
 .tag-sep {
@@ -2024,12 +2019,12 @@ html[lang='en-US'] .post-title-link {
 }
 
 .tag-filter-btn:hover {
-    background: var(--tag-default-bg);
+    background: var(--color-gray-bg);
     color: var(--text-main);
 }
 
 .tag-filter-btn.active {
-    background: var(--tag-default-bg) !important;
+    background: var(--color-gray-bg) !important;
     color: var(--text-main) !important;
 }
 
@@ -2063,14 +2058,14 @@ html[lang='en-US'] .cat-filter-btn {
     padding: 5px clamp(10px, 2.8vw, 16px);
 }
 .cat-filter-btn:hover { transform: scale(1.05); box-shadow: var(--card-hover-shadow); }
-.cat-filter-btn--music { color: var(--cat-music); border-color: var(--cat-music-border); }
-.cat-filter-btn--music.is-active { background: var(--cat-music-bg) !important; border-color: var(--cat-music) !important; color: var(--cat-music) !important; }
-.cat-filter-btn--studio { color: var(--cat-studio); border-color: var(--cat-studio-border); }
-.cat-filter-btn--studio.is-active { background: var(--cat-studio-bg) !important; border-color: var(--cat-studio) !important; color: var(--cat-studio) !important; }
-.cat-filter-btn--essays { color: var(--cat-essays); border-color: var(--cat-essays-border); }
-.cat-filter-btn--essays.is-active { background: var(--cat-essays-bg) !important; border-color: var(--cat-essays) !important; color: var(--cat-essays) !important; }
-.cat-filter-btn--achievements { color: var(--cat-achievements); border-color: var(--cat-achievements-border); }
-.cat-filter-btn--achievements.is-active { background: var(--cat-achievements-bg) !important; border-color: var(--cat-achievements) !important; color: var(--cat-achievements) !important; }
+.cat-filter-btn--music { color: var(--color-amber); border-color: var(--color-amber-border); }
+.cat-filter-btn--music.is-active { background: var(--color-amber-bg) !important; border-color: var(--color-amber) !important; color: var(--color-amber) !important; }
+.cat-filter-btn--studio { color: var(--color-blue); border-color: var(--color-blue-border); }
+.cat-filter-btn--studio.is-active { background: var(--color-blue-bg) !important; border-color: var(--color-blue) !important; color: var(--color-blue) !important; }
+.cat-filter-btn--essays { color: var(--color-indigo); border-color: var(--color-indigo-border); }
+.cat-filter-btn--essays.is-active { background: var(--color-indigo-bg) !important; border-color: var(--color-indigo) !important; color: var(--color-indigo) !important; }
+.cat-filter-btn--achievements { color: var(--color-cyan); border-color: var(--color-cyan-border); }
+.cat-filter-btn--achievements.is-active { background: var(--color-cyan-bg) !important; border-color: var(--color-cyan) !important; color: var(--color-cyan) !important; }
 
 /* ==========================================================================
    📑 文章目录（Table of Contents）— 极简文字版

@@ -128,6 +128,7 @@ This is an [inline link](https://example.com).
 Image test (external):
 
 ![Placeholder](https://images.pexels.com/photos/31107292/pexels-photo-31107292.jpeg)
+*Figure 1: Placeholder image from external image hosting for demonstration purposes.*
 
 ---
 
