@@ -51,11 +51,11 @@ The early version actually looked like [this](https://a97f58be.mywebsite-16r.pag
 - 🌟 My intro, contact info, and my journey so far;
 - 📺 Real-time stats for each channel (Bilibili, YouTube, rednote);
 - 🛠️ A few handy tools (scale visualizer, audio analyzer, online piano);
-- ✨**Charlie! Zhou!!**
+- ✨**Charlie Zhou!!**
 
 ### Blog
 
-- 🎵 In-sync moments (still **Charlie! Zhou!!**), music reviews (…which i'll probably manage to write once every half a lifetime), music theory;
+- 🎵 In-sync moments (still **Charlie Zhou!!**), music reviews (…which i'll probably manage to write once every half a lifetime), music theory;
 - 🎬 Video creation and channel operations;
 - 📝 Essays, rants, random musings;
 - 🏆 Achievements and recaps;
