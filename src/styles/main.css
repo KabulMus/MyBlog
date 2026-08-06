@@ -260,6 +260,42 @@ body {
 
 .menu-toggle svg { width: 24px; height: 24px; stroke: currentColor; }
 
+/* 移动端导航栏 RSS 入口：汉堡按钮左侧，带分隔线（样式与桌面导航栏链接一致） */
+.mobile-rss {
+    margin-left: auto;          /* 推到右侧，与汉堡按钮一组 */
+    margin-right: 14px;         /* 与分隔线间距 */
+    font-size: 0.9rem;
+    font-weight: 400;           /* 与桌面 .nav-links a 一致 */
+    color: var(--text-main);
+    text-decoration: none;
+    position: relative;
+    flex-direction: column;     /* 与桌面一致：column + ::before 占位，hover 加粗不位移 */
+    justify-content: center;
+    align-items: center;
+    transition: color 0.2s ease, font-weight 0.2s ease;
+}
+/* 与桌面 .nav-links a::before 一致的粗体占位，防止 hover 加粗时宽度抖动 */
+.mobile-rss::before {
+    content: attr(data-text);
+    height: 0;
+    visibility: hidden;
+    overflow: hidden;
+    user-select: none;
+    pointer-events: none;
+    font-weight: 700;
+}
+.mobile-rss:hover { color: var(--primary-blue); font-weight: 700; }
+.mobile-rss-divider {
+    display: inline-block;
+    width: 2px;
+    height: 18px;
+    background: var(--text-sub);
+    opacity: 0.3;
+    border-radius: 3px;
+    align-self: center;
+    margin-right: 8px;          /* 与汉堡按钮间距 */
+}
+
 .nav-links a {
 	text-decoration: none;
 	color: var(--text-main);
@@ -435,6 +471,39 @@ footer a {
 
 footer a:hover {
     border-bottom-color: var(--primary-blue);
+}
+
+/* --- 全局 Toast 通知 --- */
+.toast-notice {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card-bg);
+    color: var(--text-main);
+    padding: 10px 22px;
+    border-radius: 50px;
+    border: 1px solid var(--primary-blue);
+    box-shadow: var(--card-shadow);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+    pointer-events: none;
+    white-space: nowrap;
+}
+.toast-notice.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+.toast-notice svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
 /* --- 标题栏 (Page Hero) --- */
@@ -2063,6 +2132,7 @@ html[lang='en-US'] .cat-filter-btn {
 .cat-filter-btn--studio { color: var(--color-blue); border-color: var(--color-blue-border); }
 .cat-filter-btn--studio.is-active { background: var(--color-blue-bg) !important; border-color: var(--color-blue) !important; color: var(--color-blue) !important; }
 .cat-filter-btn--essays { color: var(--color-indigo); border-color: var(--color-indigo-border); }
+
 .cat-filter-btn--essays.is-active { background: var(--color-indigo-bg) !important; border-color: var(--color-indigo) !important; color: var(--color-indigo) !important; }
 .cat-filter-btn--achievements { color: var(--color-cyan); border-color: var(--color-cyan-border); }
 .cat-filter-btn--achievements.is-active { background: var(--color-cyan-bg) !important; border-color: var(--color-cyan) !important; color: var(--color-cyan) !important; }

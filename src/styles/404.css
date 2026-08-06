@@ -1,0 +1,65 @@
+/* ===== 404 页面（独立页：复用站内 main.css 的变量/body/footer/主题按钮样式，仅保留 404 特有部分） ===== */
+.content-section {
+    background-color: var(--bg-light);
+    padding: 120px 20px 60px;
+    text-align: left;
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+.content-section section.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.section-content { margin-bottom: 70px; }
+
+.error-title {
+    font-size: clamp(5rem, 15vw, 8rem);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #0b122a 60%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+:root[data-theme='dark'] .error-title {
+    background: linear-gradient(90deg, #ffffff 0%, var(--primary-blue) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .error-title {
+        background: linear-gradient(135deg, #ffffff 0%, var(--primary-blue) 60%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+}
+.error-tagline {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 15px;
+}
+.modal-btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 35px;
+    background-color: var(--primary-blue);
+    color: var(--on-primary) !important;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+.modal-btn:hover { opacity: 0.85; }
+@media (max-width: 768px) {
+    .section-content p { display: inline; margin: 0; }
+    .section-content div { margin-bottom: 10px !important; }
+    .modal-btn { display: block; margin-top: 25px; width: fit-content; }
+}

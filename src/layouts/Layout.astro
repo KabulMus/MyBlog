@@ -12,7 +12,7 @@ interface Props {
 	brandText?: string;
 }
 
-const { frontmatter, title, brandUrl, brandText } = Astro.props;
+const { frontmatter, title, description, brandUrl, brandText } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const isEnglishRoute = currentPath.includes('/en-US');
 const htmlLang = isEnglishRoute ? 'en-US' : 'zh-CN';
@@ -39,6 +39,10 @@ function renderTitle(text: string): string {
 }
 const pageTitle = frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客');
 const renderedTitle = renderTitle(pageTitle);
+const ogDescription = description || (isEnglishRoute
+    ? "Ethan's blog — music, creation, essays & achievements."
+    : 'Ethan 的博客 — 音乐、创作、随笔与成就。');
+const ogImage = 'https://blog.ethan929.com/favicon.webp';
 const pageDate = formatDate(frontmatter?.date || "");
 
 // 计算文章序号（时间正序）
@@ -118,6 +122,20 @@ function getLangSwitchHref(pathname: string) {
 		<meta name="generator" content={Astro.generator} />
 		<title>{frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客')}</title>
 
+		<!-- Open Graph / 社交分享卡片 -->
+		<meta property="og:site_name" content={isEnglishRoute ? "Ethan's Blog" : 'Ethan 的博客'} />
+		<meta property="og:title" content={pageTitle} />
+		<meta property="og:type" content={frontmatter?.date ? 'article' : 'website'} />
+		<meta property="og:url" content={Astro.url.href} />
+		<meta property="og:image" content={ogImage} />
+		<meta property="og:description" content={ogDescription} />
+		<meta property="og:locale" content={isEnglishRoute ? 'en_US' : 'zh_CN'} />
+		<meta property="og:locale:alternate" content={isEnglishRoute ? 'zh_CN' : 'en_US'} />
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content={pageTitle} />
+		<meta name="twitter:description" content={ogDescription} />
+		<meta name="twitter:image" content={ogImage} />
+
 		<script src="/js/core.js" is:inline></script>
 	</head>
 	<body class={currentPath.startsWith('/blog') ? 'is-article-page' : ''} data-pagefind-ignore={frontmatter?.draft ? '' : undefined}>
@@ -137,6 +155,8 @@ function getLangSwitchHref(pathname: string) {
                 </a>
 				
 				<div class="nav-links desktop-only">
+					<a href="/rss.xml" class="rss-nav-link rss-link" data-copy="https://blog.ethan929.com/rss.xml" data-text="RSS">RSS</a>
+					<span class="nav-divider" aria-hidden="true"></span>
 					<a href={isEnglishRoute ? '/en-US' : '/'} data-text={navLabels.blog} class="active">{navLabels.blog}</a>
 					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/channels/' : 'https://www.ethan929.com/channels/'} data-text={navLabels.channels}>{navLabels.channels}</a>
 					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/toolkit/' : 'https://www.ethan929.com/toolkit/'} data-text={navLabels.toolkit}>{navLabels.toolkit}</a>
@@ -144,6 +164,8 @@ function getLangSwitchHref(pathname: string) {
 					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/charlie/' : 'https://www.ethan929.com/charlie/'} data-text={navLabels.charlie}>{navLabels.charlie}</a>
 				</div>
 
+				<a href="/rss.xml" class="rss-link mobile-rss mobile-only" data-copy="https://blog.ethan929.com/rss.xml" data-text="RSS">RSS</a>
+				<span class="mobile-rss-divider mobile-only" aria-hidden="true"></span>
 				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label={menuAriaLabel}>
 					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M7.94971 11.9497H39.9497"/><path d="M7.94971 23.9497H39.9497"/><path d="M7.94971 35.9497H39.9497"/></svg>
 				</button>
@@ -270,7 +292,67 @@ function getLangSwitchHref(pathname: string) {
 			<p>Built with love for Charlie and you all</p>
 		</footer>
 
-		<a href={langSwitchHref} class="lang-toggle-btn" aria-label={langSwitchLabel} title={langSwitchLabel}>
+		<!-- 全局 Toast 通知 -->
+		<div id="global-toast" class="toast-notice" data-pagefind-ignore>
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+			<span></span>
+		</div>
+
+		<script is:inline>
+			// 全局 Toast 通知函数（供全站复用）
+			function showToast(message, isError) {
+				var toast = document.getElementById('global-toast');
+				if (!toast) return;
+				var icon = toast.querySelector('svg');
+				var text = toast.querySelector('span');
+				text.innerText = message;
+				if (isError) {
+					toast.style.borderColor = '#ef4444';
+					icon.innerHTML = '<path d="M18 6L6 18M6 6l12 12" style="stroke: #ef4444"/>';
+				} else {
+					toast.style.borderColor = 'var(--primary-blue)';
+					icon.innerHTML = '<path d="M20 6L9 17l-5-5" style="stroke: var(--primary-blue)"/>';
+				}
+				toast.classList.add('show');
+				setTimeout(function() { toast.classList.remove('show'); }, 3000);
+			}
+
+			// 点击 RSS 订阅：复制链接到剪贴板，弹出 Toast 提示（不跳转 XML 页面）
+			(function() {
+				function fallbackCopy(text, done) {
+					var ta = document.createElement('textarea');
+					ta.value = text;
+					ta.style.position = 'fixed';
+					ta.style.opacity = '0';
+					document.body.appendChild(ta);
+					ta.focus();
+					ta.select();
+					try { document.execCommand('copy'); done(); } catch (e) {}
+					document.body.removeChild(ta);
+				}
+				function copyToClipboard(text, done) {
+					if (navigator.clipboard && navigator.clipboard.writeText) {
+						navigator.clipboard.writeText(text).then(done).catch(function() { fallbackCopy(text, done); });
+					} else {
+						fallbackCopy(text, done);
+					}
+				}
+				var links = document.querySelectorAll('.rss-link');
+				for (var i = 0; i < links.length; i++) {
+					(function(link) {
+						link.addEventListener('click', function(e) {
+							e.preventDefault();
+							var url = link.getAttribute('data-copy') || link.href;
+							copyToClipboard(url, function() {
+								showToast(document.documentElement.lang === 'en-US' ? 'RSS link copied' : 'RSS 地址已复制');
+							});
+						});
+					})(links[i]);
+				}
+			})();
+		</script>
+
+		<a href={langSwitchHref} class="lang-toggle-btn" aria-label={langSwitchLabel}>
 			<svg width="24" height="24" viewBox="0 0 48 48" fill="none">
 				<path d="M24 44.0002C35.0457 44.0002 44 35.0459 44 24.0002C44 12.9545 35.0457 4.00024 24 4.00024C12.9543 4.00024 4 12.9545 4 24.0002C4 35.0459 12.9543 44.0002 24 44.0002Z" stroke="currentColor" stroke-width="4" />
 				<path d="M6 30.9856C8.63192 32.041 10.5266 32.041 11.6839 30.9856C13.4199 29.4025 11.9219 24.5978 14.3532 23.2727C16.7844 21.9476 20.4886 27.8214 23.9508 25.8887C27.4129 23.9559 23.6246 18.8023 26.0272 16.713C28.4298 14.6237 31.554 16.98 32.1001 13.4865C32.6462 9.99304 29.5521 11.5082 28.9584 8.20693C28.5625 6.00611 28.5625 4.84884 28.9584 4.73511" stroke="currentColor" stroke-width="4" stroke-linecap="round" />

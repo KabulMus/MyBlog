@@ -1,0 +1,51 @@
+---
+// 独立 404 页面：复用站内样式 main.css 和主题脚本 /js/core.js，
+// 不套用 Layout（无需导航/hero/toast 等）；404 特有样式单独放 404.css
+import '../styles/main.css';
+import '../styles/404.css';
+---
+
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="robots" content="noindex, nofollow">
+		<title>404 - Page Not Found</title>
+		<script src="/js/core.js" is:inline></script>
+	</head>
+	<body>
+		<main class="content-section">
+			<section class="container">
+				<section class="section-content">
+					<h1 class="error-title">404</h1>
+					<div class="error-tagline" style="margin-bottom: 12px; text-align: justify;">
+						<p>抱歉，您访问的页面不存在或已被移除。</p>
+					</div>
+					<div style="margin-bottom: 20px; color: var(--text-sub); text-align: justify;">
+						<p>乐章里好像没有这个音……请检查链接是否正确，或者点击下方按钮返回首页。</p>
+						<p>如需反馈网页内容问题，请前往 <a href="https://github.com/KabulMus/MyWebsite/issues" target="_blank" style="color: var(--primary-blue); text-decoration: none;">GitHub</a> 提交 issue，或通过 <a href="mailto:ethanshaw@ethan929.com" target="_blank" style="color: var(--primary-blue); text-decoration: none;">电子邮箱</a> 联系我。</p>
+					</div>
+					<div class="error-tagline" style="margin-bottom: 10px; text-align: left;">
+						<p style="font-size: 1rem; margin-top: 6px;">Sorry, the page you are looking for doesn't exist or has been moved.</p>
+					</div>
+					<div style="margin-bottom: 35px; color: var(--text-sub); text-align: left;">
+						<p style="font-size: 0.9rem;">It seems this note isn't in the score… Please check the URL or click below to return home.</p>
+						<p style="font-size: 0.9rem;">If you need to report any issues with the website content, please submit an issue on <a href="https://github.com/KabulMus/MyWebsite/issues" target="_blank" style="color: var(--primary-blue); text-decoration: none;">GitHub</a> or contact me via <a href="mailto:ethanshaw@ethan929.com" target="_blank" style="color: var(--primary-blue); text-decoration: none;">email</a>.</p>
+					</div>
+					<a href="/" class="modal-btn">返回首页 &nbsp;·&nbsp; Back Home</a>
+				</section>
+
+				<footer>
+					<p>© 2026 Ethan Shaw</p>
+					<p>Built with love for Charlie and you all</p>
+				</footer>
+			</section>
+		</main>
+
+		<button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="切换亮暗模式">
+			<svg viewBox="0 0 48 48">
+				<path d="M9.15039 9.15088L11.3778 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 24H6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.15039 38.8495L11.3778 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 38.8495L36.6221 36.6221" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M44.9996 24H41.8496" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M38.8495 9.15088L36.6221 11.3783" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 3V6.15" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24 12C30.6274 12 36 17.3726 36 24Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M24 45.0001V41.8501" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+		</button>
+	</body>
+</html>
