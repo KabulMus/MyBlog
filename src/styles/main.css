@@ -164,6 +164,7 @@ body {
     font-size: 1rem;
     font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
     font-optical-sizing: auto;
+    font-synthesis: none; /* 禁止浏览器合成伪斜体/伪粗体 */
     text-align: justify;
     background-color: var(--bg-light);
     color: var(--text-main);
@@ -626,7 +627,6 @@ html[lang='zh-CN'] .typography-body em,
 html[lang='zh-CN'] .typography-body i {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
     font-style: italic;
-    font-synthesis: none; /* 禁止浏览器合成伪斜体/伪粗体 */
 }
 
 .typography-body h1, .typography-body h2,
