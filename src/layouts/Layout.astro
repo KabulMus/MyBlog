@@ -155,7 +155,7 @@ function getLangSwitchHref(pathname: string) {
                 </a>
 				
 				<div class="nav-links desktop-only">
-					<a href="/rss.xml" class="rss-nav-link rss-link" data-copy="https://blog.ethan929.com/rss.xml" data-text="RSS">RSS</a>
+					<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-nav-link rss-link" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} data-text="RSS">RSS</a>
 					<span class="nav-divider" aria-hidden="true"></span>
 					<a href={isEnglishRoute ? '/en-US' : '/'} data-text={navLabels.blog} class="active">{navLabels.blog}</a>
 					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/channels/' : 'https://www.ethan929.com/channels/'} data-text={navLabels.channels}>{navLabels.channels}</a>
@@ -164,7 +164,7 @@ function getLangSwitchHref(pathname: string) {
 					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/charlie/' : 'https://www.ethan929.com/charlie/'} data-text={navLabels.charlie}>{navLabels.charlie}</a>
 				</div>
 
-				<a href="/rss.xml" class="rss-link mobile-rss mobile-only" data-copy="https://blog.ethan929.com/rss.xml" data-text="RSS">RSS</a>
+				<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-link mobile-rss mobile-only" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} data-text="RSS">RSS</a>
 				<span class="mobile-rss-divider mobile-only" aria-hidden="true"></span>
 				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label={menuAriaLabel}>
 					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M7.94971 11.9497H39.9497"/><path d="M7.94971 23.9497H39.9497"/><path d="M7.94971 35.9497H39.9497"/></svg>

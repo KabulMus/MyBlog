@@ -1,14 +1,14 @@
 import rss from '@astrojs/rss';
 
-// 中文 RSS：/rss.xml（只含中文文章）
+// 英文 RSS：/en-US/rss.xml（只含英文文章）
 export async function GET(context) {
-  const posts = Object.values(import.meta.glob('./blog/*.md', { eager: true }))
+  const posts = Object.values(import.meta.glob('../blog/en-US/*.md', { eager: true }))
     .filter((p) => p.frontmatter && !p.frontmatter.draft)
     .sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
 
   return rss({
-    title: "Ethan's Blog",
-    description: 'Ethan 的博客 — 音乐、创作、随笔与成就。',
+    title: "Ethan's Blog (EN)",
+    description: "Ethan's blog — music, creation, essays & achievements.",
     site: context.site,
     items: posts.map((post) => ({
       title: post.frontmatter.title,
