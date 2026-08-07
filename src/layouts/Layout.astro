@@ -79,7 +79,15 @@ const nextIndex = nextPost ? postIndex + 1 : 0;
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
-    return dateStr.replace(/-/g, '.');
+    // 英文：Aug 2, 2020；中文：2020.8.2（月日不补零）
+    // 英文月份按规范：May/June/July 不缩写，其余缩写
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return dateStr.replace(/-/g, '.');
+    if (isEnglishRoute) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${months[m - 1]} ${d}, ${y}`;
+    }
+    return `${y}.${m}.${d}`;
 }
 
 // 文章点赞：从路径取 slug（如 /blog/2026-07-01-hi → 2026-07-01-hi）
@@ -200,7 +208,7 @@ function getLangSwitchHref(pathname: string) {
 								<path d="M14 34H20"/>
 								<path d="M28 26H34"/>
 								<path d="M14 26H20"/>
-							</svg> {formatDate(pageDate)}
+							</svg> {pageDate}
 						</span>
 					)}
 					{(() => {

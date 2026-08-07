@@ -65,7 +65,7 @@ The early version actually looked like [this](https://a97f58be.mywebsite-16r.pag
 
 ### Tech stack...?
 
-🤔 Hmm... I couldn't even tell you what I actually used... AI is just too good these days (DeepSeek is freaking incredible!! I can never repay Lord Liang[^3]'s kindness ✋😭🤚 (*2026/8/6 update: Liang Wenfeng, you actually backstabbed us 😡*)
+🤔 Hmm... I couldn't even tell you what I actually used... AI is just too good these days (DeepSeek is freaking incredible!! I can never repay Lord Liang[^3]'s kindness ✋😭🤚 (*Aug 6 update: Liang Wenfeng, you actually backstabbed us 😡*)
 
 [^3]: Liang Wenfeng, CEO of DeepSeek.
 

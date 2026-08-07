@@ -9,7 +9,10 @@ const allPosts: any[] = Object.values(markdownFiles).filter((p: any) => !p.front
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
-    return dateStr.replace(/-/g, '.');
+    // 中文：2020.8.2（月日不补零）
+    const [y, m, d] = dateStr.split('-').map(Number);
+    if (!y || !m || !d) return dateStr.replace(/-/g, '.');
+    return `${y}.${m}.${d}`;
 }
 
 function buildPageHref(page: number, basePath = '/') {
