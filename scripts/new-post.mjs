@@ -3,7 +3,7 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 const rl = createInterface({ input: stdin, output: stdout });
 
@@ -42,11 +42,17 @@ const draft = (await rl.question('先存草稿？(y/N，默认 N 直接发布)�
 const catArr = fmtArr(category, "['essays']");
 const tagArr = fmtArr(tags, '[]');
 
-const zhFile = join(process.cwd(), 'src', 'pages', 'blog', `${dateStr}-${slug}.md`);
-const enFile = join(process.cwd(), 'src', 'pages', 'blog', 'en-US', `${dateStr}-${slug}.md`);
+// 草稿写入 drafts/（被 gitignore 不进 GitHub；CF 部署时无此目录，不会上线）
+const draftSub = draft ? 'drafts' : '';
+const zhFile = join(process.cwd(), 'src', 'pages', 'blog', draftSub, `${dateStr}-${slug}.md`);
+const enFile = join(process.cwd(), 'src', 'pages', 'blog', 'en-US', draftSub, `${dateStr}-${slug}.md`);
+
+// 草稿在 drafts/ 子目录，相对 layout 路径比正式目录多一级
+const zhLayout = draft ? '../../../layouts/Layout.astro' : '../../layouts/Layout.astro';
+const enLayout = draft ? '../../../../layouts/Layout.astro' : '../../../layouts/Layout.astro';
 
 const zhContent = `---
-layout: '../../layouts/Layout.astro'
+layout: '${zhLayout}'
 title: '${titleZh}'
 date: '${dateStr}'
 draft: ${draft}
@@ -56,7 +62,7 @@ tags: ${tagArr}
 
 `;
 const enContent = `---
-layout: '../../../layouts/Layout.astro'
+layout: '${enLayout}'
 title: '${titleEn.replace(/'/g, "\\'")}'
 date: '${dateStr}'
 draft: ${draft}
@@ -66,11 +72,16 @@ tags: ${tagArr}
 
 `;
 
+mkdirSync(dirname(zhFile), { recursive: true });
+mkdirSync(dirname(enFile), { recursive: true });
 writeFileSync(zhFile, zhContent);
 console.log(`\n已创建：${zhFile}`);
-mkdirSync(join(process.cwd(), 'src', 'pages', 'blog', 'en-US'), { recursive: true });
 writeFileSync(enFile, enContent);
 console.log(`已创建：${enFile}`);
 
-console.log(`\n✅ 填好正文后运行：npm run pub  即可一键发布`);
+console.log(
+  draft
+    ? `\n✅ 已保存为草稿（drafts/，不会进入 GitHub）。填好正文后运行：npm run pub:draft  即可发布`
+    : `\n✅ 填好正文后运行：npm run pub  即可一键发布`
+);
 rl.close();

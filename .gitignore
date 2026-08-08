@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 # Cloudflare wrangler 本地状态（KV 模拟数据、缓存、观测日志），仅本地开发用
 .wrangler/
+
+# 草稿（drafts/ 不进 Git/公开仓库；CF 从 git 拉取时草稿不存在，不会部署）
+src/pages/blog/drafts/
+src/pages/blog/en-US/drafts/
