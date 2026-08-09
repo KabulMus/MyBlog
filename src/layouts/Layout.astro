@@ -15,6 +15,8 @@ interface Props {
 const { frontmatter, title, description, brandUrl, brandText } = Astro.props;
 const currentPath = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const isEnglishRoute = currentPath.includes('/en-US');
+// 首页（中/英）不进 pagefind 索引：搜索只命中具体文章页
+const isHome = currentPath === '/' || currentPath === '/en-US';
 const htmlLang = isEnglishRoute ? 'en-US' : 'zh-CN';
 const resolvedBrandUrl = brandUrl || (isEnglishRoute ? '/en-US' : '/');
 const langSwitchHref = getLangSwitchHref(currentPath);
@@ -117,7 +119,7 @@ function getLangSwitchHref(pathname: string) {
 
 ---
 <!doctype html>
-<html lang={htmlLang}> 
+<html lang={htmlLang} data-pagefind-ignore={frontmatter?.draft || isHome ? '' : undefined}> 
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
@@ -150,7 +152,7 @@ function getLangSwitchHref(pathname: string) {
 
 		<script src="/js/core.js" is:inline></script>
 	</head>
-	<body class={currentPath.startsWith('/blog') ? 'is-article-page' : ''} data-pagefind-ignore={frontmatter?.draft ? '' : undefined}>
+	<body class={currentPath.startsWith('/blog') ? 'is-article-page' : ''}>
 		<nav class="navbar" id="top-nav">
 			<div class="nav-container">
 				<a href={resolvedBrandUrl} class="nav-brand">
