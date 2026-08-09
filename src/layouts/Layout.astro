@@ -127,6 +127,10 @@ function getLangSwitchHref(pathname: string) {
 			href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" 
 			crossorigin="anonymous"
 		/>
+		<!-- Google Fonts（替代原 CSS @import：link 并行加载 + preconnect 提前握手） -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&family=Playfair+Display+SC:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客')}</title>
 
