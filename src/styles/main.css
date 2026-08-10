@@ -430,6 +430,12 @@ body {
     }
 }
 
+/* 主题按钮双图标：CSS 按 data-theme 控制显隐（data-theme 由 head 首帧内联脚本设定，无 JS 替换闪烁） */
+.theme-toggle-btn .icon-sun { display: none; }
+.theme-toggle-btn .icon-moon { display: flex; }
+:root[data-theme='dark'] .theme-toggle-btn .icon-sun { display: flex; }
+:root[data-theme='dark'] .theme-toggle-btn .icon-moon { display: none; }
+
 /* --- 8. 响应式显隐控制 --- */
 .mobile-only { display: none !important; }
 

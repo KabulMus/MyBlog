@@ -11,9 +11,7 @@ function applyTheme(theme) {
 
     const isDark = theme === 'dark';
 
-    // 更新所有位置的切换按钮图标
-    const svgs = document.querySelectorAll('.theme-toggle-btn svg, .nav-theme-toggle svg');
-    svgs.forEach(s => s.innerHTML = isDark ? ICONS.sun : ICONS.moon);
+    // 图标显隐由 CSS 控制（.icon-sun / .icon-moon），这里不再操作 innerHTML
 
     // 同步更新赞赏码图片（如果页面上有的话）
     const qrImg = document.querySelector('.modal-qr');
