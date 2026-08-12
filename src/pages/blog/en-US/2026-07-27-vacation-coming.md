@@ -1,7 +1,7 @@
 ---
 layout: '../../../layouts/Layout.astro'
 title: 'Finally about to survive this...'
-date: '2026-07-27'
+date: '2026-07-27T22:58'
 draft: false
 category: ['essays']
 tags: ['rant']

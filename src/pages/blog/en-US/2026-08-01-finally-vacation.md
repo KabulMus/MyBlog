@@ -1,7 +1,7 @@
 ---
 layout: '../../../layouts/Layout.astro'
 title: 'Yeah — I''m finally on vacation!!!'
-date: '2026-08-01'
+date: '2026-08-01T01:30'
 draft: false
 category: ['essays']
 tags: ['rant']

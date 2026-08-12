@@ -1,7 +1,7 @@
 ---
 layout: '../../../layouts/Layout.astro'
 title: 'The Fertile Soil Program'
-date: '2026-07-02'
+date: '2026-07-02T11:21'
 draft: false
 category: ['achievements', 'essays']
 tags: ['academic', 'rant']

@@ -9,10 +9,19 @@ const allPosts: any[] = Object.values(markdownFiles).filter((p: any) => !p.front
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
-    // 中文：2020.8.2（月日不补零）
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return dateStr.replace(/-/g, '.');
-    return `${y}.${m}.${d}`;
+    // 中文日期：2020.8.2（月日不补零）
+    const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return dateStr.replace(/-/g, '.');
+    const [, y, mo, d] = m;
+    return `${+y}.${+mo}.${+d}`;
+}
+
+function formatTime(dateStr: string) {
+    if (!dateStr) return '';
+    // 中文时间：24 小时制 14:32
+    const m = dateStr.match(/[T ](\d{1,2}):(\d{2})/);
+    if (!m) return '';
+    return `<span class="time-value">${+m[1]}<span class="time-colon">:</span>${m[2]}</span>`;
 }
 
 function buildPageHref(page: number, basePath = '/') {
@@ -103,6 +112,11 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 const postCats = toCatArray(post.frontmatter?.category);
                 return (
                     <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-categories={postCats.join(',')}>
+                        {post.frontmatter?.image && (
+                            <div class="post-card-image">
+                                <img src={post.frontmatter.image} alt="" loading="lazy" decoding="async" />
+                            </div>
+                        )}
                         <span class="post-index">{sortedPosts.length - index}</span>
                         {(() => {
                             const grouped = postCats.length > 0
@@ -143,6 +157,14 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                         <path d="M14 26H20"/>
                                     </svg> {formatDate(post.frontmatter.date)}
                                 </span>
+                                {formatTime(post.frontmatter.date) && (
+                                    <span class="post-meta-item">
+                                        <svg class="date-icon time-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                                            <path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" fill="none" stroke-linejoin="round"/>
+                                            <path d="M24.0084 12.0001L24.0072 24.0089L32.4866 32.4883" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg> <Fragment set:html={formatTime(post.frontmatter.date)} />
+                                    </span>
+                                )}
                                 <span class="post-meta-item post-like-meta" data-like-meta={postUrl.split('/').pop()}>
                                     <svg class="like-heart" viewBox="0 0 48 48" aria-hidden="true">
                                         <path d="M15 8C8.92487 8 4 12.9249 4 19C4 30 17 40 24 42.3262C31 40 44 30 44 19C44 12.9249 39.0751 8 33 8C29.2797 8 25.9907 9.8469 24 12.6738C22.0093 9.8469 18.7203 8 15 8Z"/>

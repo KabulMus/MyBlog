@@ -1,7 +1,7 @@
 ---
 layout: '../../layouts/Layout.astro'
 title: '耶——放假了！！！'
-date: '2026-08-01'
+date: '2026-08-01T01:30'
 draft: false
 category: ['essays']
 tags: ['rant']

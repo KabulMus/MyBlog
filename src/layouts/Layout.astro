@@ -46,6 +46,7 @@ const ogDescription = description || (isEnglishRoute
     : 'Ethan 的博客 — 音乐、创作、随笔与成就。');
 const ogImage = 'https://blog.ethan929.com/favicon.webp';
 const pageDate = formatDate(frontmatter?.date || "");
+const pageTime = formatTime(frontmatter?.date || "");
 
 // 计算文章序号（时间正序）
 let postIndex = 0;
@@ -81,15 +82,31 @@ const nextIndex = nextPost ? postIndex + 1 : 0;
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
-    // 英文：Aug 2, 2020；中文：2020.8.2（月日不补零）
+    // 日期部分：英文 Aug 2, 2020；中文 2020.8.2（月日不补零）
     // 英文月份按规范：May/June/July 不缩写，其余缩写
-    const [y, m, d] = dateStr.split('-').map(Number);
-    if (!y || !m || !d) return dateStr.replace(/-/g, '.');
+    const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return dateStr.replace(/-/g, '.');
+    const [, y, mo, d] = m;
     if (isEnglishRoute) {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${months[m - 1]} ${d}, ${y}`;
+        return `${months[+mo - 1]} ${+d}, ${+y}`;
     }
-    return `${y}.${m}.${d}`;
+    return `${+y}.${+mo}.${+d}`;
+}
+
+function formatTime(dateStr: string) {
+    if (!dateStr) return '';
+    // 时间部分：中文 24 小时制 14:32；英文 12 小时制 2:32 PM
+    const m = dateStr.match(/[T ](\d{1,2}):(\d{2})/);
+    if (!m) return '';
+    const h = +m[1];
+    const mm = m[2];
+    if (isEnglishRoute) {
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12 = h % 12 === 0 ? 12 : h % 12;
+        return `<span class="time-value">${h12}<span class="time-colon">:</span>${mm} ${ampm}</span>`;
+    }
+    return `<span class="time-value">${h}<span class="time-colon">:</span>${mm}</span>`;
 }
 
 // 文章点赞：从路径取 slug（如 /blog/2026-07-01-hi → 2026-07-01-hi）
@@ -204,29 +221,49 @@ function getLangSwitchHref(pathname: string) {
 			</div>
 		</nav>
 
-		<header class="page-hero">
-			<section class="hero-content">
-				<div>
-					<h1 set:html={renderedTitle}></h1> 
-					{pageDate && (
-						<span class="date">
-							{frontmatter?.draft ? (
-								<span class="page-index is-draft">{isEnglishRoute ? 'Draft' : '草稿'}</span>
-							) : (
-								postIndex > 0 && <span class="page-index">#{postIndex}</span>
-							)}
-							<svg class="date-icon" viewBox="0 0 48 48" aria-hidden="true">
-								<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z"/>
-								<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z"/>
-								<path d="M16 4V12"/>
-								<path d="M32 4V12"/>
-								<path d="M28 34H34"/>
-								<path d="M14 34H20"/>
-								<path d="M28 26H34"/>
-								<path d="M14 26H20"/>
-							</svg> {pageDate}
-						</span>
-					)}
+		<header class={`page-hero${frontmatter?.image ? ' has-hero-image' : ''}`}>
+			{frontmatter?.image ? (
+				<>
+					<div class="hero-image-wrap">
+						<img src={frontmatter.image} alt="" />
+						<div class="hero-image-fade" aria-hidden="true"></div>
+						<section class="hero-content">
+							<div>
+								<h1 set:html={renderedTitle}></h1> 
+								{pageDate && (
+									<span class="date">
+										<span class="date-group">
+											{frontmatter?.draft ? (
+												<span class="page-index is-draft">{isEnglishRoute ? 'Draft' : '草稿'}</span>
+											) : (
+												postIndex > 0 && <span class="page-index">#{postIndex}</span>
+											)}
+										</span>
+										<span class="date-group">
+											<svg class="date-icon" viewBox="0 0 48 48" aria-hidden="true">
+												<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z"/>
+												<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z"/>
+												<path d="M16 4V12"/>
+												<path d="M32 4V12"/>
+												<path d="M28 34H34"/>
+												<path d="M14 34H20"/>
+												<path d="M28 26H34"/>
+												<path d="M14 26H20"/>
+											</svg> {pageDate}
+										</span>
+										{pageTime && (
+											<span class="date-group">
+												<svg class="date-icon time-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+													<path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" fill="none" stroke-linejoin="round"/>
+													<path d="M24.0084 12.0001L24.0072 24.0089L32.4866 32.4883" stroke-linecap="round" stroke-linejoin="round"/>
+												</svg> <Fragment set:html={pageTime} />
+											</span>
+										)}
+									</span>
+								)}
+							</div>
+						</section>
+					</div>
 					{(() => {
 						const grouped = groupTagsByCat(toCatArray(frontmatter?.category), frontmatter?.tags || [], tagCats);
 						if (grouped.length === 0) return null;
@@ -247,8 +284,65 @@ function getLangSwitchHref(pathname: string) {
 							</div>
 						);
 					})()}
-				</div>
-			</section>
+				</>
+			) : (
+				<section class="hero-content">
+					<div>
+						<h1 set:html={renderedTitle}></h1> 
+						{pageDate && (
+							<span class="date">
+								<span class="date-group">
+									{frontmatter?.draft ? (
+										<span class="page-index is-draft">{isEnglishRoute ? 'Draft' : '草稿'}</span>
+									) : (
+										postIndex > 0 && <span class="page-index">#{postIndex}</span>
+									)}
+								</span>
+								<span class="date-group">
+									<svg class="date-icon" viewBox="0 0 48 48" aria-hidden="true">
+										<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z"/>
+										<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z"/>
+										<path d="M16 4V12"/>
+										<path d="M32 4V12"/>
+										<path d="M28 34H34"/>
+										<path d="M14 34H20"/>
+										<path d="M28 26H34"/>
+										<path d="M14 26H20"/>
+									</svg> {pageDate}
+								</span>
+								{pageTime && (
+									<span class="date-group">
+										<svg class="date-icon time-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+											<path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" fill="none" stroke-linejoin="round"/>
+											<path d="M24.0084 12.0001L24.0072 24.0089L32.4866 32.4883" stroke-linecap="round" stroke-linejoin="round"/>
+										</svg> <Fragment set:html={pageTime} />
+									</span>
+								)}
+							</span>
+						)}
+						{(() => {
+							const grouped = groupTagsByCat(toCatArray(frontmatter?.category), frontmatter?.tags || [], tagCats);
+							if (grouped.length === 0) return null;
+							return (
+								<div class="article-tags" data-pagefind-ignore>
+									{grouped.map((group, gi: number) => (
+										<Fragment key={'cat-' + group.cat}>
+											{gi > 0 && <span class="tag-group-sep" aria-hidden="true"><svg viewBox="0 0 12 24"><rect x="5.25" y="2" width="1.5" height="20" rx=".75" ry=".75"/></svg></span>}
+											<span class={`tag cat-tag cat-${group.cat}`}>{getCategoryName(group.cat, isEnglishRoute ? 'en' : 'zh')}</span>
+											{group.tags.map((tag: string, ti: number) => (
+												<Fragment key={tag}>
+													{ti > 0 && <span class="tag-sep" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg></span>}
+													<span class={`tag tag-${tag}`}>{tagNames[tag] || tag}</span>
+												</Fragment>
+											))}
+										</Fragment>
+									))}
+								</div>
+							);
+						})()}
+					</div>
+				</section>
+			)}
 		</header>
 
 		<main class="typography-body">
@@ -373,6 +467,38 @@ function getLangSwitchHref(pathname: string) {
 						});
 					})(links[i]);
 				}
+			})();
+
+			// 有题头图时：若标题/日期在图片区域内放不下（会顶出导航栏被遮挡），
+			// 自动增高图片区域（保持宽度、中间裁剪），让标题在导航栏下方完整显示。
+			(function() {
+				function fitHeroImage() {
+					var hero = document.querySelector('.page-hero.has-hero-image');
+					if (!hero) return;
+					var wrap = hero.querySelector('.hero-image-wrap');
+					var content = hero.querySelector('.hero-content');
+					if (!wrap || !content) return;
+					var img = wrap.querySelector('img');
+					// 标题栏高度 + 底部偏移(24) + 标题顶部与导航栏的间距(20)
+					var need = content.offsetHeight + 24 + 20;
+					if (wrap.offsetHeight < need) {
+						if (img) img.style.height = need + 'px';
+					} else {
+						if (img) img.style.height = '';
+					}
+				}
+				var fitHeroTimer = null;
+				function scheduleFitHero() {
+					clearTimeout(fitHeroTimer);
+					fitHeroTimer = setTimeout(fitHeroImage, 150);
+				}
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', fitHeroImage);
+				} else {
+					fitHeroImage();
+				}
+				window.addEventListener('load', fitHeroImage);
+				window.addEventListener('resize', scheduleFitHero);
 			})();
 		</script>
 

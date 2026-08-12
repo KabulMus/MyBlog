@@ -15,7 +15,11 @@ const CAT_TAGS = {
   achievements: ['recap', 'academic', 'skill', 'award', 'habit'],
 };
 
-const dateStr = new Date().toISOString().slice(0, 10);
+// 本地时间：文件名仅用日期前缀，frontmatter date 带具体时间（如 2026-08-12T14:32）
+const now = new Date();
+const pad = (n) => String(n).padStart(2, '0');
+const datePrefix = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+const dateStr = `${datePrefix}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
 const slugify = (s) =>
   s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -44,8 +48,8 @@ const tagArr = fmtArr(tags, '[]');
 
 // 草稿写入 drafts/（被 gitignore 不进 GitHub；CF 部署时无此目录，不会上线）
 const draftSub = draft ? 'drafts' : '';
-const zhFile = join(process.cwd(), 'src', 'pages', 'blog', draftSub, `${dateStr}-${slug}.md`);
-const enFile = join(process.cwd(), 'src', 'pages', 'blog', 'en-US', draftSub, `${dateStr}-${slug}.md`);
+const zhFile = join(process.cwd(), 'src', 'pages', 'blog', draftSub, `${datePrefix}-${slug}.md`);
+const enFile = join(process.cwd(), 'src', 'pages', 'blog', 'en-US', draftSub, `${datePrefix}-${slug}.md`);
 
 // 草稿在 drafts/ 子目录，相对 layout 路径比正式目录多一级
 const zhLayout = draft ? '../../../layouts/Layout.astro' : '../../layouts/Layout.astro';

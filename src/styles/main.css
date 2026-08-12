@@ -530,6 +530,112 @@ footer a:hover {
     max-width: 800px;
 }
 
+/* --- 文章题头图片（hero 横幅）---
+   图片作为正常文档流占据 hero 顶部（从导航栏下方开始，自然比例不限定高度）；
+   标题等内容叠放在图片最下方，正文从图片结束后开始，不会遮挡正文 */
+.page-hero.has-hero-image {
+    padding-top: 60px; /* 导航栏实际高度 60px */
+    padding-bottom: 0;
+}
+
+.hero-image-wrap {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* 固定比例裁剪：桌面端 10:3（16:9 素材中间裁剪，不丢失信息） */
+.hero-image-wrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 10 / 3;
+    object-fit: cover;
+    user-select: none;         /* 题头图不可选中 */
+    -webkit-user-drag: none;   /* 题头图不可拖拽 */
+}
+
+/* 图片底部黑色渐变遮罩：透明 → 半透明黑，兜住叠放的白色标题/日期，保证可读性 */
+.hero-image-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 170px;
+    background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+    pointer-events: none;
+}
+@media (max-width: 768px) {
+    .hero-image-fade {
+        height: 130px;   /* 移动端 16:9 图片较矮，遮罩相应缩短 */
+    }
+}
+
+/* 有题头图时：题目/日期/时间等排版在图片下方（叠于图片底部，整体略上移） */
+.page-hero.has-hero-image .hero-content {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 24px;
+    margin: 0 auto;
+}
+
+/* 有题头图时：分类/标签行移到图片下方，与正文左边缘对齐。
+   默认按双栏（≥1250 及 1249 附近的边界宽度）对齐 1100 居中容器；
+   边界宽度下正文仍为双栏，保持默认即可对齐，避免断点 gap 漏匹配 */
+.page-hero.has-hero-image .article-tags {
+    align-self: flex-start;
+    margin-top: 14px;
+    margin-bottom: 20px;
+    margin-left: calc(50vw - 550px);
+}
+/* 单栏（800~1249）：与正文（800 居中）左边缘对齐 */
+@media (min-width: 800px) and (max-width: 1249px) {
+    .page-hero.has-hero-image .article-tags {
+        margin-left: calc(50vw - 400px);
+    }
+}
+/* 移动端（≤800）：正文占满视口，标签行贴左 */
+@media (max-width: 800px) {
+    .page-hero.has-hero-image .article-tags {
+        margin-left: -2px;
+    }
+}
+
+/* 移动端：内页题头图改用 16:9（卡片图统一用 10:3） */
+@media (max-width: 768px) {
+    .hero-image-wrap img {
+        aspect-ratio: 16 / 9;
+    }
+}
+
+/* 有题头图时：题目/日期/时间/序号改为白色文字 + 黑色阴影 */
+.page-hero.has-hero-image h1 {
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
+    -webkit-text-fill-color: currentColor;
+    color: #ffffff;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7), 0 0 6px rgba(0, 0, 0, 0.45);
+}
+
+.page-hero.has-hero-image h1 .emoji {
+    -webkit-text-fill-color: initial;
+    background: none;
+}
+
+.page-hero.has-hero-image .page-index,
+.page-hero.has-hero-image .date {
+    color: #ffffff;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
+}
+
+/* 日历、时钟图标同样带阴影 */
+.page-hero.has-hero-image .date svg.date-icon {
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
+}
+
 .page-index {
     display: inline;
     font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
@@ -538,6 +644,7 @@ footer a:hover {
     font-variant-numeric: tabular-nums;
     color: var(--text-sub);
     margin-right: 16px;
+    user-select: none;          /* 序号不可选中 */
 }
 
 /* 草稿文章标记：在原本显示序号的位置，用琥珀色醒目标明 */
@@ -588,8 +695,10 @@ body:not(.is-article-page) .page-hero h1 {
 
 .page-hero .date {
     display: inline-flex;
+    flex-wrap: wrap;          /* 窄屏放不下 序号/日期/时间 三组时自动换行 */
     align-items: center;
-    gap: 4px;
+    gap: 2px 12px;            /* 换行后的行间距 2px；组间横向间距 12px */
+    max-width: 100%;          /* 配合 flex-wrap：宽度受限时才触发换行，宽屏仍同行 */
     font-size: 1rem;
     color: var(--text-sub);
     margin-top: 6px;
@@ -597,6 +706,20 @@ body:not(.is-article-page) .page-hero h1 {
     font-weight: 500;
     font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
     font-variant-numeric: tabular-nums;
+    user-select: none;          /* 日期/时间不可选中 */
+}
+
+/* 日期行分组：序号 / 日期 / 时间 三组，组内 4px、组间 12px，换行时整组移动不拆散 */
+.page-hero .date .date-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.page-hero .date .date-group .time-icon {
+    margin-left: 0;
+}
+.page-hero .date .date-group .page-index {
+    margin-right: 0;          /* 序号独立成组后不再需要额外右间距（组间距由 .date 的 gap 提供） */
 }
 
 /* ==========================================================================
@@ -1313,6 +1436,33 @@ html[lang='en-US'] .typography-body .footnotes::before {
     overflow: hidden;
 }
 
+/* 卡片题头图片：填满卡片宽度，位于卡片内容上方（无需过渡）
+   圆角不单独设置，自然遵从卡片整体圆角（由 .post-item 的 overflow:hidden 裁剪）
+   position:relative + z-index:1 让图片盖在浅色大序号（.post-index, z-index:0）上层，
+   避免重叠时大序号压到图片；整卡点击层（z-index:5）仍在上方不受影响 */
+.post-card-image {
+    position: relative;
+    z-index: 1;
+    margin: -20px -24px 16px -24px;
+    overflow: hidden;
+}
+
+/* 固定比例裁剪：桌面端 10:3 */
+/* 覆盖 .typography-body img 的通用圆角/描边/阴影：
+   图片自身无圆角，直接由卡片整体圆角当蒙版裁剪 */
+.post-card-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 10 / 3;
+    object-fit: cover;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    user-select: none;         /* 卡片题头图不可选中 */
+    -webkit-user-drag: none;   /* 卡片题头图不可拖拽 */
+}
+
 .post-item.is-hidden {
     display: none !important;
 }
@@ -1346,6 +1496,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     max-width: 800px;
     margin: 3rem auto 0;
     padding: 1.5rem 2rem;
+    user-select: none;             /* 上下篇导航不可选中 */
 }
 
 .post-nav-link {
@@ -1615,17 +1766,19 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
 }
 
 /* 4. 列表页卡片专属的日期样式 */
-/* 卡片元信息行：日期与点赞平级展示（统一字号/字体/颜色） */
+/* 卡片元信息行：日期/时间/点赞三组，放不下时自动换行 */
 .post-meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 14px;
+    gap: 8px 14px;            /* 换行后的行间距 8px；组间横向间距 14px */
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-sub);
     line-height: 1;
     font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "ss11";
     user-select: none;
 }
 
@@ -1649,6 +1802,24 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     stroke-width: 3.6;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+
+/* 时间组与日期组之间的间距：钟表图标左侧留白 */
+.date svg.date-icon.time-icon,
+.post-meta-item svg.date-icon.time-icon {
+    margin-left: 8px;
+}
+
+/* 主页卡片：日期/时间/点赞拆成三组后，时间图标不再额外左偏移（组间距由 .post-meta 的 gap 提供） */
+.post-meta .post-meta-item svg.date-icon.time-icon {
+    margin-left: 0;
+}
+
+/* 时间冒号垂直居中于数字高度中央（保持 inline：top 对 relative inline 同样生效，且不产生左右额外间距） */
+.time-colon {
+    position: relative;
+    top: -0.05em;
+    margin: 0 0.1em;
 }
 
 .post-like-meta.is-liked {
@@ -2152,6 +2323,7 @@ html[lang='en-US'] .cat-filter-btn {
 .toc {
     /* 窄屏：正文上方普通文字列表 */
     margin-bottom: 1.5rem;
+    user-select: none;          /* 目录整体不可选中 */
 }
 
 .toc-title {
@@ -2270,6 +2442,7 @@ html[lang='en-US'] .cat-filter-btn {
     transform: translateY(20px);   /* 与 nav-dropdown 方向相反：从下方（按钮方向）向上弹出 */
     transition: all 0.5s ease;     /* 速度/曲线与 nav-dropdown 一致 */
     z-index: 101;
+    user-select: none;             /* 目录弹层不可选中 */
 }
 .toc-popup.active {
     opacity: 1;
@@ -2309,10 +2482,13 @@ html[lang='en-US'] .cat-filter-btn {
 }
 
 /* ===== 桌面布局（默认，≥1250px）：正文与目录双栏整体居中（正文左 800px，目录右 200px） ===== */
-/* 文章页标题区（page hero）与正文左缘对齐，跟随双栏布局而非居中（仅文章页生效，主页保持居中） */
+/* 文章页标题区（page hero）与正文左缘对齐，跟随双栏布局而非居中（仅文章页生效，主页保持居中）
+   双栏（≥1250）：标题 max-width 1100 横跨「正文 + 目录」总列宽（h1 左右 padding 与 main 的 padding 相抵，
+   文字恰好填满内容区）；<1250 由下方断点恢复为 800px 正文宽 */
 .is-article-page .page-hero section.hero-content {
     align-self: flex-start;
     margin-left: calc(50vw - 550px);
+    max-width: 1100px;
 }
 .typography-body:has(.toc) {
     max-width: 1100px;
@@ -2349,6 +2525,7 @@ html[lang='en-US'] .cat-filter-btn {
     .is-article-page .page-hero section.hero-content {
         align-self: auto;
         margin-left: 0;
+        max-width: 800px;
     }
     .typography-body:has(.toc) {
         max-width: 800px;
@@ -2369,6 +2546,15 @@ html[lang='en-US'] .cat-filter-btn {
         overflow: visible;
     }
     .post-nav { max-width: 800px; }
+}
+
+/* 800~1249px：有题头图时 hero 内容与正文（800px 居中）左边缘对齐，
+   覆盖上面断点里 .is-article-page .page-hero section.hero-content 的 margin-left:0 */
+@media (min-width: 800px) and (max-width: 1249px) {
+    .is-article-page .page-hero.has-hero-image .hero-content {
+        margin-left: calc(50vw - 400px);
+        margin-right: auto;
+    }
 }
 
 /* --- 9. 页面切换平滑过渡（View Transitions API） --- */

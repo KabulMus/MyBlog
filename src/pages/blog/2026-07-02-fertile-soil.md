@@ -1,7 +1,7 @@
 ---
 layout: '../../layouts/Layout.astro'
 title: '沃土计划'
-date: '2026-07-02'
+date: '2026-07-02T11:21'
 draft: false
 category: ['achievements', 'essays']
 tags: ['academic', 'rant']
