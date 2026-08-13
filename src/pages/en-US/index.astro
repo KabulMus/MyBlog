@@ -34,10 +34,59 @@ function buildPageHref(page: number, basePath = '/en-US') {
 }
 
 function smartQuotes(text: string): string {
-    return text
-        .replace( /"([^"]*)"/g, '\u201C$1\u201D')
-        .replace(/'([^']*)'/g, '\u2018$1\u2019')
-        .replace(/'/g, '\u2019');
+    // 双引号对：标准处理
+    text = text.replace(/"([^"\n]*)"/g, '\u201C$1\u201D');
+    const chars = text.split('');
+    const positions: number[] = [];
+    for (let i = 0; i < chars.length; i++) {
+        if (chars[i] === "'") positions.push(i);
+    }
+    if (positions.length === 0) return text;
+    const isAlnum = (ch: string) => /[A-Za-z0-9]/.test(ch);
+    // 状态机：inQuote 表示当前是否处于开引号内部。
+    // 规则：
+    //   不在引号内：前是字母 → 撇号（it's）；否则 → 开引号 ‘
+    //   在引号内：后是字母 → 撇号；后是空白/结尾 → 闭引号 ’
+    //   在引号内后跟标点：若后面还有 ' → 是撇号（如 somethin'.' 中间那个），否则是闭引号
+    let inQuote = false;
+    for (let i = 0; i < chars.length; i++) {
+        if (chars[i] !== "'") continue;
+        const prev = i > 0 ? chars[i - 1] : '';
+        const next = i < chars.length - 1 ? chars[i + 1] : '';
+        if (inQuote) {
+            if (isAlnum(next)) {
+                chars[i] = '\u2019'; // 后是字母 → 撇号（it's）
+            } else if (next === '' || /\s/.test(next)) {
+                chars[i] = '\u2019'; // 后是空白/结尾 → 闭引号
+                inQuote = false;
+            } else {
+                // 后是标点：若后面还有 ' → 当前是撇号（最后那个才是闭引号）
+                if (positions.some((p) => p > i)) {
+                    chars[i] = '\u2019';
+                } else {
+                    chars[i] = '\u2019'; // 闭引号
+                    inQuote = false;
+                }
+            }
+        } else {
+            if (isAlnum(prev)) {
+                chars[i] = '\u2019'; // 前是字母 → 撇号（it's）
+            } else {
+                // 候选开引号：只有后面存在“闭引号候选”（某个 ' 后是非字母/结尾）才当开引号，
+                // 否则是开头撇号缩写（'cause / 'Twas / 'em / 'til）
+                const hasClosing = positions.some(
+                    (j) => j > i && (j === chars.length - 1 || !isAlnum(chars[j + 1]))
+                );
+                if (hasClosing) {
+                    chars[i] = '\u2018'; // 开引号
+                    inQuote = true;
+                } else {
+                    chars[i] = '\u2019'; // 开头撇号（'cause 等）
+                }
+            }
+        }
+    }
+    return chars.join('');
 }
 
 const tagNames = tagNamesEn;

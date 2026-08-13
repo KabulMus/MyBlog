@@ -17,7 +17,7 @@ Blog: **[blog.ethan929.com](https://blog.ethan929.com/en-US)**
 
 It's finally live😭😭😭
 
-I started tinkering with this site back in May, and it's finally looking like somethin‘!!
+I started tinkering with this site back in May, and it's finally looking like somethin'!!
 
 > Hey hey Ethan, so what's the point of this website, anyway?
 

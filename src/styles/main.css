@@ -189,7 +189,7 @@ body {
 
 .nav-container {
 	width: 100%;
-	max-width: 1100px;
+	max-width: 800px;
 	margin: 0 auto;
 	padding: 0 20px;
 	display: flex;
@@ -536,6 +536,62 @@ footer a:hover {
 .page-hero.has-hero-image {
     padding-top: 60px; /* 导航栏实际高度 60px */
     padding-bottom: 0;
+}
+
+/* ===== 文章页：去掉导航栏，改用悬浮返回按钮 ===== */
+/* 文章页隐藏顶部导航栏 */
+.is-article-page .navbar { display: none !important; }
+
+/* 悬浮返回按钮：左上角，不占布局空间，浮在 hero 上方 */
+.article-back-btn {
+    position: fixed;
+    top: 20px;
+    left: 32px;
+    z-index: 120;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--navbar-bg);        /* 复用导航栏半透明背景 */
+    backdrop-filter: blur(12px);         /* 复用导航栏模糊效果 */
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--item-border);
+    box-shadow: var(--card-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+/* 宽度 > 800px 时左侧也改为 20px（与顶部对称） */
+@media (min-width: 801px) {
+    .article-back-btn { left: 20px; }
+}
+.article-back-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transform: translateX(-1px); /* 箭头路径中心(25)相对 viewBox 中心(24)略偏右，微调居中 */
+}
+@media (hover: hover) and (pointer: fine) {
+    .article-back-btn:hover {
+        color: var(--primary-blue);
+        box-shadow: var(--card-hover-shadow);
+        transform: scale(1.08);
+    }
+}
+
+/* 文章页 hero 顶部：无图为返回按钮留安全区(64px = 按钮顶20 + 高36 + 间隙8)；有图时图片顶到页首 */
+.is-article-page .page-hero {
+    padding-top: 64px;
+}
+.is-article-page .page-hero.has-hero-image {
+    padding-top: 0;
 }
 
 .hero-image-wrap {
