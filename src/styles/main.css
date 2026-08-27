@@ -1205,6 +1205,18 @@ html[lang='zh-CN'] .typography-body i {
     font-family: inherit;               /* 覆盖中文斜体的宋体，恢复正文字体 */
 }
 
+/* 4. 🎚️ 图片尺寸控制：默认全宽（直接写 Markdown ![](url) 即可），另有 小/中 两档收窄
+   推荐写法：用 <p> 把图片和图注包在一起 —— <p> 里的 img 会按上面的规则 flex 居中，
+   图注 <em> 会变成副文本小字居中。尺寸 class 加在 <img> 上：
+     <p>
+       <img class="img-sm" src="/images/xxx.webp" alt="...">   小 · 约 40%
+       <em>图注</em>
+     </p>
+   （img-md ≈ 65% 中；不写 class 或直接用 ![](url) 即默认全宽，无需大号）
+   宽度为相对正文容器的百分比，随屏幕自适应；圆角/边框/阴影沿用上面的基础样式。 */
+.typography-body img.img-sm { width: 40%; }
+.typography-body img.img-md { width: 65%; }
+
 /* ==========================================================================
    🔤 拼音注音（Ruby Annotation）
    Markdown 里直接写内联 HTML 即可：
@@ -1364,7 +1376,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
-    margin: 2rem 0 0;
+    margin: 2rem 0;
 }
 
 .pagination-side {

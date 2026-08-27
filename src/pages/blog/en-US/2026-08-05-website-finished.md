@@ -33,7 +33,7 @@ Yeah, that's about it.
 
 The early version actually looked like [this](https://a97f58be.mywebsite-16r.pages.dev/en_US)[^1] — one page to rule them all ()
 
-[^1]: This one was actually one of the better versions, using the Google Fonts API... There was also an even older (read: extremely bare-bones) version, but I switched hosting platforms halfway through, so it's long gone from the current Cloudflare Pages.
+[^1]: This one was actually one of the better versions, using the Google Fonts API... There was also an <ruby>even older<rt>bare-bones</rt></ruby> version, but I switched hosting platforms halfway through, so it's long gone from the current Cloudflare Pages.
 
 ## What's on the site?
 
