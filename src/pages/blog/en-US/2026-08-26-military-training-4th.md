@@ -19,10 +19,8 @@ Pretty sure he's from Sichuan.
 
 Gotta say, trained instructors are just on another level — not only are their military skills solid, their ability to hold in a laugh is elite too ()
 
-<p>
-  <img class="img-sm" src="/images/2026-08-26-police-laughing.webp" alt="placeholder">
-  <em>No matter how funny it gets, we won't laugh — unless we just can't help it.</em>
-</p>
+![placeholder](/images/2026-08-26-police-laughing.webp){.img-sm}
+*No matter how funny it gets, we won't laugh — unless we just can't help it.*
 
 ---
 

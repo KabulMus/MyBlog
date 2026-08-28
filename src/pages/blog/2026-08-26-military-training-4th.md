@@ -19,10 +19,8 @@ tags: ['note']
 
 不得不说教官们受过训练就是不一样，不仅军事能力强，绷住的能力也很强（）
 
-<p>
-  <img class="img-sm" src="/images/2026-08-26-police-laughing.webp" alt="placeholder">
-  <em>无论多好笑我们都不会笑，除非忍不住</em>
-</p>
+![placeholder](/images/2026-08-26-police-laughing.webp){.img-sm}
+*无论多好笑我们都不会笑，除非忍不住*
 
 ---
 

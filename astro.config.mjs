@@ -127,10 +127,53 @@ function rehypeSmartQuotesBody() {
   };
 }
 
+// ⚡️ 图片尺寸 + 图注的 Markdown 写法支持（Pandoc 风格）：
+//   ![alt](/images/xxx.webp){.img-md}
+//   *图注*（markdown 斜体，可省略）
+// 编译成 <p><img class="img-md"><em>图注</em></p>，复用现有 p:has(img) 居中 + em 图注样式；
+// 图注是普通 md 文本节点，智能引号也能正常生效。
+// 注意：只有写了 {.xxx} 才会进入该处理，普通 ![]() 完全不受影响。
+function remarkFigure() {
+  return (tree) => {
+    const children = tree.children;
+    for (let i = 0; i < children.length; i++) {
+      const p = children[i];
+      if (!p || p.type !== 'paragraph') continue;
+      const kids = p.children;
+      const imgIdx = kids.findIndex((c) => c.type === 'image');
+      if (imgIdx === -1) continue;
+      const img = kids[imgIdx];
+      // 图片后紧跟 {.xxx} → 提取 class
+      let cls = null;
+      let clsIdx = -1;
+      const after = kids[imgIdx + 1];
+      if (after && after.type === 'text') {
+        const m = after.value.match(/^\s*\{\s*\.?([\w-]+)\s*\}\s*$/);
+        if (m) { cls = m[1]; clsIdx = imgIdx + 1; }
+      }
+      if (!cls) continue; // 无尺寸 class → 保持原样
+      img.data = img.data || {};
+      img.data.hProperties = img.data.hProperties || {};
+      img.data.hProperties.class = cls;
+      if (clsIdx !== -1) kids.splice(clsIdx, 1);
+      // 下一个兄弟段落若是「单独一句斜体」→ 作为图注并入本段
+      const next = children[i + 1];
+      if (
+        next && next.type === 'paragraph' &&
+        next.children.length === 1 &&
+        next.children[0].type === 'emphasis'
+      ) {
+        kids.push(next.children[0]);
+        children.splice(i + 1, 1);
+      }
+    }
+  };
+}
+
 export default defineConfig({
   site: 'https://blog.ethan929.com',
   markdown: {
-    remarkPlugins: [remarkMath], // ⚡️ 负责在 Markdown 编译阶段识别 $ 和 $$ 语法
+    remarkPlugins: [remarkFigure, remarkMath], // ⚡️ 图片尺寸/图注 markdown 写法 + 识别 $ $$ 语法
     rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody], // ⚡️ KaTeX 公式 + 正文智能引号（统一状态机）
     // ⚡️ 关闭内置 smartypants 的引号转换，改由 rehypeSmartQuotesBody 统一接管；
     //    保留破折号/省略号；backticks 也关闭（否则正文两个单引号 '' 会被合并成右双引号 ”）
