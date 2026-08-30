@@ -151,7 +151,7 @@ button, input, select, textarea { font-family: inherit; }
 
 body {
     font-size: 1rem;
-    font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+    font-family: 'Inter Var', 'Noto Sans SC', -apple-system, sans-serif;
     font-optical-sizing: auto;
     font-synthesis: none; /* 禁止浏览器合成伪斜体/伪粗体 */
     text-align: justify;
@@ -694,7 +694,7 @@ footer a:hover {
 
 .page-index {
     display: inline;
-    font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -721,7 +721,7 @@ footer a:hover {
 .page-hero h1 {
     font-size: 2.8rem;
     font-weight: 800;
-    font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -760,7 +760,7 @@ body:not(.is-article-page) .page-hero h1 {
     margin-top: 6px;
     padding: 0 32px;
     font-weight: 500;
-    font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-variant-numeric: tabular-nums;
     user-select: none;          /* 日期/时间不可选中 */
 }
@@ -813,26 +813,27 @@ html[lang='zh-CN'] .typography-body i {
     color: var(--text-main);
     font-weight: 700;
     position: relative;
+    line-height: 1.2;
 }
 
 .typography-body h1 {
     font-size: 1.8rem;
-    margin: 1rem 0;
+    margin: 1.2rem 0;
 }
 
 .typography-body h2 {
     font-size: 1.6rem;
-    margin: 1rem 0 0.6rem;
+    margin: 1.2rem 0 0.8rem;
 }
 
 .typography-body h3 {
     font-size: 1.3rem;
-    margin: 0.6rem 0 0.3rem;
+    margin: 0.8rem 0 0.5rem;
 }
 
 .typography-body h4, .typography-body h5, .typography-body h6 {
     font-size: 1.1rem;
-    margin: 0.3rem 0;
+    margin: 0.5rem 0;
 }
 /* ==========================================================================
    🛠️ 终极隔离：仅在纯文章正文内启用悬停变色与井号（彻底不波及卡片）
@@ -871,7 +872,7 @@ html[lang='zh-CN'] .typography-body i {
     left: -1.4rem; 
     color: var(--primary-blue);
     font-weight: 700; 
-    font-family: 'Montserrat', 'Inter', sans-serif; 
+    font-family: 'Montserrat', 'Inter Var', sans-serif; 
     opacity: 0; 
     transition: opacity 0.2s ease; /* 纯粹的不透明度缓动 */
 }
@@ -1078,7 +1079,7 @@ html[lang='zh-CN'] .typography-body i {
     overflow-x: auto !important;        
     padding: 28px 32px;       /* ⚡️ 把顶部 Padding 稍微加大（由 18px 变 28px），防止第一行代码和语言标签撞车 */
     
-    font-family: 'JetBrains Mono', 'Fira Code', 'Inter', monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Inter Var', monospace;
     font-size: 0.92rem;
     line-height: 1.6;
     color: #e3e3e6;
@@ -1231,7 +1232,7 @@ html[lang='zh-CN'] .typography-body i {
     font-size: 0.8em;                  /* 注音约半个字高 */
     font-weight: 500;
     color: var(--text-sub);             /* 弱化灰色，不抢正文 */
-    font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Inter Var', 'Noto Sans SC', sans-serif;
     line-height: 0;
     user-select: none;                  /* 注音不参与选中复制 */
 }
@@ -1284,7 +1285,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
-    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
     margin-bottom: 1.2rem;             /* 稍微拉开一点和下面列表的间距 */
     color: var(--text-sub);
     opacity: 0.6;
@@ -1398,7 +1399,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
 .pagination-end {
     display: inline-flex;
     align-items: center;
-    font-family: 'Montserrat', 'Inter', sans-serif;
+    font-family: 'Montserrat', 'Inter Var', sans-serif;
     font-size: 1rem;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
@@ -1421,7 +1422,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     justify-content: center;
     width: 2.4rem;
     height: 2.4rem;
-    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+    font-family: 'Barlow Condensed', 'Inter Var', sans-serif;
     font-size: 1.2rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -1540,7 +1541,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     z-index: 0;
     right: 24px;
     bottom: -30px;
-    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+    font-family: 'Barlow Condensed', 'Inter Var', sans-serif;
     font-size: 10rem;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
@@ -1621,7 +1622,7 @@ html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
 .post-nav-label {
     font-size: 0.8rem;
     font-weight: 500;
-    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
     color: var(--primary-blue);
     display: inline-flex;
     align-items: center;
@@ -1641,7 +1642,7 @@ html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
 .post-nav-index {
     position: absolute;
     bottom: -10px;
-    font-family: 'Barlow Condensed', 'Inter', sans-serif;
+    font-family: 'Barlow Condensed', 'Inter Var', sans-serif;
     font-size: 4.6rem;
     font-weight: 900;
     font-variant-numeric: tabular-nums;
@@ -1719,7 +1720,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     border: none;
     background: transparent;
     color: var(--text-sub);
-    font-family: 'Encode Sans', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
@@ -1844,7 +1845,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     font-weight: 500;
     color: var(--text-sub);
     line-height: 1;
-    font-family: 'Montserrat', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "ss11";
     user-select: none;
@@ -2045,7 +2046,7 @@ html[lang='en-US'] .post-title-link {
 #search .pagefind-ui__result-excerpt,
 #search .pagefind-ui__message,
 #search .pagefind-ui__button {
-    font-family: 'Inter', 'Noto Sans SC', sans-serif !important;
+    font-family: 'Inter Var', 'Noto Sans SC', sans-serif !important;
 }
 
 /* ==========================================================================
@@ -2195,7 +2196,7 @@ html[lang='en-US'] .post-title-link {
 .tag {
     z-index: 1;
     display: inline;
-    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 0.78rem;
     font-weight: 500;
     line-height: 1.2;
@@ -2323,7 +2324,7 @@ html[lang='en-US'] .post-title-link {
     border: none;
     background: transparent;
     color: var(--text-sub);
-    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
@@ -2361,7 +2362,7 @@ html[lang='en-US'] .post-title-link {
     border: 1px solid var(--item-border);
     background: var(--card-bg);
     color: var(--text-sub);
-    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
@@ -2396,7 +2397,7 @@ html[lang='en-US'] .cat-filter-btn {
 
 .toc-title {
     /* 复用正文注脚「注释/Notes」标题的样式 */
-    font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-sub);

@@ -1,0 +1,50 @@
+---
+layout: '../../../layouts/Layout.astro'
+title: 'Tencent Music ❌ Copyright Troll ✅'
+date: '2026-08-30T14:18'
+draft: false
+category: ['studio', 'essays']
+tags: ['channel', 'article']
+---
+
+Honestly, I didn't want to bring this up — for one thing, I did use copyrighted content, so speaking up won't win me any understanding; for another, this kind of video could stir up some waves. But I can't hold it in anymore. And I don't need to be scared of being silenced or anything — I'm small enough that it doesn't matter, and besides, is this world really short of people who've been treated unfairly?
+
+Heads up: this is my personal opinion, not a legal argument — mostly emotional venting, so take it with a grain of salt.
+
+I'm not saying copyright protection is wrong. But Tencent Music is straight-up wrecking the creative ecosystem — and I'm firmly against Tencent Music (actually, not just the music arm) trying to monopolize copyrights and destroy the creative environment!
+
+As early as 2021, regulators ordered Tencent Music to drop its exclusive copyrights — but everyone can see how that turned out: the monopoly walls and the heavy-handed pressure only got worse. Who knows whether that order ever had anything to do with us listeners, but as an ordinary user, just look at NetEase Cloud Music — it's still swaths of grayed-out songs.
+
+## On the Copyright Law
+
+I've been a creator for four years now — over 200 videos in total, and more than a dozen of them have been reported by TME, using the Copyright Law and such as a shield.
+
+But I believe the Copyright Law was meant to encourage creation and dissemination — not to block dissemination!
+
+## Selective enforcement
+
+You make me take my video down — yet the platform is full of people using copyrighted music. What, you think I'm easy to bully, so you pick the softest target? Selective enforcement, huh? Fine — then let me appeal, won't you? F\*ck that, it doesn't work! And if you ever tried to report one of the big shots, the hell you would — you'd tuck your head in faster than anyone!
+
+## Absurd licensing fees we can't afford
+
+We're willing to buy the rights — but where's a proper channel? Even the one they offer is priced entirely for commercial use. For a small creator like me, I'd have to shell out anywhere from a few thousand to over ten thousand yuan (≈ \$400–\$1,400) to buy a single song from your godd\*mn company before making a video — and in return I get what, the "creator incentive" payout that's not even five yuan (less than a dollar) as a consolation prize??
+
+## Music and derivative works
+
+In my opinion, music and derivative works naturally lift each other up. People discover great songs through derivative creations, get hooked, and go listen on the music platform on their own — most will even accept paying for a membership. Whether people come to your platform is decided by QUALITY! Blocking like this might lock in the money short-term, but in the long run? Doesn't it also hurt the exposure and vitality of musicians' works?!
+
+## The platform's review system
+
+So the platform's review joins right in with them to beat down creators? You've never once given creators a chance to breathe — every report is met with an instant "rejected and locked", not even a plain "rejected". If you'd just "reject" without locking, it would preserve the video's original stats and give creators room to fix things. But with this system, creators can only keep re-uploading — delete, re-upload, delete again. Look at how many times I've had to re-upload already!
+
+I can reasonably suspect I've been put on their watchlist.
+
+---
+
+— I suggest Tencent Music and Visual China (the one where "the copyright of the national flag and emblem belongs to your company too?"), and FounderType (1. Lawyer-letter warning! 2. Aren't Source Han and other free, open-source fonts good enough?) all sit at the same table.
+
+---
+
+I finally got close to 4,000 followers, yet now I'm about to pivot or just stop posting.
+
+Who's there to blame for that, huh.
