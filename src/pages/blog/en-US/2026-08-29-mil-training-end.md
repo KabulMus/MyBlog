@@ -3,6 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: 'The military training has come to an end.'
 date: '2026-08-29T20:10'
 draft: false
+ai: true
 category: ['essays']
 tags: ['note']
 ---

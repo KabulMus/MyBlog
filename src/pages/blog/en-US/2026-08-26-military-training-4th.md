@@ -3,6 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: 'This is... the 4th day of military training'
 date: '2026-08-26T22:56'
 draft: false
+ai: true
 category: ['essays']
 tags: ['note']
 ---

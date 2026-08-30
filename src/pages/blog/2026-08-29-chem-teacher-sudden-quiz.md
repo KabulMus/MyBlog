@@ -4,6 +4,7 @@ title: '化学老师你在故意败好感吗？'
 date: '2026-08-29T00:02'
 draft: false
 category: ['essays']
+warning: opinion
 tags: ['rant']
 ---
 

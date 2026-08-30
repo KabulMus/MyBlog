@@ -87,6 +87,14 @@ function smartQuotes(text: string): string {
 
 const tagNames = tagNamesZh;
 
+function warningLabel(w: string, lang: 'zh' | 'en'): string {
+    const map: Record<string, { zh: string; en: string }> = {
+        opinion: { zh: '个人观点', en: 'Opinion' },
+        spoilers: { zh: '剧透', en: 'Spoilers' },
+    };
+    return map[w]?.[lang] || w;
+}
+
 const sortedPosts = allPosts.sort((a, b) => {
     const dateA = new Date(a.frontmatter?.date || 0).getTime();
     const dateB = new Date(b.frontmatter?.date || 0).getTime();
@@ -154,11 +162,15 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             </div>
         </div>
 
+        <div class="post-list-wrap">
         <ul class="post-list">
             {sortedPosts.map((post, index) => {
                 const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
                 const postCats = toCatArray(post.frontmatter?.category);
+                const postWarnings = Array.isArray(post.frontmatter?.warning)
+                    ? post.frontmatter.warning
+                    : (post.frontmatter?.warning ? [post.frontmatter.warning] : []);
                 return (
                     <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-categories={postCats.join(',')}>
                         {post.frontmatter?.image && (
@@ -186,6 +198,20 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                             ))}
                                         </Fragment>
                                     ))}
+                                    {/* 内容提示（个人观点/剧透）：frontmatter warning 时显示，与 AI 徽标同区靠右 */}
+                                    {postWarnings.length > 0 && (
+                                        <span class="cw-pills" data-pagefind-ignore>
+                                            {postWarnings.map((w: string) => (
+                                                <span class={`tag cat-tag cw-pill cw-${w}`}>{warningLabel(w, 'zh')}</span>
+                                            ))}
+                                        </span>
+                                    )}
+                                    {/* AI 翻译徽标：始终在最后（最右端） */}
+                                    {post.frontmatter?.ai && (
+                                        <span class="tag cat-tag ai-badge" title="AI 翻译">
+                                            <span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
+                                        </span>
+                                    )}
                                 </div>
                             );
                         })()}
@@ -226,6 +252,9 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 );
             })}
         </ul>
+
+        <div id="post-list-empty" data-pagefind-ignore><p>暂无匹配文章</p></div>
+        </div>
 
         {sortedPosts.length === 0 && (
             <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章</p>
@@ -284,6 +313,54 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 <script is:inline>
     var activeCategory = '';
     var activeTags = [];
+
+    var POSTS_PER_PAGE = 8; // 与顶部 postsPerPage 保持一致
+
+    function snapshotOrigPages() {
+        document.querySelectorAll('.post-list .post-item').forEach(function (item) {
+            if (!item.getAttribute('data-orig-page')) {
+                item.setAttribute('data-orig-page', item.getAttribute('data-page') || '1');
+            }
+        });
+    }
+
+    function updateEmptyState(isEmpty) {
+        var empty = document.getElementById('post-list-empty');
+        if (empty) empty.classList.toggle('is-visible', isEmpty);
+    }
+
+    // 筛选时重新组页：匹配卡片按「匹配结果顺序」重新分配页码，并同步分页 UI；卡片上的 #N 编号不动
+    function repaginate() {
+        snapshotOrigPages();
+        var items = Array.prototype.slice.call(document.querySelectorAll('.post-list .post-item'));
+        var matchIndex = 0;
+        var matchCount = 0;
+        items.forEach(function (item) {
+            var cats = (item.getAttribute('data-categories') || '').split(',').filter(Boolean);
+            var tags = (item.getAttribute('data-tags') || '').split(',').filter(Boolean);
+            var ok = (!activeCategory || cats.indexOf(activeCategory) !== -1) &&
+                     (activeTags.length === 0 || activeTags.some(function (t) { return tags.indexOf(t) !== -1; }));
+            if (ok) {
+                item.setAttribute('data-page', String(Math.floor(matchIndex / POSTS_PER_PAGE) + 1));
+                matchIndex++;
+                matchCount++;
+            } else {
+                item.setAttribute('data-page', item.getAttribute('data-orig-page') || '1');
+            }
+        });
+        var total = Math.max(1, Math.ceil(matchCount / POSTS_PER_PAGE));
+        var pagination = document.querySelector('.pagination');
+        if (pagination) {
+            pagination.classList.toggle('is-collapsed', total <= 1);
+            pagination.setAttribute('data-total-pages', String(total));
+            var input = pagination.querySelector('.pagination-input');
+            if (input) input.max = String(total);
+            var end = pagination.querySelector('.pagination-end');
+            if (end) end.textContent = String(total);
+        }
+        // 仅当「有文章但筛选 0 命中」时显示空态（避免和无文章时的提示重复）
+        updateEmptyState(items.length > 0 && matchCount === 0);
+    }
 
     // tag 筛选栏展开/收起：只切换 CSS class，动画全部由 @keyframes 驱动
     // （grid-template-rows 0fr↔1fr 平滑展开，并自然推挤下方卡片滑动）
@@ -401,6 +478,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 
         var initialPage = getPageFromUrl();
         sessionStorage.setItem('blogHomePage', String(initialPage));
+        repaginate();
         showPage(initialPage);
 
         document.querySelectorAll('.cat-filter-btn').forEach((btn) => {
@@ -441,6 +519,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 nextUrl.searchParams.set('page', '1');
                 history.pushState({}, '', nextUrl);
                 sessionStorage.setItem('blogHomePage', '1');
+                repaginate();
                 showPage(1);
                 smoothScrollToTop();
             });
@@ -462,6 +541,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 document.querySelectorAll('.tag-filter-btn').forEach(function(b) {
                     b.classList.toggle('active', activeTags.indexOf(b.getAttribute('data-tag') || '') !== -1);
                 });
+                repaginate();
                 showPage(1);
                 smoothScrollToTop();
             });

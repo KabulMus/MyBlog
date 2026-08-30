@@ -3,6 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: 'An empty vessel makes the loudest sound'
 date: '2026-08-22T22:43'
 draft: false
+ai: true
 category: ['essays']
 tags: ['rant']
 ---

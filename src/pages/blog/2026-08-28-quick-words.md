@@ -4,6 +4,7 @@ title: '嘘🤫我偷偷讲两句'
 date: '2026-08-28T00:48'
 draft: false
 category: ['essays']
+warning: opinion
 tags: ['note']
 ---
 

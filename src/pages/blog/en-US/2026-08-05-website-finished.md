@@ -3,6 +3,7 @@ layout: '../../../layouts/Layout.astro'
 title: 'My website is finally ready!!'
 date: '2026-08-05T20:12'
 draft: false
+ai: true
 category: ['essays', 'studio']
 tags: ['article', 'code']
 ---

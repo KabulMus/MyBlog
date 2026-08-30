@@ -3,7 +3,9 @@ layout: '../../../layouts/Layout.astro'
 title: 'Shh... 🤫 Just a few quick words'
 date: '2026-08-28T00:48'
 draft: false
+ai: true
 category: ['essays']
+warning: opinion
 tags: ['note']
 ---
 

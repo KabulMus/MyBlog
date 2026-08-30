@@ -36,7 +36,7 @@
     --color-gray-bg: rgba(107, 114, 128, 0.1);
     --color-gray-border: rgba(107, 114, 128, 0.3);
     --color-cyan: #06b6d4;         /* 原「成就」青 */
-    --color-cyan-bg: rgba(6, 182, 212, 0.12);
+    --color-cyan-bg: rgba(6, 182, 212, 0.1);
     --color-cyan-border: rgba(6, 182, 212, 0.35);
     --color-red: #ef4444;
     --color-red-bg: rgba(239, 68, 68, 0.1);
@@ -72,6 +72,7 @@
     --color-amber: #e9c15c;
     --color-amber-bg: rgba(251, 191, 36, 0.15);
     --color-amber-border: rgba(251, 191, 36, 0.3);
+    --color-green: #96f150;
     --color-green-bg: rgba(88, 204, 2, 0.15);
     --color-gray-bg: rgba(148, 163, 184, 0.15);
     --color-cyan: #2dd4bf;         /* 原「成就」暗色 */
@@ -80,10 +81,10 @@
     --color-red: #f87171;
     --color-red-bg: rgba(248, 113, 113, 0.15);
     --color-red-border: rgba(248, 113, 113, 0.3);
-    --color-purple: #c084fc;
+    --color-purple: #c48efa;
     --color-purple-bg: rgba(192, 132, 252, 0.15);
     --color-purple-border: rgba(192, 132, 252, 0.3);
-    --color-indigo: #818cf8;
+    --color-indigo: #a1aafb;
     --color-indigo-bg: rgba(129, 140, 248, 0.15);
     --color-indigo-border: rgba(129, 140, 248, 0.3);
     --color-rose: #fb7185;
@@ -110,6 +111,7 @@
         --color-amber: #e9c15c;
         --color-amber-bg: rgba(251, 191, 36, 0.15);
         --color-amber-border: rgba(251, 191, 36, 0.3);
+        --color-green: #96f150;
         --color-green-bg: rgba(88, 204, 2, 0.15);
         --color-gray-bg: rgba(148, 163, 184, 0.15);
         --color-cyan: #2dd4bf;         /* 原「成就」暗色 */
@@ -118,10 +120,10 @@
         --color-red: #f87171;
         --color-red-bg: rgba(248, 113, 113, 0.15);
         --color-red-border: rgba(248, 113, 113, 0.3);
-        --color-purple: #c084fc;
+        --color-purple: #c48efa;
         --color-purple-bg: rgba(192, 132, 252, 0.15);
         --color-purple-border: rgba(192, 132, 252, 0.3);
-        --color-indigo: #818cf8;
+        --color-indigo: #a1aafb;
         --color-indigo-bg: rgba(129, 140, 248, 0.15);
         --color-indigo-border: rgba(129, 140, 248, 0.3);
         --color-rose: #fb7185;
@@ -642,21 +644,34 @@ footer a:hover {
    边界宽度下正文仍为双栏，保持默认即可对齐，避免断点 gap 漏匹配 */
 .page-hero.has-hero-image .article-tags {
     align-self: flex-start;
+    width: min(800px, 100%);   /* 撑满 800px 正文宽：让 .ai-badge 的 margin-left:auto 能推到 tag 行右端 */
+    padding: 0;                /* 双栏：行已=800 正文列，去 32px padding 使 tag 文字/徽标贴合正文左右缘 */
     margin-top: 14px;
     margin-bottom: 20px;
-    margin-left: calc(50vw - 550px);
+    margin-left: calc(50vw - 516px);   /* 双栏：对齐 800 正文列左缘（1100 容器内 grid 居中偏移 34px；原 550 对齐容器会偏左 34） */
 }
-/* 单栏（800~1249）：与正文（800 居中）左边缘对齐 */
+/* 单栏（800~1249）：与正文（800 居中）左边缘对齐；tag 行比正文文字宽 32px/边，保留 padding 32 使内容对齐正文 */
 @media (min-width: 800px) and (max-width: 1249px) {
     .page-hero.has-hero-image .article-tags {
         margin-left: calc(50vw - 400px);
+        padding: 0 32px;
     }
 }
 /* 移动端（≤800）：正文占满视口，标签行贴左 */
 @media (max-width: 800px) {
     .page-hero.has-hero-image .article-tags {
         margin-left: -2px;
+        padding: 0 32px;
     }
+}
+
+/* 非题图文章：双栏（≥1250）下 .article-tags 跟随 800 正文列而非 1100 hero 容器——
+   hero-content 左缘在 50vw-550，正文列左缘在 50vw-516，故 +34px 左移、限宽 800；
+   单栏/移动端由下方 @media(max-width:1249) 重置回自适应宽 + margin-left:0 */
+.is-article-page .page-hero:not(.has-hero-image) section.hero-content .article-tags {
+    width: min(800px, 100%);
+    margin-left: 34px;
+    padding: 0;              /* 双栏：行=800 正文列，去 padding 使 tag 文字/徽标贴合正文左右缘 */
 }
 
 /* 移动端：内页题头图改用 16:9（卡片图统一用 10:3） */
@@ -1784,6 +1799,31 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     opacity: 0.4;
 }
 
+/* 空匹配提示：固定位置 + 纯淡入淡出（绝对定位铺满列表区，不随卡片高度移动）
+   .post-list-wrap 提供 position:relative 锚点 + 空态时的 min-height，让提示居中 */
+.post-list-wrap {
+    position: relative;
+    min-height: 20rem;
+}
+#post-list-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease 0.1s;
+}
+#post-list-empty.is-visible {
+    opacity: 1;
+}
+#post-list-empty p {
+    margin: 0;
+    color: var(--text-sub);
+    text-align: center;
+}
+
 /* 2. 撑满整张卡片的绝对定位点击层 */
 .post-title-link::before {
     content: "";
@@ -2216,6 +2256,68 @@ html[lang='en-US'] .post-title-link {
 .cat-tag.cat-essays { background: var(--color-indigo-bg); color: var(--color-indigo); }
 .cat-tag.cat-achievements { background: var(--color-cyan-bg); color: var(--color-cyan); }
 
+/* AI 翻译徽标：复用分类标签框样式（紫），与 cat/tag 同行靠右（右上角）
+   .ai-badge-icon 内为翻译 SVG（Illustrator 导出，viewBox 24），颜色/粗细由 CSS 控制 */
+.ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;          /* 推到标签行最右端 */
+    background: var(--color-purple-bg);
+    color: var(--color-purple);
+    white-space: nowrap;
+}
+.ai-badge-icon {
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+}
+.ai-badge-icon svg {
+    display: block;
+    width: 1.25em;   /* 随徽标字体缩放 */
+    height: 1.25em;
+    stroke: currentColor;   /* 继承徽标紫色，不用 SVG 自带颜色 */
+}
+.ai-badge-icon svg path,
+.ai-badge-icon svg polyline,
+.ai-badge-icon svg line {
+    fill: none;
+    stroke-width: 2.5;          /* 24 viewBox：与之前 48/5 同屏粗细 */
+    stroke-miterlimit: 2;       /* 与 Illustrator 导出一致 */
+}
+
+/* 内容提示 pill（个人观点/剧透）：与 AI 徽标同区、tag 行右端 */
+.cw-pills {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;       /* 无 AI 徽标时也能推到右端 */
+    align-self: center;
+}
+.cw-pills + .ai-badge {
+    margin-left: 8px;        /* AI 徽标始终在最后：pills 用 margin-left:auto 推右，AI 徽标只留间距 */
+}
+/* AI 徽标与内容提示 pill 垂直居中对齐（文章页 + 主页卡片，避免 baseline/center 混用错位） */
+.article-tags .ai-badge,
+.article-tags .cw-pills,
+.post-tags .ai-badge,
+.post-tags .cw-pills {
+    align-self: center;
+}
+.cw-pill {
+    font-weight: 700;
+    white-space: nowrap;
+}
+.cw-pill.cw-opinion {
+    background: var(--color-green-bg);
+    color: var(--color-green);
+}
+.cw-pill.cw-spoilers {
+    background: var(--color-rose-bg);
+    color: var(--color-rose);
+}
+
+
 /* tag 之间的分隔号（实心圆点 SVG）：独立 flex 项，靠 gap 两侧对称自然居中 */
 .tag-sep {
     color: var(--text-sub);
@@ -2595,6 +2697,12 @@ html[lang='en-US'] .cat-filter-btn {
         align-self: auto;
         margin-left: 0;
         max-width: 800px;
+    }
+    /* 非题图文章 tag 行：单栏/移动端恢复自适应宽 + 无左偏移 + padding 对齐正文 */
+    .is-article-page .page-hero:not(.has-hero-image) section.hero-content .article-tags {
+        width: auto;
+        margin-left: 0;
+        padding: 0 32px;
     }
     .typography-body:has(.toc) {
         max-width: 800px;

@@ -26,6 +26,18 @@ const navLabels = isEnglishRoute
     : { blog: '博客', channels: '频道列表', toolkit: '工具箱', support: '联系支持', charlie: '关于周深' };
 const menuAriaLabel = isEnglishRoute ? 'Menu' : '菜单';
 const themeAriaLabel = isEnglishRoute ? 'Toggle theme' : '切换亮暗模式';
+
+// 内容提示（Content Warning）：frontmatter warning 字段（可字符串或数组），如 ['opinion'] / ['spoilers']
+const postWarnings: string[] = Array.isArray(frontmatter?.warning)
+    ? frontmatter.warning
+    : (frontmatter?.warning ? [frontmatter.warning] : []);
+function warningLabel(w: string, lang: 'zh' | 'en'): string {
+    const map: Record<string, { zh: string; en: string }> = {
+        opinion: { zh: '个人观点', en: 'Opinion' },
+        spoilers: { zh: '剧透', en: 'Spoilers' },
+    };
+    return map[w]?.[lang] || w;
+}
 function smartQuotes(text: string): string {
     // 双引号对：标准处理
     text = text.replace(/"([^"\n]*)"/g, '\u201C$1\u201D');
@@ -347,6 +359,20 @@ function getLangSwitchHref(pathname: string) {
 										))}
 									</Fragment>
 								))}
+								{/* 内容提示（个人观点/剧透等）：与 AI 徽标同区、tag 行右端 */}
+								{postWarnings.length > 0 && (
+									<span class="cw-pills" data-pagefind-ignore>
+										{postWarnings.map((w: string) => (
+											<span class={`tag cat-tag cw-pill cw-${w}`} title={warningLabel(w, isEnglishRoute ? 'en' : 'zh')}>{warningLabel(w, isEnglishRoute ? 'en' : 'zh')}</span>
+										))}
+									</span>
+								)}
+								{/* AI 翻译徽标：始终在最后（最右端） */}
+								{frontmatter?.ai && (
+									<span class="tag cat-tag ai-badge" title={isEnglishRoute ? 'AI translation' : 'AI 翻译'}>
+										<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
+									</span>
+								)}
 							</div>
 						);
 					})()}
@@ -403,6 +429,20 @@ function getLangSwitchHref(pathname: string) {
 											))}
 										</Fragment>
 									))}
+									{/* 内容提示（个人观点/剧透等）：与 AI 徽标同区、tag 行右端 */}
+									{postWarnings.length > 0 && (
+										<span class="cw-pills" data-pagefind-ignore>
+											{postWarnings.map((w: string) => (
+												<span class={`tag cat-tag cw-pill cw-${w}`} title={warningLabel(w, isEnglishRoute ? 'en' : 'zh')}>{warningLabel(w, isEnglishRoute ? 'en' : 'zh')}</span>
+											))}
+										</span>
+									)}
+									{/* AI 翻译徽标：始终在最后（最右端） */}
+									{frontmatter?.ai && (
+										<span class="tag cat-tag ai-badge" title={isEnglishRoute ? 'AI translation' : 'AI 翻译'}>
+											<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
+										</span>
+									)}
 								</div>
 							);
 						})()}

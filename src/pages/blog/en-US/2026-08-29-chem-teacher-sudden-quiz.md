@@ -3,7 +3,9 @@ layout: '../../../layouts/Layout.astro'
 title: 'Chemistry teacher, are you trying to turn everyone off on purpose?'
 date: '2026-08-29T00:02'
 draft: false
+ai: true
 category: ['essays']
+warning: opinion
 tags: ['rant']
 ---
 
