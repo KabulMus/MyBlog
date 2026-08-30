@@ -13,6 +13,6 @@ Finally!
 
 One week left…
 
-hope the dumb*ss principal actually sticks to his word 😅👎
+hope the dumb\*ss principal actually sticks to his word 😅👎
 
 **LET'S GO!!!**

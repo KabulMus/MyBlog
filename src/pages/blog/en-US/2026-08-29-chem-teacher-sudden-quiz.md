@@ -7,7 +7,7 @@ category: ['essays']
 tags: ['rant']
 ---
 
-Honestly, from the very first day as our acting homeroom teacher she already gave us more than enough: making us write some godd\*mn 1,000-word personal *mini*-biography, failing to work the computer so we never got our movie, and making us read that f\*\*king student handbook.
+Honestly, from the very first day as our acting homeroom teacher she already gave us more than enough: making us write some godd\*mn 1,000-word personal *mini*-biography, failing to work the computer so we never got our movie, and making us read that f\*cking student handbook.
 
 And yet, there's an even bigger move.
 
