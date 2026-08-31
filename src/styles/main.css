@@ -708,6 +708,14 @@ footer a:hover {
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.75);
 }
 
+/* 有题头图时：AI 翻译徽标叠在黑遮罩上，强制用深色模式紫色（亮紫 + 深紫底），
+   保证任意主题下都清晰易读；仅作用于题图 hero 区域，卡片/无题图文章不受影响 */
+.page-hero.has-hero-image {
+    --color-purple: #d6b0fd;
+    --color-purple-bg: rgba(37, 15, 59, 0.5);
+    --color-purple-border: rgba(192, 132, 252, 0.3);
+}
+
 /* 日历、时钟图标同样带阴影 */
 .page-hero.has-hero-image .date svg.date-icon {
     filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.7));
