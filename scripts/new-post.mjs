@@ -184,10 +184,32 @@ const tags = await select(
 // 重建 readline 接口，继续用普通输入问剩余问题
 const rl2 = createInterface({ input: stdin, output: stdout });
 const draft = (await rl2.question('先存草稿？(y/N，默认 N 直接发布)：')).trim().toLowerCase() === 'y';
+// 英文版默认显示「AI 翻译」pill（当前英语水平还不够，默认 true；日后英语水平够了改成 false 即可）
+const aiTranslate = (await rl2.question('英文版显示「AI 翻译」pill？(Y/n，默认 Y)：')).trim().toLowerCase() !== 'n';
 rl2.close();
+
+// 内容警告（多选，顺序=显示顺序，可留空）：与 Layout.astro warningLabel / main.css cw-* 保持一致
+const warningChoices = [
+  { key: 'opinion', label: '主观 / Opinion' },
+  { key: 'spoilers', label: '剧透 / Spoilers' },
+  { key: 'politics', label: '政治 / Politics' },
+  { key: 'adult', label: '成人 / Adult' },
+];
+const warnings = await select(
+  '内容警告（↑↓ 空格 勾选，回车 确认；顺序=显示顺序，可留空）：',
+  warningChoices,
+  { multi: true, ordered: true }
+);
 
 const catArr = fmtArr(effectiveCats, "['essays']");
 const tagArr = fmtArr(tags, '[]');
+const warningLine =
+  warnings.length === 1
+    ? `warning: ${warnings[0]}\n`
+    : warnings.length > 1
+      ? `warning: ['${warnings.join("', '")}']\n`
+      : '';
+const aiLine = aiTranslate ? 'ai: true\n' : '';
 
 // 草稿写入 drafts/（被 gitignore 不进 GitHub；CF 部署时无此目录，不会上线）
 const draftSub = draft ? 'drafts' : '';
@@ -205,18 +227,18 @@ date: '${dateStr}'
 draft: ${draft}
 category: ${catArr}
 tags: ${tagArr}
+${warningLine}
 ---
-
 `;
 const enContent = `---
 layout: '${enLayout}'
 title: '${titleEn.replace(/'/g, "\\'")}'
 date: '${dateStr}'
 draft: ${draft}
-category: ${catArr}
+${aiLine}category: ${catArr}
 tags: ${tagArr}
+${warningLine}
 ---
-
 `;
 
 mkdirSync(dirname(zhFile), { recursive: true });

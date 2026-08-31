@@ -33,8 +33,10 @@ const postWarnings: string[] = Array.isArray(frontmatter?.warning)
     : (frontmatter?.warning ? [frontmatter.warning] : []);
 function warningLabel(w: string, lang: 'zh' | 'en'): string {
     const map: Record<string, { zh: string; en: string }> = {
-        opinion: { zh: '个人观点', en: 'Opinion' },
+        opinion: { zh: '主观', en: 'Opinion' },
         spoilers: { zh: '剧透', en: 'Spoilers' },
+        politics: { zh: '政治', en: 'Politics' },
+        adult: { zh: '成人', en: 'Adult' },
     };
     return map[w]?.[lang] || w;
 }
@@ -337,6 +339,12 @@ function getLangSwitchHref(pathname: string) {
 												</svg> <Fragment set:html={pageTime} />
 											</span>
 										)}
+										{/* AI 翻译徽标：放在「序号、日期、时间」之后，保持 date 组间距 */}
+										{frontmatter?.ai && (
+											<span class="tag cat-tag ai-badge">
+												<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
+											</span>
+										)}
 									</span>
 								)}
 							</div>
@@ -363,14 +371,8 @@ function getLangSwitchHref(pathname: string) {
 								{postWarnings.length > 0 && (
 									<span class="cw-pills" data-pagefind-ignore>
 										{postWarnings.map((w: string) => (
-											<span class={`tag cat-tag cw-pill cw-${w}`} title={warningLabel(w, isEnglishRoute ? 'en' : 'zh')}>{warningLabel(w, isEnglishRoute ? 'en' : 'zh')}</span>
+											<span class={`tag cat-tag cw-pill cw-${w}`}>{warningLabel(w, isEnglishRoute ? 'en' : 'zh')}</span>
 										))}
-									</span>
-								)}
-								{/* AI 翻译徽标：始终在最后（最右端） */}
-								{frontmatter?.ai && (
-									<span class="tag cat-tag ai-badge" title={isEnglishRoute ? 'AI translation' : 'AI 翻译'}>
-										<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
 									</span>
 								)}
 							</div>
@@ -410,6 +412,12 @@ function getLangSwitchHref(pathname: string) {
 										</svg> <Fragment set:html={pageTime} />
 									</span>
 								)}
+								{/* AI 翻译徽标：放在「序号、日期、时间」之后，保持 date 组间距 */}
+								{frontmatter?.ai && (
+									<span class="tag cat-tag ai-badge">
+										<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
+									</span>
+								)}
 							</span>
 						)}
 						{(() => {
@@ -433,14 +441,8 @@ function getLangSwitchHref(pathname: string) {
 									{postWarnings.length > 0 && (
 										<span class="cw-pills" data-pagefind-ignore>
 											{postWarnings.map((w: string) => (
-												<span class={`tag cat-tag cw-pill cw-${w}`} title={warningLabel(w, isEnglishRoute ? 'en' : 'zh')}>{warningLabel(w, isEnglishRoute ? 'en' : 'zh')}</span>
+												<span class={`tag cat-tag cw-pill cw-${w}`}>{warningLabel(w, isEnglishRoute ? 'en' : 'zh')}</span>
 											))}
-										</span>
-									)}
-									{/* AI 翻译徽标：始终在最后（最右端） */}
-									{frontmatter?.ai && (
-										<span class="tag cat-tag ai-badge" title={isEnglishRoute ? 'AI translation' : 'AI 翻译'}>
-											<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
 										</span>
 									)}
 								</div>
@@ -877,6 +879,122 @@ function getLangSwitchHref(pathname: string) {
 				}
 			}
 			document.addEventListener('DOMContentLoaded', buildToc);
+
+			// 视频嵌入点击加载：.video-embed 占位 → 点击注入真实 iframe（YT/B 站通用）
+			function initVideoEmbeds() {
+				document.querySelectorAll('.video-embed').forEach(function(wrap) {
+					var btn = wrap.querySelector('.video-embed-btn');
+					if (!btn) return;
+					btn.addEventListener('click', function() {
+						var src = wrap.getAttribute('data-embed-src');
+						if (!src || wrap.querySelector('iframe')) return;
+						var iframe = document.createElement('iframe');
+						iframe.src = src;
+						iframe.setAttribute('allowfullscreen', '');
+						iframe.setAttribute('loading', 'lazy');
+						iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+						iframe.setAttribute('title', 'Embedded video');
+						// 立即替换；iframe 自身 background 与占位同色，加载期间不闪页面背景
+						wrap.replaceChildren(iframe);
+					});
+				});
+			}
+			document.addEventListener('DOMContentLoaded', initVideoEmbeds);
+
+			// 标签行窄屏重排：
+			//  1) cat 不在行首时，不得把「cat + 首个 tag」拆到两行 → 隐藏前一个 | 并在 cat 前插断行整组换行；
+			//     cat 在行首则允许 tag 自行换行。
+			//  2) 同一 cat 内 tag 换行时去掉分隔符 ·（行尾/行首的 · 与跨组 | 都隐藏）。
+			function relayoutTagRows() {
+				document.querySelectorAll('.article-tags, .post-tags').forEach(function(row) {
+					var cy = function(el) { var r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+					var sameRow = function(a, b) { return Math.abs(a - b) < 6; };
+					var isCat = function(el) {
+						return el.classList.contains('cat-tag') && !el.classList.contains('cw-pill') && !el.classList.contains('ai-badge');
+					};
+					// 清理
+					row.querySelectorAll('.tag-row-break').forEach(function(el) { el.remove(); });
+					row.querySelectorAll('.is-hidden').forEach(function(el) { el.classList.remove('is-hidden'); });
+					// 迭代至稳定：display:none 隐藏分隔符会回流改变布局，需按最终布局重判（最多 3 轮）
+					for (var iter = 0; iter < 5; iter++) {
+						var changed = false;
+						// pass 1：违规 cat（不在行首且首个 tag 被拆到下一行）→ 隐藏前 | 并插断行
+						var kids = Array.prototype.slice.call(row.children);
+						var needBreak = [];
+						var prevVis = null;
+						for (var i = 0; i < kids.length; i++) {
+							var el = kids[i];
+							if (el.classList.contains('tag-row-break') || el.classList.contains('is-hidden')) continue;
+							if (isCat(el)) {
+								if (!prevVis || !sameRow(cy(el), cy(prevVis))) { prevVis = el; continue; } // cat 行首 → 允许
+								var firstTag = null;
+								for (var j = i + 1; j < kids.length; j++) {
+									var c = kids[j];
+									if (c.classList.contains('tag-row-break') || c.classList.contains('is-hidden')) continue;
+									if (isCat(c)) break;
+									if (c.classList.contains('tag') && !c.classList.contains('cw-pill')) { firstTag = c; break; }
+									if (c.classList.contains('cw-pills') || c.classList.contains('ai-badge')) break;
+								}
+								if (firstTag && !sameRow(cy(el), cy(firstTag))) needBreak.push({ el: el, prev: prevVis });
+							}
+							prevVis = el;
+						}
+						needBreak.forEach(function(o) {
+							if (o.prev && o.prev.classList.contains('tag-group-sep')) o.prev.classList.add('is-hidden');
+							var br = document.createElement('span');
+							br.className = 'tag-row-break';
+							row.insertBefore(br, o.el);
+							changed = true;
+						});
+						// pass 2：分隔符显示当且仅当其前后可见元素同行（换行处隐藏，回流后同行则恢复）
+						kids = Array.prototype.slice.call(row.children);
+						for (var k = 0; k < kids.length; k++) {
+							var s = kids[k];
+							if (!s.classList.contains('tag-sep') && !s.classList.contains('tag-group-sep')) continue;
+							var p = null;
+							for (var a = k - 1; a >= 0; a--) {
+								var ca = kids[a];
+								if (ca.classList.contains('tag-row-break') || ca.classList.contains('is-hidden')) continue;
+								p = ca; break;
+							}
+							var n = null;
+							for (var b = k + 1; b < kids.length; b++) {
+								var cb = kids[b];
+								if (cb.classList.contains('tag-row-break') || cb.classList.contains('is-hidden')) continue;
+								n = cb; break;
+							}
+							var shouldShow = !!(p && n && sameRow(cy(p), cy(n)));
+							if (shouldShow && s.classList.contains('is-hidden')) { s.classList.remove('is-hidden'); changed = true; }
+							else if (!shouldShow && !s.classList.contains('is-hidden')) { s.classList.add('is-hidden'); changed = true; }
+						}
+						if (!changed) break;
+					}
+					// 行距：给每个换行处（非首行的第一个可见元素前）确保有 .tag-row-break，
+					// break 的高度即行距（cat 违规处 pass1 已插；普通 tag 换行处在此补插）。
+					// 这样行内结构不变、分隔符 align-self:center 不受影响，且所有换行处行距一致
+					// （不能用 row-gap：零高 break 会让 cat 换行处变成双倍间距；
+					//   也不能用行首元素 margin-top：center 分隔符只随行框中心移动一半会错位）。
+					var groups2 = [], curG = [], curCyG = null;
+					Array.prototype.slice.call(row.children).forEach(function(el) {
+						if (el.classList.contains('tag-row-break') || el.classList.contains('is-hidden')) return;
+						var c = cy(el);
+						if (curCyG === null || !sameRow(c, curCyG)) { if (curG.length) groups2.push(curG); curG = []; curCyG = c; }
+						curG.push(el);
+					});
+					if (curG.length) groups2.push(curG);
+					for (var gi = 1; gi < groups2.length; gi++) {
+						var firstEl = groups2[gi][0];
+						var prevSib = firstEl.previousElementSibling;
+						if (prevSib && prevSib.classList.contains('tag-row-break')) continue;
+						var br2 = document.createElement('span');
+						br2.className = 'tag-row-break';
+						row.insertBefore(br2, firstEl);
+					}
+				});
+			}
+			window.addEventListener('resize', relayoutTagRows);
+			document.addEventListener('DOMContentLoaded', relayoutTagRows);
+			window.addEventListener('load', relayoutTagRows);
 		})();
 	</script>
 	</body>

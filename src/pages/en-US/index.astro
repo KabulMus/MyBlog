@@ -93,8 +93,10 @@ const tagNames = tagNamesEn;
 
 function warningLabel(w: string, lang: 'zh' | 'en'): string {
     const map: Record<string, { zh: string; en: string }> = {
-        opinion: { zh: '个人观点', en: 'Opinion' },
+        opinion: { zh: '主观', en: 'Opinion' },
         spoilers: { zh: '剧透', en: 'Spoilers' },
+        politics: { zh: '政治', en: 'Politics' },
+        adult: { zh: '成人', en: 'Adult' },
     };
     return map[w]?.[lang] || w;
 }
@@ -210,12 +212,6 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                             ))}
                                         </span>
                                     )}
-                                    {/* AI 翻译徽标：始终在最后（最右端） */}
-                                    {post.frontmatter?.ai && (
-                                        <span class="tag cat-tag ai-badge" title="AI translation">
-                                            <span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
-                                        </span>
-                                    )}
                                 </div>
                             );
                         })()}
@@ -251,6 +247,12 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                     <span class="like-count">–</span>
                                 </span>
                             </div>
+                        )}
+                        {/* AI 翻译徽标：卡片右下角锁死（absolute 定位，不参与底部信息流式布局） */}
+                        {post.frontmatter?.ai && (
+                            <span class="tag cat-tag ai-badge">
+                                <span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
+                            </span>
                         )}
                     </li>
                 );

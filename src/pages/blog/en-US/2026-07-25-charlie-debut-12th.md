@@ -3,7 +3,6 @@ layout: '../../../layouts/Layout.astro'
 title: 'Happy 12th debut anniversary, Charlie Zhou Shen!'
 date: '2026-07-25T17:52'
 draft: false
-ai: true
 category: ['music']
 tags: ['insync']
 image: '/images/2026-07-25-anni-concert.webp'
