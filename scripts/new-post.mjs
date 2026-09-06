@@ -142,8 +142,52 @@ function select(prompt, choices, opts = {}) {
 // 本地时间：文件名仅用日期前缀，frontmatter date 带具体时间（如 2026-08-12T14:32）
 const now = new Date();
 const pad = (n) => String(n).padStart(2, '0');
-const datePrefix = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-const dateStr = `${datePrefix}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+const fmtDate = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
+const fmtTime = (h, min) => `${pad(h)}:${pad(min)}`;
+const nowDate = fmtDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+const nowTime = fmtTime(now.getHours(), now.getMinutes());
+
+// 先问标题前确认：用当前时间新建，还是自定义日期/时间？（默认当前时间）
+const parseDate = (s) => {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s.trim());
+  if (!m) return null;
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const dt = new Date(y, mo - 1, d);
+  if (!(dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d)) return null;
+  return fmtDate(y, mo, d);
+};
+const parseTime = (s) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const h = +m[1], min = +m[2];
+  if (h > 23 || min > 59) return null;
+  return fmtTime(h, min);
+};
+
+const useNow =
+  (await rl.question(`用当前时间（${nowDate} ${nowTime}）新建？(Y/n，默认 Y)：`))
+    .trim().toLowerCase() !== 'n';
+
+let datePrefix = nowDate;
+let timeStr = nowTime;
+if (!useNow) {
+  // 选否：分别自定义日期与时间；直接回车则仍用「今天 / 当前时刻」
+  while (true) {
+    const ans = (await rl.question(`日期（YYYY-MM-DD，回车 = 今天 ${nowDate}）：`)).trim();
+    if (!ans) break;
+    const v = parseDate(ans);
+    if (v) { datePrefix = v; break; }
+    console.log('  ⚠ 日期无效（如 2026-02-30），请重输');
+  }
+  while (true) {
+    const ans = (await rl.question(`时间（HH:MM，回车 = 当前 ${nowTime}，00:00 请输 00:00）：`)).trim();
+    if (!ans) break;
+    const v = parseTime(ans);
+    if (v) { timeStr = v; break; }
+    console.log('  ⚠ 时间无效（如 25:00），请重输');
+  }
+}
+const dateStr = `${datePrefix}T${timeStr}`;
 
 const slugify = (s) =>
   s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -253,3 +297,9 @@ console.log(
     ? `\n✅ 已保存为草稿（drafts/，不会进入 GitHub）。填好正文后运行：npm run pub:draft  即可发布`
     : `\n✅ 填好正文后运行：npm run pub  即可一键发布`
 );
+
+// —— 收尾：解除 raw 模式并停止读取 stdin，让进程自然退出 ——
+//（选择器里多次 stdin.resume() 会把 stdin 留在“流动”状态；若不 pause，
+//  stdin 句柄始终活跃 → 事件循环不空 → 进程不退出，结束后还得 Ctrl+C 才能继续敲命令）
+try { stdin.setRawMode(false); } catch {}
+stdin.pause();

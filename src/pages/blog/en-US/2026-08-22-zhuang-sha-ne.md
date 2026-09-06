@@ -8,9 +8,9 @@ category: ['essays']
 tags: ['rant']
 ---
 
-It was evening self-study, and the class was about to watch a movie. The teacher fiddled with the computer for ages without any luck — it was running Internet Explorer, way too old a version. The moment she opened Bilibili, it flashed a "browser too old" warning and suggested downloading Chrome, Edge, or Firefox.
+It was evening self-study, and the class was about to watch a movie. The teacher fiddled with the computer for ages without any luck—it was running Internet Explorer, way too old a version. The moment she opened Bilibili, it flashed a "browser too old" warning and suggested downloading Chrome, Edge, or Firefox.
 
-That's when some unsung comrade of ours marched up to the podium and started downloading Chrome — all the while giving the teacher a very know-it-all lecture about how the browser was too outdated to access Bilibili.
+That's when some unsung comrade of ours marched up to the podium and started downloading Chrome—all the while giving the teacher a very know-it-all lecture about how the browser was too outdated to access Bilibili.
 
 ---
 

@@ -8,11 +8,11 @@ category: ['essays']
 tags: ['note']
 ---
 
-Our class — our whole company, even — was pretty unhappy with the final evaluation results.
+Our class—our whole company, even—was pretty unhappy with the final evaluation results.
 
 But whether or not there was foul play behind that ranking, we'd already given it our all.
 
-The seven days of training are behind us now — ahead lie the three years of high school.
+The seven days of training are behind us now—ahead lie the three years of high school.
 
 ---
 
@@ -29,7 +29,7 @@ Thank them for teaching us the first lesson of high school.
 
 I hope that one day, we'll meet again...
 
-***Besides — as active-duty soldiers of the People's Liberation Army, they were already respectable to begin with.***
+***Besides—as active-duty soldiers of the People's Liberation Army, they were already respectable to begin with.***
 
 ---
 

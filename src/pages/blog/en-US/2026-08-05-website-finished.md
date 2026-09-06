@@ -24,7 +24,7 @@ I started tinkering with this site back in May, and it's finally looking like so
 
 *(deepthinking...)*
 
-i dunno. maybe just for fun — don't you think having your own domain and your own website is just really cool?! (doge)
+i dunno. maybe just for fun—don't you think having your own domain and your own website is just really cool?! (doge)
 
 ## Why does this site exist?
 
@@ -32,7 +32,7 @@ Hmm... At first I just wanted a personal site + tool site to replace the messy p
 
 Yeah, that's about it.
 
-The early version actually looked like [this](https://a97f58be.mywebsite-16r.pages.dev/en_US)[^1] — one page to rule them all ()
+The early version actually looked like [this](https://a97f58be.mywebsite-16r.pages.dev/en_US)[^1]—one page to rule them all ()
 
 [^1]: This one was actually one of the better versions, using the Google Fonts API... There was also an <ruby>even older<rt>bare-bones</rt></ruby> version, but I switched hosting platforms halfway through, so it's long gone from the current Cloudflare Pages.
 
@@ -62,7 +62,7 @@ The early version actually looked like [this](https://a97f58be.mywebsite-16r.pag
 - 🏆 Achievements and recaps;
 - 🔍 On-site search, specially adapted for Chinese!
 - 🏷️ Category & tag filtering;
-- ❤️ Like system — hit that heart if you enjoy it~
+- ❤️ Like system—hit that heart if you enjoy it~
 
 ### Tech stack...?
 
@@ -83,7 +83,7 @@ I hit a ton of pitfalls building this site... it nearly did me in (not really br
 ![Placeholder](/images/2026-08-05-charlie-en.webp)
 *I still maintain this was a stroke of genius...*
 
-I must have spent a good half a day debugging this big text on and off. I wanted the "text embedded in the photo + white inner stroke" effect. At first I used `text-stroke` for the outline, but it turned out that only does a centered stroke — and since I was using a variable font, every single stroke of every glyph got outlined (OH NO! I'M ANGRY!!!). I asked every AI I could think of, went around in circles, and finally switched to SVG: first "erode" the glyph's alpha inward by 1px, then subtract the eroded shape from the original — leaving only a clean white line hugging the inner edge of the glyph, with adjustable thickness😋
+I must have spent a good half a day debugging this big text on and off. I wanted the "text embedded in the photo + white inner stroke" effect. At first I used `text-stroke` for the outline, but it turned out that only does a centered stroke—and since I was using a variable font, every single stroke of every glyph got outlined (OH NO! I'M ANGRY!!!). I asked every AI I could think of, went around in circles, and finally switched to SVG: first "erode" the glyph's alpha inward by 1px, then subtract the eroded shape from the original—leaving only a clean white line hugging the inner edge of the glyph, with adjustable thickness😋
 
 Genius!
 
@@ -91,13 +91,13 @@ Genius!
 
 So, Chinese doesn't have **real** italics, so for Chinese italics I use a serif (Song-style) font instead, paired with a serif italic. Honestly that's not bad... way better than fake-oblique italics!! (English, of course, gets real italics.)
 
-Why Song-style, you ask? A wild accidental discovery (bro, my attention span is insane): in UN documents, Chinese body text is typeset in Song-style, matching the upright serif of English; and where English uses italic serif, the Chinese UN documents use Kai-style. But Kai looks terrible👎👎 on the web, and the Kai fonts on Google Fonts are hit-or-miss and don't match our beloved Source Han family — so I'd rather use *Source Han Serif*~
+Why Song-style, you ask? A wild accidental discovery (bro, my attention span is insane): in UN documents, Chinese body text is typeset in Song-style, matching the upright serif of English; and where English uses italic serif, the Chinese UN documents use Kai-style. But Kai looks terrible👎👎 on the web, and the Kai fonts on Google Fonts are hit-or-miss and don't match our beloved Source Han family—so I'd rather use *Source Han Serif*~
 
 ### Pagefind's Chinese support sucks!
 
-The on-site search uses Pagefind, but by default it tokenizes by English words and basically can't handle Chinese — God knows how it splits the text, so you might search a keyword and find absolutely nothing. For example, searching <mark>阿拉</mark> would actually surface <mark>阿拉</mark>伯 (Arab), but searching 阿拉伯 itself would come up empty; searching <mark>中</mark>国 (China) would return <mark>中</mark>日文 (Chinese & Japanese), and happened to drag 一<mark>中</mark> (No.1 High School) along for the ride, but never <mark>中国</mark> itself.
+The on-site search uses Pagefind, but by default it tokenizes by English words and basically can't handle Chinese—God knows how it splits the text, so you might search a keyword and find absolutely nothing. For example, searching <mark>阿拉</mark> would actually surface <mark>阿拉</mark>伯 (Arab), but searching 阿拉伯 itself would come up empty; searching <mark>中</mark>国 (China) would return <mark>中</mark>日文 (Chinese & Japanese), and happened to drag 一<mark>中</mark> (No.1 High School) along for the ride, but never <mark>中国</mark> itself.
 
-After a lot of thinking, DeepSeek came up with a hack: before indexing, insert a zero-width space between every two CJK characters to trick it into treating each character as its own token, and on the search side auto-convert queries into exact phrases — problem solved!
+After a lot of thinking, DeepSeek came up with a hack: before indexing, insert a zero-width space between every two CJK characters to trick it into treating each character as its own token, and on the search side auto-convert queries into exact phrases—problem solved!
 
 That DeepSeek, it's a sly one.
 

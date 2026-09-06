@@ -18,4 +18,4 @@ but robbing us students[^1] of rest time like this is way too harsh.
 
 based on current intel... TWO MONTHS?? f\*cking Dumb\*ss.
 
-Ah well, whatever — it's still an achievement, the capability is right there 😋
+Ah well, whatever—it's still an achievement, the capability is right there 😋

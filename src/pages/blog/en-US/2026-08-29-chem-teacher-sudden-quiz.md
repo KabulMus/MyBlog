@@ -13,8 +13,8 @@ Honestly, from the very first day as our acting homeroom teacher she already gav
 
 And yet, there's an even bigger move.
 
-It's second-period evening self-study — every other class is watching a movie, or at the very least studying quietly.
+It's second-period evening self-study—every other class is watching a movie, or at the very least studying quietly.
 
-But you? The moment it's your turn to be on duty, you hit us with a surprise quiz instead — 75 minutes for those two huge sheets, who the hell could ever finish that?! 😡
+But you? The moment it's your turn to be on duty, you hit us with a surprise quiz instead—75 minutes for those two huge sheets, who the hell could ever finish that?! 😡
 
 **Still, apologies for the offense.**
