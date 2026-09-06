@@ -105,8 +105,8 @@ function renderTitle(text: string): string {
 const pageTitle = frontmatter?.title || title || (isEnglishRoute ? 'My Blog' : '我的博客');
 const renderedTitle = renderTitle(pageTitle);
 const ogDescription = description || (isEnglishRoute
-    ? "Ethan's blog — music, creation, essays & achievements."
-    : 'Ethan 的博客 — 音乐、创作、随笔与成就。');
+    ? "Ethan's blog—music, creation, essays & achievements."
+    : 'Ethan 的博客—音乐、创作、随笔与成就。');
 const ogImage = 'https://blog.ethan929.com/favicon.webp';
 const pageDate = formatDate(frontmatter?.date || "");
 const pageTime = formatTime(frontmatter?.date || "");
@@ -996,6 +996,53 @@ function getLangSwitchHref(pathname: string) {
 			document.addEventListener('DOMContentLoaded', relayoutTagRows);
 			window.addEventListener('load', relayoutTagRows);
 		})();
+	</script>
+
+	<script>
+		// 🎼 ABC 乐谱渲染（abcjs）：仅当本页存在 .abc-score 时才动态加载 abcjs（代码分割，不污染其他页）。
+		// 绘制颜色取自当前主题的 --text-main；主题切换（手动切换 / 跟随系统）会改 html[data-theme]，
+		// 这里用 MutationObserver 监听并在变化时用新主题色重绘。
+		async function initAbcScores() {
+			const hosts = Array.from(document.querySelectorAll<HTMLElement>('.abc-score'));
+			if (!hosts.length) return;
+			// 先把源码读进 dataset（首次渲染后 <pre class="abc-source"> 会被 renderAbc 替换掉，重绘时改从 dataset 取）
+			hosts.forEach((host) => {
+				const codeEl = host.querySelector('.abc-source code');
+				if (codeEl && !host.dataset.abc) {
+					host.dataset.abc = (codeEl.textContent || '').replace(/\n$/, '');
+				}
+			});
+			if (!hosts.some((h) => h.dataset.abc)) return;
+			const abcjs = await import('abcjs');
+
+			const renderOne = (host: HTMLElement) => {
+				const src = host.dataset.abc;
+				if (!src) return;
+				const fg = (getComputedStyle(document.documentElement).getPropertyValue('--text-main') || '#1D1D1F').trim();
+				try {
+					abcjs.renderAbc(host, src, {
+						responsive: 'resize',
+						add_classes: true,
+						foregroundColor: fg,
+					});
+					host.classList.add('is-rendered');
+				} catch (err) {
+					console.error('abcjs render failed:', err);
+				}
+			};
+			const renderAll = () => hosts.forEach(renderOne);
+			renderAll();
+			// 主题变化 → 用新主题色重绘（renderAbc 会清空容器重画，无残留）
+			let lastTheme = document.documentElement.getAttribute('data-theme');
+			new MutationObserver(() => {
+				const theme = document.documentElement.getAttribute('data-theme');
+				if (theme && theme !== lastTheme) {
+					lastTheme = theme;
+					renderAll();
+				}
+			}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+		}
+		initAbcScores();
 	</script>
 	</body>
 </html>

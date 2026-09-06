@@ -8,7 +8,7 @@ export async function GET(context) {
 
   return rss({
     title: "Ethan's Blog",
-    description: 'Ethan 的博客 — 音乐、创作、随笔与成就。',
+    description: 'Ethan 的博客—音乐、创作、随笔与成就。',
     site: context.site,
     items: posts.map((post) => ({
       title: post.frontmatter.title,

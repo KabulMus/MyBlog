@@ -228,10 +228,35 @@ function remarkEmbed() {
   };
 }
 
+// 🎼 ABC 乐谱围栏支持：```abc 代码块 → 编译成 .abc-score 占位。
+// 源码兜底保留在 <pre class="abc-source"><code> 里（无 JS 时退化为普通代码块；该区域在
+// rehype 阶段是 raw html，不会进入智能引号/高亮流程，ABC 文本不会被破坏）；
+// 页面脚本见 Layout.astro：检测到 .abc-score 时懒加载 abcjs 就地渲染 SVG，并按主题取色。
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function remarkAbc() {
+  return (tree) => {
+    const children = tree.children;
+    for (let i = 0; i < children.length; i++) {
+      const n = children[i];
+      if (!n || n.type !== 'code') continue;
+      if (n.lang !== 'abc' && n.lang !== 'abcjs') continue;
+      const code = escapeHtml(n.value || '');
+      children[i] = {
+        type: 'html',
+        value:
+          '<div class="abc-score" data-pagefind-ignore>' +
+          '<pre class="abc-source"><code class="language-abc">' + code + '</code></pre></div>',
+      };
+    }
+  };
+}
+
 export default defineConfig({
   site: 'https://blog.ethan929.com',
   markdown: {
-    remarkPlugins: [remarkFigure, remarkEmbed, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + 识别 $ $$ 语法
+    remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 乐谱 + 识别 $ $$ 语法
     rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody], // ⚡️ KaTeX 公式 + 正文智能引号（统一状态机）
     // ⚡️ 关闭内置 smartypants 的引号转换，改由 rehypeSmartQuotesBody 统一接管；
     //    保留破折号/省略号；backticks 也关闭（否则正文两个单引号 '' 会被合并成右双引号 ”）

@@ -2963,3 +2963,70 @@ html[lang='en-US'] .cat-filter-btn {
         animation: none;
     }
 }
+
+/* ==========================================================================
+   🎼 ABC 乐谱（```abc 围栏 → abcjs 渲染为 SVG，见 astro.config remarkAbc / Layout 脚本）
+   ========================================================================== */
+.typography-body .abc-score {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 1.5rem auto;
+    max-width: 100%;
+    overflow-x: auto;   /* 窄屏铺不下时横向滚动，防止爆框 */
+}
+/* 渲染出的谱面：不拉伸、按内容宽度显示（abcjs 可能输出 svg 或带 alt 的 img，两者都约束） */
+.abc-score svg,
+.abc-score img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    flex: none;
+}
+/* 关闭 abcjs 默认的「音符点选高亮/拖拽」交互（那套是给编辑器/播放联动用的，静态阅读用不上）。
+   谱面 SVG 设 pointer-events:none：鼠标点/拖不再高亮音符；
+   不影响文字选中（SVG 文字本就不能鼠标拖选，Ctrl+A 全选仍走 ::selection 规则变白） */
+.abc-score svg {
+    pointer-events: none;
+}
+/* 渲染前 / 无 JS 时的源码兜底：低调小号等宽块（优先级盖过通用 pre 代码块样式） */
+.abc-score .abc-source {
+    margin: 0 !important;
+    padding: 0.6rem 0.9rem !important;
+    border: 1px solid var(--item-border) !important;
+    border-radius: var(--card-radius) !important;
+    background: var(--card-bg) !important;
+    box-shadow: none !important;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.abc-score .abc-source code {
+    display: block;
+    padding: 0 !important;
+    background: transparent;
+    color: var(--text-sub);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+/* 🎼 谱面标题（T:）/ 作曲者（C:）字体：默认是 abcjs 的 Times New Roman（SVG 呈现属性，优先级最低，
+   CSS 可直接覆盖）。这里换成站内衬线栈：西文 Source Serif 4、中文回退 Noto Serif SC（与正文 em 斜体同栈）。
+   字号仍由 abcjs 按谱面尺寸给定（标题 27 / 作曲 19 上下），如想改大小可再叠 font-size。 */
+.abc-score .abcjs-title {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-weight: 700;
+    font-size: 24;
+}
+.abc-score .abcjs-composer {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-style: italic;
+}
+/* 🎼 选中态文字颜色：SVG <text> 的字形颜色由 fill（而非 color）决定，全局 ::selection 的
+   color / -webkit-text-fill-color 都管不到它；实测(Chromium)只有 ::selection 里直接写 fill
+   才会重新着色。background 也一并带上，选中表现才和正文一致（亮=白字蓝底、暗=深字浅蓝底） */
+.abc-score ::selection {
+    background: var(--primary-blue);
+    color: var(--on-primary);
+    fill: var(--on-primary);
+    -webkit-text-fill-color: var(--on-primary);
+}
