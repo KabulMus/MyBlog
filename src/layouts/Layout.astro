@@ -218,6 +218,8 @@ function getLangSwitchHref(pathname: string) {
 		        t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		    }
 		    document.documentElement.setAttribute('data-theme', t);
+		    // 题图防跳动：JS 存在时标记 hero-lock（题图先隐藏，字体就绪+定稿后才淡入，见 fitHero 脚本）
+		    document.documentElement.classList.add('hero-lock');
 		})();
 		</script>
 		<meta charset="UTF-8" />
@@ -585,20 +587,34 @@ function getLangSwitchHref(pathname: string) {
 					if (!hero) return;
 					var wrap = hero.querySelector('.hero-image-wrap');
 					var content = hero.querySelector('.hero-content');
-					if (!wrap || !content) return;
-					var img = wrap.querySelector('img');
+					var img = wrap ? wrap.querySelector('img') : null;
+					if (!wrap || !content || !img) return;
+					// 基准 = 图片「自然比例」高度（CSS aspect-ratio 的结果），随当前宽度实时算。
+					// ⚠️ 不能拿 wrap 当前高度当基准：那可能已被本函数加高，字体到位后测量略小
+					// 会走 else 清空内联高 → 图“刚对一会儿又弹回原比例”。
+					var base = wrap.offsetHeight;
+					var ar = getComputedStyle(img).aspectRatio || '';
+					var m = /([\d.]+)\s*\/\s*([\d.]+)/.exec(ar);
+					if (m && img.clientWidth > 0) base = img.clientWidth * (parseFloat(m[2]) / parseFloat(m[1]));
 					// 标题栏高度 + 底部偏移(24) + 标题顶部与返回按钮的间距(64)
 					var need = content.offsetHeight + 24 + 64;
-					if (wrap.offsetHeight < need) {
-						if (img) img.style.height = need + 'px';
+					if (need > base) {
+						img.style.height = need + 'px';
 					} else {
-						if (img) img.style.height = '';
+						img.style.height = '';
 					}
 				}
 				var fitHeroTimer = null;
 				function scheduleFitHero() {
 					clearTimeout(fitHeroTimer);
 					fitHeroTimer = setTimeout(fitHeroImage, 150);
+				}
+				// 定稿后淡入：配合 html.hero-lock 的隐藏态，高度算好后才显示 → 无「跳动」
+				function unlockHeroImage() {
+					var hero = document.querySelector('.page-hero.has-hero-image');
+					if (hero && !hero.classList.contains('is-hero-ready')) {
+						hero.classList.add('is-hero-ready');
+					}
 				}
 				if (document.readyState === 'loading') {
 					document.addEventListener('DOMContentLoaded', fitHeroImage);
@@ -607,6 +623,24 @@ function getLangSwitchHref(pathname: string) {
 				}
 				window.addEventListener('load', fitHeroImage);
 				window.addEventListener('resize', scheduleFitHero);
+				document.addEventListener('pageshow', fitHeroImage);
+				// 网页字体就绪后再测一次：首访时常因字体未加载完、标题用回退字体被测矮，
+				// 导致误判「不需要增高」（移动端表现为先进来不对、刷新才对）。
+				// 字体就绪 = 高度可定稿 → 先算好高度再淡入，杜绝「图突然长高」的跳动。
+				if (document.fonts && document.fonts.ready) {
+					document.fonts.ready.then(function () { fitHeroImage(); unlockHeroImage(); });
+				}
+				// 兜底：万一 fonts.ready 异常卡住，题图不能永远隐藏
+				setTimeout(unlockHeroImage, 1500);
+				// 标题区尺寸一变（字体换入、日期换行、页面转场动画结束后）就自动重算：
+				// 用 ResizeObserver 监听 .hero-content，绕开各类「只在刷新后正确」的时序问题。
+				if (typeof ResizeObserver !== 'undefined') {
+					var heroContentToWatch = document.querySelector('.page-hero.has-hero-image .hero-content');
+					if (heroContentToWatch) {
+						var heroResizeObserver = new ResizeObserver(function () { scheduleFitHero(); });
+						heroResizeObserver.observe(heroContentToWatch);
+					}
+				}
 			})();
 		</script>
 

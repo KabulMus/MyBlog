@@ -3009,6 +3009,26 @@ html[lang='en-US'] .cat-filter-btn {
     line-height: 1.5;
     overflow-x: auto;
 }
+
+/* ==========================================================================
+   🖼️ 题图防跳动（hero 定稿前隐藏、定稿后淡入）
+   原理：题图高度要等网页字体就绪量完标题才能定稿；若字体晚到直接改高，
+   页面下方会「跳一下」。改成本地先 opacity:0 占位，Layout 的 JS 在字体就绪 +
+   高度算完后加 .is-hero-ready → 淡入（高度已在淡入前就位，不再位移）。
+   仅 html.hero-lock（JS 头部加上）下生效，无 JS 时题图正常显示不隐藏。
+   ========================================================================== */
+html.hero-lock .page-hero.has-hero-image {
+    opacity: 0;
+}
+html.hero-lock .page-hero.has-hero-image.is-hero-ready {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+    html.hero-lock .page-hero.has-hero-image.is-hero-ready {
+        transition: none;
+    }
+}
 /* 🎼 谱面标题（T:）/ 作曲者（C:）字体：默认是 abcjs 的 Times New Roman（SVG 呈现属性，优先级最低，
    CSS 可直接覆盖）。这里换成站内衬线栈：西文 Source Serif 4、中文回退 Noto Serif SC（与正文 em 斜体同栈）。
    字号仍由 abcjs 按谱面尺寸给定（标题 27 / 作曲 19 上下），如想改大小可再叠 font-size。 */
