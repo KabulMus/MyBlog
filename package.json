@@ -29,6 +29,7 @@
     "@cloudflare/workers-types": "^5.20260801.1",
     "@tiptap/core": "^3.31.3",
     "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-list": "^3.31.3",
     "@tiptap/pm": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "pagefind": "^1.5.2",

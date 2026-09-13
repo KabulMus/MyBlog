@@ -1,6 +1,21 @@
-/* 本地编辑器（/admin）专属样式
-   设计语言全部取自 main.css 的 token（--card-bg / --card-radius / --item-border / --text-sub / --primary-blue），
-   亮暗跟随 html[data-theme]，与站点其它页面同一套。 */
+/* ⚠️ 设计语言规则（全部照抄站点，别再自创）：
+   · 圆角：卡片 --card-radius；彩色小 pill 6px；主按钮 8px；图标按钮 50%（圆形）
+   · 描边：一律 1px solid var(--item-border)；阴影 var(--card-shadow) / hover 用 --card-hover-shadow
+   · 主色：--primary-blue；主色上的文字用 var(--on-primary)（暗色模式下它不是白色！）
+   · 彩色 pill 用站点已有的 --color-*-bg / --color-* 成对 token
+   · UI 小字用站点的 Encode Sans SC 字族（.tag / .cat-tag 那套）；代码行用 JetBrains Mono
+   · 交互：图标按钮 hover = 变主色 + scale + 阴影；主按钮 hover = opacity .85
+   · 滚动条：站点全局隐藏（main.css `*::-webkit-scrollbar{display:none}`），这里保持一致
+   · 正文排版不在这里定义，交给 main.css 的 .typography-body（编辑器正文容器带这个类）
+/* ⚠️ 下面这两个变量只服务于特定东西：
+   · --ed-font-ui：**只给分类/标签/内容警告的 chips 用**（对齐站点 .tag / .cat-tag / .cw-pill 的 Encode Sans SC），
+     界面其它部分（顶栏、表单标签、按钮、工具条、toast…）一律继承 body 的 Inter，别乱套。
+   · --ed-font-mono：代码行（源码块、源码视图、diff）。
+   ⚠️ 变量漏定义时 `var()` 会让属性静默回退成 inherit（不报错），很难查。 */
+:root {
+	--ed-font-ui: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+	--ed-font-mono: 'JetBrains Mono', 'Fira Code', 'Inter Var', monospace;
+}
 
 .editor-body {
 	height: 100vh;
@@ -13,14 +28,16 @@
 	color: var(--text-main);
 }
 
-/* ── 顶栏 ───────────────────────────────────────── */
+/* ── 顶栏（照抄 .navbar 的半透明 + 模糊语言）────────── */
 .editor-bar {
 	flex: 0 0 auto;
 	display: flex;
 	align-items: center;
 	gap: 12px;
 	padding: 8px 12px;
-	background: var(--card-bg);
+	background: var(--navbar-bg);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
 	border-bottom: 1px solid var(--item-border);
 }
 
@@ -32,56 +49,114 @@
 }
 
 .editor-bar-left { flex: 0 0 auto; }
-.editor-bar-center { flex: 1 1 auto; min-width: 0; }
+/* ⚠️ 这里必须开 flex：以前没开，块级的 .editor-select 会把「新建」按钮挤到**下一行**去
+   （用户看到的就是那个按钮不在下拉后面）。 */
+.editor-bar-center {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+/* 下拉吃掉剩余宽度（长标题靠 ellipsis 收），新建按钮保持自己的宽度。
+   ⚠️ 必须 flex: 0 0 auto：flex 项默认能压缩，上面那个下拉的固有宽度一大，按钮就被挤到 48px
+   ——「新建」两个字换行，按钮变成 45px 高（跟右侧那排 27px 的按钮完全不是一个样子）。 */
+.editor-bar-center > .editor-select { flex: 1 1 auto; min-width: 0; }
+.editor-bar-center > .editor-btn { flex: 0 0 auto; white-space: nowrap; }
 .editor-bar-right { flex: 0 0 auto; justify-content: flex-end; }
 
 .editor-brand {
-	font-weight: 600;
-	font-size: 0.95rem;
+	font-size: 0.9rem;
+	font-weight: 700;
 	letter-spacing: 0.01em;
 	white-space: nowrap;
 }
 
 .editor-select {
 	width: 100%;
-	max-width: 640px;
-	padding: 6px 10px;
-	font: inherit;
-	font-size: 0.88rem;
+	max-width: 620px;
+	padding: 5px 10px;
+	font-size: 0.82rem;
+	font-weight: 500;
 	color: var(--text-main);
 	background: var(--card-bg);
 	border: 1px solid var(--item-border);
-	border-radius: calc(var(--card-radius) - 4px);
+	border-radius: 6px;
 	outline: none;
+	cursor: pointer;
+	transition: border-color 0.2s ease;
 }
 
+.editor-select:hover { border-color: var(--text-sub); }
 .editor-select:focus-visible { border-color: var(--primary-blue); }
 
 .editor-meta {
-	font-size: 0.78rem;
+	font-size: 0.74rem;
+	font-weight: 500;
 	color: var(--text-sub);
 	white-space: nowrap;
 }
 
+/* 图标按钮 = 站点的圆形悬浮按钮语言（.article-back-btn / .theme-toggle-btn） */
 .editor-icon-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 30px;
-	height: 30px;
+	width: 34px;
+	height: 34px;
 	padding: 0;
-	color: var(--text-sub);
-	background: transparent;
+	flex: 0 0 auto;
+	color: var(--text-main);
+	background: var(--card-bg);
 	border: 1px solid var(--item-border);
-	border-radius: calc(var(--card-radius) - 4px);
+	border-radius: 50%;
+	box-shadow: var(--card-shadow);
 	cursor: pointer;
-	transition: color 120ms ease, border-color 120ms ease;
+	text-decoration: none;
+	transition: all 0.2s ease;
 }
 
-.editor-icon-btn:hover { color: var(--text-main); border-color: var(--text-sub); }
-.editor-icon-btn svg { width: 16px; height: 16px; }
+.editor-icon-btn svg {
+	display: block;
+	width: 18px;
+	height: 18px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.editor-icon-btn:hover {
+		color: var(--primary-blue);
+		box-shadow: var(--card-hover-shadow);
+		transform: scale(1.08);
+	}
+}
+
+/* 不留圆底的那一枚（顶栏左上角亮暗切换）：图标直接落在顶栏上 */
+.editor-icon-btn--plain,
+.editor-icon-btn--plain:hover {
+	width: auto;
+	height: auto;
+	padding: 0;
+	background: none;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	transform: none;
+}
+
+.editor-icon-btn--plain svg { width: 19px; height: 19px; }
 
 /* 亮暗图标互斥（与站点同样的约定） */
+.editor-icon-btn .icon-sun,
+.editor-icon-btn .icon-moon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
 .editor-icon-btn .icon-moon { display: none; }
 html[data-theme='dark'] .editor-icon-btn .icon-sun { display: none; }
 html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
@@ -104,25 +179,28 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	background: var(--card-bg);
 	border: 1px solid var(--item-border);
 	border-radius: var(--card-radius);
+	box-shadow: var(--card-shadow);
 	overflow: hidden;
 }
 
 .editor-pane-head {
 	flex: 0 0 auto;
 	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
+	align-items: center;
 	gap: 10px;
 	padding: 8px 12px;
 	font-size: 0.78rem;
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--text-sub);
 	background: rgba(127, 127, 127, 0.07);
 	border-bottom: 1px solid var(--item-border);
 }
 
+.editor-pane-head > span:first-child { color: var(--text-main); }
+
 .editor-hint {
-	font-weight: 400;
+	flex: 1 1 auto;
+	font-weight: 500;
 	font-size: 0.74rem;
 	color: var(--text-sub);
 	overflow: hidden;
@@ -136,7 +214,7 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	margin: 0;
 	padding: 12px 14px;
 	overflow: auto;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+	font-family: var(--ed-font-mono);
 	font-size: 0.82rem;
 	line-height: 1.6;
 	white-space: pre-wrap;
@@ -149,10 +227,8 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	width: 100%;
 	min-height: 0;
 	border: 0;
-	background: #fff;
+	background: var(--card-bg);
 }
-
-html[data-theme='dark'] .editor-frame { background: #0f172a; }
 
 @media (max-width: 900px) {
 	.editor-main {
@@ -162,7 +238,8 @@ html[data-theme='dark'] .editor-frame { background: #0f172a; }
 }
 
 @media print {
-	.editor-bar { display: none; }
+	.editor-bar,
+	.editor-toast { display: none; }
 }
 
 /* ── 往返自检页 ─────────────────────────────── */
@@ -172,15 +249,16 @@ html[data-theme='dark'] .editor-frame { background: #0f172a; }
 }
 
 .editor-report {
-	padding: 16px;
+	padding: 16px 20px 40px;
 }
 
 .editor-report h2 {
 	margin: 8px 0 14px;
 	font-size: 1rem;
+	font-weight: 700;
 }
 
-.report-ok { color: var(--primary-blue); }
+.report-ok { color: var(--color-green); }
 
 .report-list {
 	margin: 0;
@@ -195,38 +273,1616 @@ html[data-theme='dark'] .editor-frame { background: #0f172a; }
 
 .diff {
 	margin-top: 4px;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	padding: 6px 10px;
+	font-family: var(--ed-font-mono);
 	font-size: 0.78rem;
+	background: var(--bg-light);
+	border-radius: 6px;
 	white-space: pre-wrap;
 	word-break: break-all;
 }
 
-.diff-before { color: #c0392b; }
-.diff-after { color: #1e8e3e; }
+.diff-before { color: var(--color-red); }
+.diff-after { color: var(--color-green); }
 
-/* ── 编辑器里的「源码块」（rawBlock：围栏 / 公式块 / 裸 HTML）── */
+/* ⚠️ 以下 .md-raw-block 只在「NodeView 没接上」的兜底 HTML（renderHTML）里才会出现，正常看不到；
+   编辑器里显示的是下面那套 .md-block 卡片。 */
 .md-raw-block {
 	margin: 0.75rem 0;
 	padding: 8px 10px;
-	background: rgba(127, 127, 127, 0.08);
+	background: var(--bg-light);
 	border: 1px dashed var(--item-border);
-	border-radius: calc(var(--card-radius) - 4px);
+	border-radius: 6px;
 }
 
 .md-raw-block::before {
-	content: '源码块（编辑器不改写）';
+	content: '源码块 · 编辑器不改写';
 	display: block;
 	margin-bottom: 6px;
 	font-size: 0.68rem;
-	font-weight: 600;
+	font-weight: 700;
 	color: var(--text-sub);
 }
 
-.md-raw-pre {
+/*
+ * ⚠️ 卡片里的 <pre> 会吃到站点代码块的深色皮肤（.typography-body pre：底色 #1a1a1e、
+ * 内层 padding 28px 32px、文字 #e3e3e6，另有一个语言标签伪元素）—— 在卡片里就变成一坨黑，
+ * 而且底色深、文字也深，基本看不见内容。这里压回普通文本外观，底色/边框交给卡片自己。
+ * 选择器带 .editor-prose 是为了压过 .typography-body pre 的优先级。
+ */
+.editor-prose .md-raw-block pre,
+.editor-prose .md-raw-block pre code {
+	position: static;
 	margin: 0;
-	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-	font-size: 0.78rem;
-	line-height: 1.5;
+	padding: 0;
+	overflow: visible;
+	color: inherit;
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	font-family: var(--ed-font-mono); /* = 站点代码块那套字体 */
+	font-size: 0.92rem;
+	line-height: 1.6;
 	white-space: pre-wrap;
 	word-break: break-word;
+}
+
+.editor-prose .md-raw-block pre::before,
+.editor-prose .md-raw-block pre::after {
+	content: none;
+}
+
+/* ── 自定义块卡片（M2：可就地编辑的围栏 / 公式 / 表格 / 图片）────────────
+   语言：卡片 = --card-bg + --card-radius + 1px --item-border + --card-shadow；
+   头部一条浅底（与 .editor-pane-head 同色）；徽标 = 彩色 pill（--color-*-bg / --color-*，
+   跟站点 .tag / .cat-tag 同一套成对 token）；小按钮 = 6px 描边（站点 tag 小框语言）。 */
+.md-block {
+	margin: 0.9rem 0;
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: var(--card-radius);
+	box-shadow: var(--card-shadow);
+	overflow: hidden;
+}
+
+.md-block-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	background: rgba(127, 127, 127, 0.07);
+	border-bottom: 1px solid var(--item-border);
+}
+
+/* 徽标（pill 语言：6px 圆角 + Encode Sans SC，跟分类/标签 chips 同族） */
+.md-block-badge {
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	font-family: var(--ed-font-ui);
+	font-size: 0.7rem;
+	font-weight: 700;
+	color: var(--text-sub);
+	background: var(--bg-light);
+	border-radius: 6px;
+	white-space: nowrap;
+}
+
+.md-block-badge[data-color='blue'] { color: var(--color-blue); background: var(--color-blue-bg); }
+.md-block-badge[data-color='amber'] { color: var(--color-amber); background: var(--color-amber-bg); }
+.md-block-badge[data-color='green'] { color: var(--color-green); background: var(--color-green-bg); }
+.md-block-badge[data-color='cyan'] { color: var(--color-cyan); background: var(--color-cyan-bg); }
+.md-block-badge[data-color='red'] { color: var(--color-red); background: var(--color-red-bg); }
+.md-block-badge[data-color='purple'] { color: var(--color-purple); background: var(--color-purple-bg); }
+.md-block-badge[data-color='indigo'] { color: var(--color-indigo); background: var(--color-indigo-bg); }
+.md-block-badge[data-color='rose'] { color: var(--color-rose); background: var(--color-rose-bg); }
+
+/* 头部右侧的小按钮（删除 / 添加字段…） */
+.md-block-head > .md-block-mini { margin-left: auto; }
+.md-block-head > .md-block-mini + .md-block-mini { margin-left: 0; }
+
+.md-block-mini,
+.md-field-add {
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	font-size: 0.7rem;
+	font-weight: 600;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.md-block-mini:hover { color: var(--color-red); border-color: currentColor; }
+
+.md-field-add { align-self: flex-start; }
+.md-field-add:hover { color: var(--primary-blue); border-color: currentColor; }
+
+.md-block-body { padding: 8px 10px; }
+
+/* 源码输入框：软换行；行号是叠在同一份文本上的覆盖层（同字体同尺寸 ⇒ 换行后依旧对齐） */
+.md-code { position: relative; --md-gutter: 2.6em; }
+
+.md-input,
+.md-lines {
+	font-family: var(--ed-font-mono);
+	font-size: 0.92rem;
+	line-height: 1.6;
+	tab-size: 4;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+.md-input {
+	display: block;
+	width: 100%;
+	margin: 0;
+	padding: 0 0 0 var(--md-gutter);
+	color: var(--text-main);
+	background: transparent;
+	border: 0;
+	outline: none;
+	resize: none;
+	overflow: hidden;
+}
+
+.md-lines {
+	position: absolute;
+	inset: 0;
+	padding: 0 0 0 var(--md-gutter);
+	color: transparent;
+	pointer-events: none;
+	user-select: none;
+}
+
+.md-line { display: block; position: relative; }
+
+.md-line-n {
+	position: absolute;
+	right: calc(100% + 0.7em);
+	color: var(--text-sub);
+	opacity: 0.55;
+}
+
+/* ── 字段行（乐谱头部 / 图片信息）────────────────────── */
+.md-fields {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 1px 0 8px;
+}
+
+/* 乐谱头部字段表：两列自适应（窄了就自动变一列），长字段（标题/歌词）占满整行 */
+.md-fields-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+	gap: 5px 12px;
+}
+
+.md-cell {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.md-cell--wide { grid-column: 1 / -1; }
+
+.md-cell-label {
+	flex: 0 0 70px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--text-sub);
+	text-align: right;
+	white-space: nowrap;
+}
+
+.md-fields-rows { display: flex; flex-direction: column; gap: 5px; }
+
+.md-extras { display: flex; flex-direction: column; gap: 5px; }
+
+.md-field { display: flex; align-items: center; gap: 6px; }
+
+.md-field-label {
+	flex: 0 0 84px;
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: var(--text-sub);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* 输入框沿用表单那套（6px 圆角 + --item-border，hover 副文本色，focus 主色） */
+.md-field-input {
+	min-width: 0;
+	padding: 3px 8px;
+	font-size: 0.78rem;
+	color: var(--text-main);
+	background: var(--bg-light);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	outline: none;
+	transition: border-color 0.2s ease;
+}
+
+.md-field-input:hover { border-color: var(--text-sub); }
+.md-field-input:focus { border-color: var(--primary-blue); }
+.md-field-input::placeholder { color: var(--text-sub); opacity: 0.7; }
+
+/* 卡片里的小下拉（现在只有图片卡片的「尺寸」）：复用 .editor-select 那一整套
+   —— 弹层美化、描边箭头都在 @supports (appearance: base-select) 的共享块里（表格列对齐也是这套），
+   这儿只把尺寸/字重收成跟 .md-field-input 一致的那一档，让它跟旁边的「路径」「说明」对齐。 */
+.editor-select.md-card-select {
+	width: auto;
+	flex: 1 1 auto;
+	/* ⚠️ min-height 必须清零：base-select 给收起态扣了一个 24px 的「地板」，光调内边距压不下去
+	   （实测上下给 3 / 1.8 / 1.2px，量出来都是 24）。清零后上下各 1.8px ⇒
+	   1.6（描边）+ 17.6（内容盒，正好等于收起态那一行的行盒）+ 3.6 = 22.8，跟旁边输入框分毫不差；
+	   内容盒也不再比行盒多出 2.4px 余量 ⇒ 那行字是真居中，不是偏上 1.2px。 */
+	min-height: 0;
+	padding: 1.8px 24px 1.8px 8px;
+	font-size: 0.78rem;
+	/* ⚠️ 字重和行高都要跟旁边的输入框一致（400 / normal）：共享块那边给的是 500 + 继承行高，
+	   收起态会比输入框高 5px（实测 28 vs 23）。 */
+	font-weight: 400;
+	line-height: normal;
+	color: var(--text-main);
+	background: var(--bg-light);
+	border-color: var(--item-border);
+}
+
+.md-field-key {
+	flex: 0 0 92px;
+	font-family: var(--ed-font-mono);
+	font-size: 0.74rem;
+	color: var(--text-sub);
+}
+
+.md-field-key:focus { color: var(--text-main); }
+.md-field-val { flex: 1 1 auto; }
+.md-cell .md-field-input { flex: 1 1 auto; }
+
+.md-field-del {
+	flex: 0 0 auto;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	font-size: 0.9rem;
+	line-height: 1;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 50%;
+	cursor: pointer;
+	transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.md-field-del:hover { color: var(--color-red); border-color: currentColor; }
+
+/* ── 图片卡片 ─────────────────────────────────────── */
+.md-image { display: flex; align-items: flex-start; gap: 10px; }
+
+.md-image-thumb {
+	position: relative;
+	flex: 0 0 104px;
+	height: 74px;
+	overflow: hidden;
+	background: var(--bg-light);
+	border: 1px solid var(--item-border);
+	border-radius: 8px;
+}
+
+.md-image-preview { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.md-image-note {
+	position: absolute;
+	inset: 0;
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 0 6px;
+	font-size: 0.68rem;
+	color: var(--text-sub);
+	text-align: center;
+	background: var(--bg-light);
+}
+
+.md-image-thumb[data-state='ok'] .md-image-note { display: none; }
+.md-image-thumb[data-state='loading'] .md-image-note--loading { display: flex; }
+.md-image-thumb[data-state='missing'] .md-image-preview { display: none; }
+.md-image-thumb[data-state='missing'] .md-image-note--missing { display: flex; }
+
+.md-image .md-fields { flex: 1 1 auto; min-width: 0; margin: 0; }
+
+/* ── 行内特殊样式的补充样式 ────────────────────────────
+   <mark> <sup> <sub> <kbd> 的样式 main.css 里已有（.typography-body …），编辑器正文就带
+   .typography-body 这个类 ⇒ 自动生效，这里只补两处站点没有的。 */
+
+/* 脚注引用：照抄站点「.typography-body sup a」那套（站点那条要 <a>，我们的节点里没有 <a>，所以补一份） */
+.editor-prose .md-fn-ref {
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0 2px;
+	color: var(--primary-blue);
+	cursor: default;
+}
+
+/* 脚注定义行（形如 [^1]: …）：跟站点底部「注释」区一个意思，用副文本色小一号。
+   ⚠️ 选择器**必须**用 JS 打的 .is-fn-def（见 FootnoteDefGuard 的 decorations），不能写成
+   `p:has(> .md-fn-ref:first-child)` —— :first-child 只数**元素**节点、看不见前面的文字节点，
+   结果「正文+引用」这种段落也被当成定义段，整行变成注释样式（踩过）。 */
+.editor-prose p.is-fn-def {
+	font-size: 0.88rem;
+	color: var(--text-sub);
+}
+
+/* ⚠️ 站点 main.css 有一条 `.typography-body p:has(img)`（图片段落居中：flex column + center）。
+   编辑器里 ProseMirror 会给「以行内原子结尾」的段落补一个 <img class="ProseMirror-separator">
+   —— 脚注引用正好是行内原子，落在行尾时就会误中那条规则：整句被居中、<sup> 作为 flex 子项被块化，
+   序号和文字叠在一起。这里把这种段落改回普通块（编辑器的正文里不会有真图片，图片是卡片）。 */
+.editor-prose p:has(> img.ProseMirror-separator) {
+	display: block;
+}
+
+/* ── 任务列表（- [x] …）────────────────────────────────
+   ⚠️ 站点 main.css 里**本来就有**一整套任务列表样式（`.typography-body li:has(input[type=checkbox])`
+      + `input::before` 遮罩对勾 + `display: grid; place-content: center` 居中 + 完成后文字转副文本色）。
+      编辑器正文容器就带 `.typography-body` ⇒ 直接生效、跟线上长得一模一样。
+      之前我自作聪明又写了一套 `::after` 对勾，跟站点那枚 `::before` 叠在一起，方框被撑歪、勾也偏了（踩过）。
+   这里只补两处**编辑器才有**的需求，别的一律不动。 */
+.editor-prose ul[data-type='taskList'] li > label {
+	display: flex;
+	align-items: center;
+	user-select: none;
+}
+
+/* 站点的勾选框是「展示态」（disabled + pointer-events: none），编辑器里得能点 */
+.editor-prose ul[data-type='taskList'] li input[type='checkbox'] {
+	pointer-events: auto;
+	cursor: pointer;
+}
+
+/* 编辑器的 DOM 比线上多一层 <div><p>，把段落外边距收掉，否则每一项会比线上多一截间距 */
+.editor-prose ul[data-type='taskList'] li > div > p { margin: 0; }
+
+/* ── 表格卡片（GFM 网格编辑）────────────────────────── */
+/* 列多了要能横着滚（网格列最小 92px，就会被撑出容器） */
+.md-table-scroll { overflow-x: auto; }
+
+.md-table-grid {
+	display: grid;
+	gap: 3px;
+	align-items: center;
+}
+
+.md-table-cell {
+	width: 100%;
+	min-width: 0;
+	padding: 3px 7px;
+	font-size: 0.8rem;
+	color: var(--text-main);
+	background: var(--bg-light);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	outline: none;
+	transition: border-color 0.2s ease;
+}
+
+.md-table-cell:hover { border-color: var(--text-sub); }
+.md-table-cell:focus { border-color: var(--primary-blue); }
+/* 表头行（分隔行之上）加粗，跟站点表头一个意思 */
+.md-table-cell[data-head='1'] { font-weight: 700; }
+
+/* 对齐行：小下拉，虚线框，弱化存在感（它是列属性，不是内容） */
+.md-table-align { display: flex; min-width: 0; }
+
+.md-table-align select {
+	width: 100%;
+	min-width: 0;
+	padding: 1px 4px;
+	font-size: 0.68rem;
+	font-weight: 600;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px dashed var(--item-border);
+	border-radius: 6px;
+	outline: none;
+	cursor: pointer;
+	transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.md-table-align select:hover { color: var(--primary-blue); border-color: currentColor; }
+.md-table-align select:focus-visible { border-color: var(--primary-blue); }
+
+.md-table-gap { display: block; }
+
+.md-table-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 7px;
+}
+
+/* ── 顶栏按钮 / toast ─────────────────────────────────────── */
+/* 次按钮 = 站点 tag 小框语言（6px 圆角 + 描边 + 副文本色） */
+.editor-btn {
+	padding: 4px 12px;
+	font-size: 0.78rem;
+	font-weight: 600;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.editor-btn:hover { color: var(--primary-blue); border-color: currentColor; }
+
+/* 主按钮 = 站点的 .modal-btn 语言 */
+.editor-btn--primary {
+	padding: 5px 20px;
+	color: var(--on-primary);
+	background: var(--primary-blue);
+	border-color: var(--primary-blue);
+	border-radius: 8px;
+	font-weight: 600;
+	transition: opacity 0.2s;
+}
+
+.editor-btn--primary:hover { color: var(--on-primary); border-color: var(--primary-blue); opacity: 0.85; }
+.editor-btn:disabled { opacity: 0.45; cursor: default; pointer-events: none; }
+
+.editor-linkish {
+	padding: 0;
+	font-size: 0.74rem;
+	font-weight: 600;
+	color: var(--primary-blue);
+	background: none;
+	border: 0;
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.editor-linkish:hover { opacity: 0.75; }
+
+/* toast = 站点的 .toast-notice 语言（胶囊 + 主色描边 + 卡片阴影） */
+.editor-toast {
+	position: fixed;
+	left: 50%;
+	bottom: 34px;
+	z-index: 60;
+	max-width: min(560px, 90vw);
+	padding: 10px 22px;
+	font-size: 0.86rem;
+	font-weight: 500;
+	color: var(--text-main);
+	background: var(--card-bg);
+	border: 1px solid var(--primary-blue);
+	border-radius: 50px;
+	box-shadow: var(--card-shadow);
+	transform: translateX(-50%);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	/* 淡入淡出（跟链接弹层同一套：hidden 切换 + @starting-style 给进场第一帧）
+	   ⚠️ 补间里必须带上 translateX(-50%)，它就是靠这个居中的 */
+	transition: opacity 0.18s ease, transform 0.18s ease, display 0.18s allow-discrete;
+}
+
+.editor-toast[hidden] {
+	display: none;
+	opacity: 0;
+	transform: translateX(-50%) translateY(6px);
+}
+
+@starting-style {
+	.editor-toast:not([hidden]) {
+		opacity: 0;
+		transform: translateX(-50%) translateY(6px);
+	}
+}
+
+.editor-toast[data-kind='err'] { border-color: #ef4444; }
+
+/* ── frontmatter 表单 ─────────────────────────────────────── */
+.editor-form {
+	flex: 0 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--item-border);
+}
+
+.fm-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.fm-row > label:first-child {
+	flex: 0 0 56px;
+	font-size: 0.74rem;
+	font-weight: 700;
+	color: var(--text-sub);
+}
+
+.fm-row input[type='text'],
+.fm-row input[type='datetime-local'] {
+	flex: 1 1 200px;
+	min-width: 0;
+	padding: 4px 9px;
+	font-size: 0.8rem;
+	color: var(--text-main);
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	outline: none;
+	transition: border-color 0.2s ease;
+}
+
+.fm-row input:hover { border-color: var(--text-sub); }
+.fm-row input:focus-visible { border-color: var(--primary-blue); }
+
+/* 标题栏：英文用站点的 Montserrat（跟 .page-index / 站内数字/英文信息同一族），中文回落 Inter → Noto Sans SC。
+   字重 600 与站点 .page-index 一致（表单控件默认是 400，正好容易被忽略）。
+   ⚠️ 用类不用 id：新建文章弹窗里的中英标题框要同一套字体（那边共不了 id）。 */
+.fm-title {
+	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-weight: 600;
+}
+
+/* 日期栏：字重 400（跟普通输入框一致）；Montserrat + 等宽数字（照抄站点 .page-index 的写法：
+   font-variant-numeric: tabular-nums，这样秒/分/年月对齐，不会随数字宽度跳动）。
+   另外把 Chrome 原生的日历按钮换成站点同款日历图标（stroke 4/48 那套），并给分段加选中高亮。
+   ⚠️ 选 `.fm-date-wrap > input` 而不是 `#fm-date`：新建文章弹窗里的日期框也在同构 wrapper 里。 */
+.fm-date-wrap > input {
+	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-weight: 400;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ── 日期栏的日历图标 ─────────────────────────────────────────
+   踩坑记录（两次）：
+   ① 直接给 `::-webkit-calendar-picker-indicator` 设 mask + background-color 不行 —— Chrome 自带的日历背景图
+      还在，两层图形叠在一起；把 background-image 清空又会让图标整个消失。
+   ② 改用 wrapper 的 `::after` + mask(data URI) 也画不出来（mask 生效了但图形为空）。
+   最终做法跟站点一致：**内联 SVG**（Layout.astro 的 .date-icon 就是内联 SVG），
+   颜色用 currentColor ⇒ 跟着主题和 hover 变，几何形状直接复用站点那 8 条 path。 */
+.fm-date-wrap {
+	position: relative;
+	display: flex;
+	flex: 1 1 200px;
+	min-width: 0;
+}
+
+.fm-date-wrap > input {
+	flex: 1 1 auto;
+	width: 100%;
+}
+
+.fm-date-icon {
+	position: absolute;
+	top: 50%;
+	right: 9px;
+	width: 15px;
+	height: 15px;
+	transform: translateY(-50%);
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 4;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	color: var(--text-sub);
+	pointer-events: none; /* 点击穿透到下面那个透明的原生日历按钮上 */
+	transition: color 0.2s ease;
+}
+
+.fm-date-wrap:hover .fm-date-icon,
+.fm-date-wrap:focus-within .fm-date-icon {
+	color: var(--primary-blue);
+}
+
+/* 原生日历按钮：保留尺寸与点击区域（正好在我的图标下面），但不绘制自己的图形。
+   ⚠️ 选择器按 wrapper 走而不是 `#fm-date`：新建文章那个表单里的日期框要用同一套。 */
+.fm-date-wrap > input::-webkit-calendar-picker-indicator {
+	width: 15px;
+	height: 15px;
+	margin-left: 4px;
+	padding: 0;
+	background: none;
+	opacity: 0;
+	cursor: pointer;
+}
+
+/* 分段（年/月/日/时/分）：点进去选中的那一段用主色浅底高亮，跟站点 pill 同一套 token */
+.fm-date-wrap > input::-webkit-datetime-edit {
+	padding: 0;
+}
+.fm-date-wrap > input::-webkit-datetime-edit-fields-wrapper {
+	padding: 0;
+}
+.fm-date-wrap > input::-webkit-datetime-edit-text {
+	padding: 0 1px;
+	color: var(--text-sub);
+}
+.fm-date-wrap > input::-webkit-datetime-edit-year-field:focus,
+.fm-date-wrap > input::-webkit-datetime-edit-month-field:focus,
+.fm-date-wrap > input::-webkit-datetime-edit-day-field:focus,
+.fm-date-wrap > input::-webkit-datetime-edit-hour-field:focus,
+.fm-date-wrap > input::-webkit-datetime-edit-minute-field:focus {
+	color: var(--color-blue);
+	background: var(--color-blue-bg);
+	border-radius: 3px;
+	outline: none;
+}
+
+.fm-check {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 0.74rem;
+	font-weight: 500;
+	color: var(--text-sub);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.fm-check input { accent-color: var(--primary-blue); }
+
+.fm-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	flex: 1 1 260px;
+}
+
+/* chip = 站点的 .cat-tag / .tag / .cw-pill 那套：
+   未选 = 只有描边的小框（副文本色，字重 500）；选中 = 站点现成的彩色 pill（字重 700） */
+.chip {
+	display: inline-block;
+	padding: 3px 7px;
+	font-family: var(--ed-font-ui);
+	font-size: 0.78rem;
+	font-weight: 500;
+	line-height: 1.2;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	cursor: pointer;
+	user-select: none;
+	transition: all 0.2s ease;
+}
+
+/* hover 反馈分两种：
+   · 未选中：文字色 + 描边色一起变（明显「可以点」）；
+   · 已选中：**只变描边色，文字色保持分类配色不变**（跟站点静态色块的气质一致）——
+     那条规则写在下面选中态那几档配色**之后**（同权重靠顺序取胜）。 */
+.chip:not(.chip--on):hover { color: var(--text-main); border-color: var(--text-sub); }
+
+/* 选中态：底色 + 文字色 + **描边色**都用自己那套配色。这里先给兜底（没有可用分类时才走）：蓝。 */
+.chip--on {
+	font-weight: 700;
+	border-color: var(--color-blue-border);
+}
+
+/* 选中态的颜色全部借用站点现成的类：
+   分类 → .cat-tag.cat-music/studio/essays/achievements；标签 → 同样按它所属分类（在 JS 里算好 cat-* 类）；
+   内容警告 → .cw-pill.cw-opinion/spoilers/politics/adult。
+   下面只是「万一没有可用分类」的兼底（用蓝色那套 token）。 */
+.chip--on:not(.cat-tag):not(.cw-pill) { background: var(--color-blue-bg); color: var(--color-blue); }
+
+/* 选中态的描边 = 该配色方案自己的 --color-*-border（站点里这几个 token 本来就是给浅底 pill 配的描边，
+   30% 透明档；站点的筛选按钮 .cat-filter-btn--* 也是这么配的）—— 比单纯的黑/白描边跟底色是一套。
+   ⚠️ 权重 (0,3,0)，且必须排在下一条 hover 规则**之前**（同权重靠顺序）。 */
+.cat-tag.chip--on.cat-music { border-color: var(--color-amber-border); }
+.cat-tag.chip--on.cat-studio { border-color: var(--color-blue-border); }
+.cat-tag.chip--on.cat-essays { border-color: var(--color-indigo-border); }
+.cat-tag.chip--on.cat-achievements { border-color: var(--color-cyan-border); }
+.cw-pill.chip--on.cw-opinion { border-color: var(--color-green-border); }
+.cw-pill.chip--on.cw-spoilers { border-color: var(--color-indigo-border); }
+.cw-pill.chip--on.cw-politics { border-color: var(--color-red-border); }
+.cw-pill.chip--on.cw-adult { border-color: var(--color-rose-border); }
+
+/* 「草稿」「AI」两枚开关的描边（底色/字色在下面那条里）：草稿=琥珀、AI=紫，跟站点那两处一致 */
+.chip--on.flag-draft { border-color: var(--color-amber-border); }
+.chip--on.flag-ai { border-color: var(--color-purple-border); }
+
+/* 选中态 hover：描边压到实色（currentColor 就是那套主色）⇒ 30% → 100% 的加深手感 */
+.chip.chip--on:hover { border-color: currentColor; }
+
+/* 「草稿标记」「AI 翻译」两个开关 chip：颜色也照抄站点那两处，跟文章页/首页看到的完全一致
+   草稿 = --color-amber*（站点 .page-index.is-draft 就是 #b45309 这个琥珀）
+   AI   = --color-purple*（站点 .ai-badge 的紫）
+   ⚠️ 选择器必须写三个类：上面那条兜底 `.chip--on:not(.cat-tag):not(.cw-pill)` 里两个 `:not()` 也算
+      各自的权重 ⇒ 它其实是 (0,3,0)，只写 `.chip--on.flag-draft` 只有 (0,2,0)，会被它抢成蓝色（踩过）。 */
+.chip.chip--on.flag-draft { background: var(--color-amber-bg); color: var(--color-amber); }
+.chip.chip--on.flag-ai { background: var(--color-purple-bg); color: var(--color-purple); }
+
+/* AI 那枚带图标：得用 inline-flex 把图标和文字对齐（inline-block + 行内 span 会歪、基线也不对） */
+.chip.flag-ai { display: inline-flex; align-items: center; gap: 4px; }
+
+/* 图标跟站点 .ai-badge-icon 同一套尺度：1.25em 随 chip 字号缩放、吃 currentColor。
+   ⚠️ 描边分两档：未选中 1.8（细一档，跟「未启用」的灰字一个气质），
+   选中 2.5（跟站点 .ai-badge 完全一样粗）。24 格视口下两档差 ≈ 0.45px，刚好能看出「点亮了」。
+   ⚠️ 变粗要跟底色/字重一起过渡，别「啪」一下跳：字重（500 → 700）靠 .chip 自己那条
+   `transition: all`（chips 用的 Encode Sans SC 是 Google Fonts 的 wght@100..900 变量字体，
+   中间字重真有字形，插值才看得出来）；而图标这几条路径是**子元素**，`all` 管不到 ⇒ 单独写。 */
+.chip .chip-ico { display: inline-flex; align-items: center; line-height: 0; }
+.chip .chip-ico svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; }
+.chip .chip-ico svg path,
+.chip .chip-ico svg polyline,
+.chip .chip-ico svg line { fill: none; stroke-width: 1.8; stroke-miterlimit: 2; transition: stroke-width 0.2s ease; }
+
+.chip--on .chip-ico svg path,
+.chip--on .chip-ico svg polyline,
+.chip--on .chip-ico svg line { stroke-width: 2.5; }
+
+/* ── 工具条 + 正文区 ─────────────────────────────────────── */
+.editor-toolbar {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px;
+	padding: 6px 10px;
+	border-bottom: 1px solid var(--item-border);
+}
+
+.editor-toolbar button {
+	min-width: 28px;
+	padding: 3px 8px;
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	/* 按钮里既有纯文字（引用/列表…）也有纯图标（粗体/斜体/删除线）：
+	   flex 居中让两者都站中间；min-height 把高度统一 —— 文字按钮 = 行高 20 + 上下 3 + 描边 2 ≈ 28，
+	   图标按钮只有 15px 高，不统一的话一排高矮不齐。 */
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 28px;
+}
+
+/* 图标按钮里的那枚 svg：尺寸/描边统一在这儿管（stroke 走 currentColor ⇒ hover、按下态自动跟色） */
+.editor-toolbar button > svg {
+	width: 15px;
+	height: 15px;
+	flex: 0 0 auto;
+	fill: none;
+	pointer-events: none;
+}
+
+/* ⚠️ 内联 SVG 的 overflow 默认是 hidden ⇒ 图形离视口边不足「描边半宽」的那点会被裁掉。
+   ruby 那枚（Illustrator 导的，viewBox 24 / 描边 2 ⇒ 半宽 1 单位）最低画到 23.1，加半宽 = 24.1，
+   超视口 0.1 单位（15px 下 0.0625px，肉眼看不出，但没必要留着）⇒ 单独放开。
+   以后再有画得这么满的图标，照这个处理：描边 2 的图形要落在 1 到 23 之间。 */
+.editor-toolbar button[data-cmd='ruby'] > svg { overflow: visible; }
+
+.editor-toolbar button:hover {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+}
+
+/* 工具条分组之间的竖分隔线（行内格式和插入块两段之间） */
+.editor-toolbar-sep {
+	width: 1px;
+	height: 16px;
+	margin: 0 4px;
+	background: var(--item-border);
+}
+
+/* 工具条里的「段落/标题」小下拉：复用 .editor-select 那一整套（含弹层美化 + 描边箭头）。
+   ⚠️ 具体的尺寸/箭头覆盖写在**文件最末尾**——它得排在「共用下拉规则」后面才抢得过（同优先级靠后就赢）。 */
+.editor-toolbar-select {
+	flex: 0 0 auto;
+	color: var(--text-main);
+	background: transparent;
+	border-color: transparent;
+}
+
+.editor-toolbar-select:hover { background: var(--color-blue-bg); border-color: transparent; }
+
+/* 按钮的「按下态」：跟 hover 同色系，多一圈描边区分（描边默认就是 1px transparent ⇒ 不会跳版） */
+.editor-toolbar button.is-on {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	border-color: var(--color-blue-border);
+}
+
+.editor-doc {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+}
+
+/* 编辑区正文：直接套站内文章的同款类 `.typography-body`（main.css），所以这里只做编辑器专属的部分，
+   排版（字体/字号/行高/标题/引用/代码/图片/链接）全部交给 main.css，跟真页面一致。 */
+/* ⚠️ 用 `body .editor-prose`（而不是单个类）提高优先级：ProseMirror 的基础样式是**运行时**往 head 里
+   注入 <style> 的（排在静态样式表之后），同等优先级下它会赢。它给 .ProseMirror 设了
+   `font-variant-ligatures: none`（= font-feature-settings: "liga" 0），并且 white-space: pre-wrap
+   会让 line-break 变成 after-white-space —— 正好把站点 body 上的
+   `font-feature-settings: "liga" 1, "calt" 1, "halt" 1` 和 `line-break: strict` 盖掉，
+   中文标点的半宽（halt）和连字就没了。这里按站点正文原样恢复。 */
+body .editor-prose {
+	font-variant-ligatures: normal;
+	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
+	line-break: strict;
+}
+
+.editor-prose {
+	min-height: 100%;
+	outline: none;
+	padding-top: 14px;
+	padding-bottom: 40px;
+}
+
+/* 站点里的段落、标题等由 .typography-body 管；这里只补编辑器需要、站点没有的东西 */
+.editor-prose > .md-raw-block:first-child { margin-top: 0; }
+
+/* ProseMirror 的选区/光标在亮暗两套主题下都要看得见 */
+/* 选中文字沿用站点的全局 ::selection（--primary-blue 底 + --on-primary 字），不要另搞一套 */
+.editor-prose.ProseMirror-focused { outline: none; }
+
+/*
+ * 站点的标题悬停效果（左边浮现蓝色井号 + 标题变蓝 + 鼠标指针变手型）是给文章页「点击锚点」用的，
+ * 编辑器里用不上。
+ * ⚠️ 必须带 !important：站点的选择器里有 `:not(.post-title-link h2)`（:not 取参数里最高的优先级）
+ *    + `:hover`，算下来比我写任何普通选择器都高，硬拼优先级很难看也容易翻车。
+ */
+body .editor-prose h1::before,
+body .editor-prose h2::before,
+body .editor-prose h3::before,
+body .editor-prose h4::before,
+body .editor-prose h5::before,
+body .editor-prose h6::before {
+	content: none !important;
+}
+
+body .editor-prose h1:hover,
+body .editor-prose h2:hover,
+body .editor-prose h3:hover,
+body .editor-prose h4:hover,
+body .editor-prose h5:hover,
+body .editor-prose h6:hover {
+	color: inherit !important;
+}
+
+body .editor-prose h1,
+body .editor-prose h2,
+body .editor-prose h3,
+body .editor-prose h4,
+body .editor-prose h5,
+body .editor-prose h6 {
+	cursor: text !important;
+}
+
+/* ── 下拉弹层（把原生 select 的弹层换成站点语言的浮层）──────────────────
+   用的是 Chromium 的「可定制 select」：`appearance: base-select` + `::picker(select)`。
+   ⚠️ 不支持的浏览器（比如 Firefox）会原样落到系统原生弹层 —— 功能不受影响，只是没这套外观，
+      所以整段包在 @supports 里。
+   涉及：顶部文章下拉（.editor-select）、表格的列对齐（.md-table-align select）。
+   语言：浮层 = 卡片（--card-bg + --card-radius/10px + 描边 + 更强的 --card-hover-shadow）；
+        选项 = 列表项（6px 圆角，hover 主色浅底，选中主色 + 600）；动画 0.16s ease。 */
+@supports (appearance: base-select) {
+	.editor-select,
+	.md-table-align select {
+		appearance: base-select;
+		/* ⚠️ 开了 base-select 之后 select 变成 inline-flex，`::picker-icon` 是排在文字**后面**的
+		   flex 项 ⇒ 控件宽的时候箭头会飘在中间。所以自己接管布局：
+		   块级容器 + 绝对定位的箭头（顺便让长标题能用 ellipsis 收）。 */
+		position: relative;
+		display: block;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		padding-right: 32px; /* 给右边那枚箭头留位置 */
+	}
+
+	/* 浮层本体 */
+	.editor-select::picker(select),
+	.md-table-align select::picker(select) {
+		appearance: base-select;
+		box-sizing: border-box;
+		/* 位置：默认位置区（position-area: end span-end）会让浮层按内容宽度居中/左溢，
+		   看着跟控件「脱开」；这里把左边缘锚到控件左边缘，宽度按内容但不越过视口右边 */
+		left: anchor(left);
+		right: auto;
+		width: max-content;
+		max-width: min(680px, calc(100vw - 12px));
+		/* ⚠️ 方向由 index.astro 的 aimPicker 在打开前算好、用 --picker-area 传进来，别在这儿写死：
+		   UA 那套判定用不了 —— 它量「下方放不下」时参照的是控件所在的**滚动容器**
+		   （表格那个在 .md-table-scroll 里、卡片那个在 .md-block 里，都不是窗口），
+		   实测窗口里还剩 199px 空当，它照样把 110px 高的菜单翻到控件上方去。
+		   这里只负责掐掉 UA 的回退链 —— 不掐的话它会推翻 JS 给的方向。 */
+		position-area: var(--picker-area, end span-end);
+		position-try-fallbacks: none;
+		/* 空当要跟着方向翻面：菜单在上时，间隙得留在它下面 */
+		margin: var(--picker-margin, 6px 0 0);
+		padding: 4px;
+		max-height: min(340px, 60vh);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		color: var(--text-main);
+		background: var(--card-bg);
+		border: 1px solid var(--item-border);
+		border-radius: 10px;
+		box-shadow: var(--card-hover-shadow);
+		/* 弹出用 opacity/transform（top layer 里没有 layout 过渡，display 得配 allow-discrete） */
+		opacity: 0;
+		transform: translateY(-4px) scale(0.985);
+		transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s allow-discrete, overlay 0.16s allow-discrete;
+	}
+
+	.editor-select::picker(select):popover-open,
+	.md-table-align select::picker(select):popover-open {
+		opacity: 1;
+		transform: none;
+	}
+
+	@starting-style {
+		.editor-select::picker(select):popover-open,
+		.md-table-align select::picker(select):popover-open {
+			opacity: 0;
+			transform: translateY(-4px) scale(0.985);
+		}
+	}
+
+	/* 选项 */
+	/* ⚠️ 上下不对称（6 / 4）是实测出来的，别顺手「改成对称」：
+	   选项行高 32 = 内边距 10 + 行盒 22，行盒是**贴着内容盒顶部**摆的
+	   ⇒ 行盒中线比行的中线低 1px ⇒ 中文那行字（墨迹本来就比 em 盒中线高 0.5px）合计偏高 1.1px。
+	   上 +1 / 下 -1 后墨迹中线落回行中线；同一行的图标也跟着下了 1px，在下面单独扳回去。 */
+	.editor-select option,
+	.md-table-align select option {
+		padding: 6px 10px 4px;
+		border-radius: 6px;
+		font-size: 0.82rem;
+		font-weight: 500;
+		color: var(--text-main);
+		background: transparent;
+		transition: background-color 0.15s ease, color 0.15s ease;
+	}
+
+	.editor-select option:hover,
+	.editor-select option:focus-visible,
+	.md-table-align select option:hover,
+	.md-table-align select option:focus-visible {
+		background: var(--color-blue-bg);
+	}
+
+	/* 选中项：主色 + 加粗；默认那个勾记号太抢镜，去掉 */
+	.editor-select option:checked,
+	.md-table-align select option:checked {
+		color: var(--primary-blue);
+		font-weight: 600;
+	}
+
+	.editor-select option::checkmark,
+	.md-table-align select option::checkmark {
+		display: none;
+	}
+
+	/* optgroup = 小标题 + 两列网格（同一篇的中英落在同一行）。
+	   ⚠️ 网格只能写在 optgroup 上：弹层本体和 option 上的 display:grid 都被 UA 那层内部容器
+	   吃掉（实测同一行只命中 1 个 option）；optgroup 上同一行能命中 2 个。
+	   列顺序 = 源码顺序 ⇒ loadList 把中英交替塞进来，即成对。 */
+	.editor-select optgroup {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		padding: 6px 6px 2px;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+		color: var(--text-sub);
+	}
+
+	/* 长标题一律省略号收尾，别让换行把行的节奏打乱（grid 项要 min-width:0 才会缩） */
+	.editor-select optgroup option {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	/* ⚠️ 网格的第一个格子被 UA 生成的**组标签**占着，而那个标签是 UA 内部盒子，作者 CSS 碰不到
+	   （给 optgroup::before 写 grid-column 不生效，实测它的 content 是 none）。
+	   所以塞一个零高的占位项把格子补回来，后面的选项才刚好两两成对。 */
+	.editor-select option.optgroup-pad {
+		height: 0;
+		padding: 0;
+		overflow: hidden;
+	}
+
+	/* 缺另一语言时的占位项（disabled，只把列位占住） */
+	.editor-select option:disabled {
+		color: var(--text-sub);
+		opacity: 0.55;
+	}
+
+	.editor-select optgroup option { padding-left: 14px; }
+
+	.md-table-align select option { padding: 5px 8px 3px; font-size: 0.76rem; }
+
+	/* 箭头（::picker-icon）：默认是实心三角，跟站点「stroke 4 / 圆头」的图标不搭 ——
+	   所以清掉默认图形，用 mask 画一枚描边箭头（mask + background-color 才吃得进 currentColor，
+	   直接换 content: url(...) 的话颜色就写死了，没法跟着 hover / 主题变）。
+	   ⚠️ 位置：绝对定位钉到右边缘（不能靠 flex 排，见上面那段注释）。 */
+	.editor-select::picker-icon,
+	.md-table-align select::picker-icon {
+		content: '';
+		display: block;
+		position: absolute;
+		right: 10px;
+		top: 50%;
+		translate: 0 -50%;
+		width: 14px;
+		height: 14px;
+		flex: 0 0 auto;
+		background-color: currentColor;
+		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 5L7 9.4L11.4 5'/%3E%3C/svg%3E") center / contain no-repeat;
+		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.6 5L7 9.4L11.4 5'/%3E%3C/svg%3E") center / contain no-repeat;
+		transition: background-color 0.2s ease, rotate 0.2s ease;
+	}
+
+	/* 常态 = 继承 select 的字色（.editor-select 是 --text-main、表格那个是 --text-sub），
+	   hover / 聚焦时换成主色 */
+	.editor-select:hover::picker-icon,
+	.editor-select:focus-visible::picker-icon,
+	.md-table-align select:hover::picker-icon,
+	.md-table-align select:focus-visible::picker-icon {
+		background-color: var(--primary-blue);
+	}
+
+	.editor-select:open::picker-icon,
+	.md-table-align select:open::picker-icon {
+		rotate: 180deg;
+	}
+
+	/* ⚠️ 必须放在上面那条共用规则**之后**：同优先级时靠后的生效。
+	   表格的列对齐下拉本身就小，14px 箭头塞进去会把高度撑起来，单独缩一号。 */
+	.md-table-align select {
+		padding-right: 22px;
+	}
+
+	.md-table-align select::picker-icon {
+		right: 6px;
+		width: 10px;
+		height: 10px;
+	}
+
+	/* 浮层里的滚动条：站点全局藏了滚动条，这里跟 .md-input 一样破例（文章列表要能滚） */
+	.editor-select::picker(select)::-webkit-scrollbar,
+	.md-table-align select::picker(select)::-webkit-scrollbar {
+		display: block;
+		width: 8px;
+	}
+
+	.editor-select::picker(select)::-webkit-scrollbar-thumb,
+	.md-table-align select::picker(select)::-webkit-scrollbar-thumb {
+		background: var(--item-border);
+		border-radius: 4px;
+	}
+
+	.editor-select::picker(select)::-webkit-scrollbar-thumb:hover,
+	.md-table-align select::picker(select)::-webkit-scrollbar-thumb:hover {
+		background: var(--text-sub);
+	}
+}
+
+/* ── 工具条「段落/标题」下拉的尺寸与箭头（⚠️ 必须放在文件最后）────────────
+   它要覆盖前面 `.editor-select` / `::picker-icon` 那套共用规则，
+   同优先级时靠后的生效 —— 写在前面的话 width/padding-right/箭头尺寸全都会被抢回去（踩过）。 */
+/* ⚠️ 选择器写成 `button.editor-toolbar-select`（两个类）：它现在是**按钮**，
+   而 `.editor-toolbar button`（1 类 + 1 类型）会把 padding / min-height / 颜色全抢走。
+   ⚠️ 上下内边距不对称（3.9 / 2.1）是实测出来的，别顺手「改成对称」：
+      行盒在内容盒里的落点算不准（内容盒比行盒高 1.6px，多出来的算上面还是下面只有 0.4px 的量级），
+      当初是放大 8 倍直接对出来的。 */
+.editor-toolbar button.editor-toolbar-select {
+	width: auto;
+	min-width: 96px; /* 收起态宽度：跟改之前量出来的一样（原来是原生 select 的 96） */
+	max-width: 124px;
+	justify-content: flex-start;
+	/* 左内边距 7 + 描边 1 ⇒ 图标落在 x=8；图标 15 + 间距 8 ⇒ 文字落在 x=31（原来那颗图标也是这两个位置） */
+	gap: 8px;
+	/* ⚠️ 内边距必须左右上下对称：原来是给原生 select 那套错位的内容盒配的（3.9 / 2.1），
+	   换成自己的按钮后 flex 是在**内容盒**里居中 ⇒ 沿用不对称值会让图标整体下沉 0.9px，
+	   一排图标里就它不齐（量过：旧的图标中心正好在工具条行的中线上）。 */
+	padding: 3px 26px 3px 7px;
+	/* ⚠️ 高度写死 = 旧 select 量出来的 29.6，别改成 min-height：里面那行字是 22px 高（比内容盒高 0.4px），
+	   min-height 拦不住它 ⇒ 按钮会变成 30。写死高度后行盒溢出 0.4px，flex 居中自己会把差值平分掉。 */
+	box-sizing: border-box;
+	height: 29.6px;
+	font-size: 0.78rem;
+	font-weight: 500;
+	/* ⚠️ 这里**故意不写 color**：让它跟其它工具条按钮一样拿 `.editor-toolbar button` 的
+	   `--text-sub`（静止浅灰）+ `:hover` 的主色。一旦在这里写死颜色，两个规则优先级会打平，
+	   而本规则在文件末尾 ⇒ hover 的蓝色会被抢回去（踩过）。 */
+	/* ⚠️ 收起态那行字的高度由 line-height 决定：它得撑满内容盒，否则行盒比内容盒矮、
+	   上下平分多出来的部分，字就会偏。 */
+	line-height: 22px;
+}
+
+/* 收起态那枚级别图标：15px，颜色吃 currentColor（跟着主题、置灰态一起变） */
+.editor-toolbar .hd-cur {
+	width: 15px;
+	height: 15px;
+	flex: 0 0 auto;
+	fill: none;
+	pointer-events: none;
+}
+
+/* 右边那枚箭头：原来由原生 select 的 ::picker-icon 画（11px、离右边缘 7px），现在自己画一个，位置尺寸照旧 */
+.editor-toolbar .hd-arrow {
+	width: 11px;
+	height: 11px;
+	flex: 0 0 auto;
+	fill: none;
+	pointer-events: none;
+	margin-left: auto; /* 推到最右（收起态比内容宽，多出来的空当全给这里） */
+	margin-right: -19px; /* 右内边距 26 - 19 = 7 ⇒ 箭头落在离右边缘 7px 处 */
+}
+
+/* 弹层里选项前面那枚图标：上面那条「上 6 / 下 4」是把**整行内容**往下推 1px 去贴中文墨迹的，
+   图标也跟着被推下去了 —— 但它本来就该在行的正中间（描边图标的墨迹在 48 格视口里是对称的）
+   ⇒ 单独扳回 1px，跟文字墨迹对齐。 */
+.editor-select option svg {
+	position: relative;
+	top: -1px;
+}
+
+/* H1：站点里文章标题就是 H1（.post-title-link h1），正文再写 H1 属于「能写但不推荐」——
+   置灰只是提示，**不是** disabled，照样能点。 */
+
+/* 段落/标题下拉的外层：只是让按钮在工具条里不参与 flex 拉伸 */
+.hd-wrap {
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 auto;
+}
+
+/* 收起态、当前是 H1 时：图标和级别名淡一档，跟菜单里那一项呼应。
+   ⚠️ 不能再用颜色区分了：静止态已经跟其它按钮一样是 --text-sub。 */
+.editor-toolbar-select.is-dim .hd-cur,
+.editor-toolbar-select.is-dim #hd-label { opacity: 0.6; }
+
+/* ── 自绘下拉菜单（段落 / 标题）────────────────────────────────
+   原来是原生 <select> 的弹层：系统字体、灰色高亮、方角，跟编辑器完全不是一个长相。
+   现在跟链接弹层同一套：fixed 定位 + 卡片 token + @starting-style 进出场。 */
+.editor-menu {
+	position: fixed;
+	z-index: 40;
+	min-width: 118px;
+	padding: 4px;
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: var(--card-radius);
+	box-shadow: var(--card-shadow);
+	transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s allow-discrete;
+	transform-origin: var(--menu-origin, 50% 0);
+}
+
+.editor-menu[hidden] {
+	display: none;
+	opacity: 0;
+	transform: translateY(-4px) scale(0.96);
+}
+
+@starting-style {
+	.editor-menu:not([hidden]) {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.96);
+	}
+}
+
+/* ⚠️ 菜单项是 button，菜单又在 .editor-toolbar 里 ⇒ `.editor-toolbar button`（1 类 + 1 类型）
+   会把 padding / min-height / 颜色 / 圆角全抢走（连 justify-content: center 也是它给的，
+   不显式写 flex-start 的话图标加文字会整组居中） ⇒ 这里用两个类的选择器压住它。 */
+.editor-menu .editor-menu-item {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 8px;
+	width: 100%;
+	min-height: 26px;
+	/* 左右各 10：图标离**形状**（hover 和选中时那块底）的左边缘得留点空，
+	   贴太紧看着像被框住了（原来只给了 4）。跟菜单自身的 4px 内边距加起来才是离菜单边缘的距离。 */
+	padding: 4px 10px;
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--text-main);
+	text-align: left;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.editor-menu .editor-menu-item > svg {
+	width: 15px;
+	height: 15px;
+	flex: 0 0 auto;
+	fill: none;
+}
+
+.editor-menu .editor-menu-item:hover,
+.editor-menu .editor-menu-item:focus-visible {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	outline: none;
+}
+
+/* 当前块类型那一项：颜色 + 加粗 ⚠️ 置灰规则写在后面 ⇒ H1 选中时仍然保持灰（跟原来一致） */
+.editor-menu .editor-menu-item.is-on {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	border-color: var(--color-blue-border);
+	font-weight: 600;
+}
+
+.editor-menu .editor-menu-item.is-dim { color: var(--text-sub); }
+
+/* ── 自绘确认弹窗（取代 window.confirm）────────────────────── */
+.editor-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 70;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	background: rgb(15 23 42 / 0.32);
+	transition: opacity 0.16s ease, display 0.16s allow-discrete;
+}
+
+.editor-modal[hidden] {
+	display: none;
+	opacity: 0;
+}
+
+@starting-style {
+	.editor-modal:not([hidden]) { opacity: 0; }
+}
+
+.editor-modal-card {
+	width: min(360px, 100%);
+	padding: 16px 18px 14px;
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: var(--card-radius);
+	box-shadow: var(--card-shadow);
+	transition: transform 0.16s ease;
+}
+
+.editor-modal[hidden] .editor-modal-card { transform: translateY(8px) scale(0.97); }
+
+@starting-style {
+	.editor-modal:not([hidden]) .editor-modal-card { transform: translateY(8px) scale(0.97); }
+}
+
+.editor-modal-title {
+	margin: 0 0 6px;
+	font-size: 0.92rem;
+	font-weight: 600;
+	color: var(--text-main);
+}
+
+.editor-modal-text {
+	margin: 0;
+	font-size: 0.82rem;
+	line-height: 1.62;
+	color: var(--text-sub);
+}
+
+.editor-modal-btns {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.editor-modal-btns > button {
+	padding: 5px 14px;
+	font: inherit;
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.editor-modal-btns > button:hover {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	border-color: var(--color-blue-border);
+}
+
+/* 主按钮（确定 / 切换）：站点主按钮那套配色，文字必须 --on-primary */
+.editor-modal-btns > button.is-primary {
+	color: var(--on-primary);
+	background: var(--primary-blue);
+	border-color: transparent;
+}
+
+.editor-modal-btns > button.is-primary:hover {
+	color: var(--on-primary);
+	background: var(--primary-blue);
+	border-color: transparent;
+	opacity: 0.85;
+}
+
+/* ── 新建文章表单（同一个弹窗壳子）────────────────────────
+   字段直接复用 frontmatter 那套（.fm-row / .fm-chips / .fm-check），
+   只多一个两列网格 + 标签加宽（那边的 56px 只够「标题」「日期」这种两字标签）。 */
+.editor-modal-card--form {
+	width: min(560px, 100%);
+}
+
+.np-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px 14px;
+	margin-top: 12px;
+}
+
+.editor-modal-card--form .fm-row > label:first-child {
+	flex: 0 0 78px;
+}
+
+.np-block {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.np-key {
+	flex: 0 0 78px;
+	padding-top: 4px;
+	font-size: 0.74rem;
+	font-weight: 700;
+	color: var(--text-sub);
+}
+
+/* 出错 / 创建中的那一行：空着就不占位 */
+.np-error {
+	margin-top: 8px;
+	color: var(--color-red);
+}
+
+.np-error:empty { display: none; }
+
+/* 窗口窄就改单列，别把输入框挤成一条缝 */
+@media (max-width: 720px) {
+	.np-grid { grid-template-columns: 1fr; }
+}
+
+/* ⚠️ 少动效：菜单/弹窗的规则在上面，覆盖必须写在它们**后面**才算数 */
+@media (prefers-reduced-motion: reduce) {
+	.editor-menu,
+	.editor-modal,
+	.editor-modal-card { transition: none; }
+
+	@starting-style {
+		.editor-menu:not([hidden]) {
+			opacity: 1;
+			transform: none;
+		}
+
+		.editor-modal:not([hidden]) { opacity: 1; }
+
+		.editor-modal:not([hidden]) .editor-modal-card { transform: none; }
+	}
+}
+
+/* ── 脚本输出面板（发布这类跑命令的动作）─────────────────
+   右下角一块浮层；发布要几十秒，输出得看得见，不能只给个 toast。 */
+.editor-log {
+	position: fixed;
+	right: 16px;
+	bottom: 16px;
+	z-index: 65;
+	width: min(560px, calc(100vw - 32px));
+	max-height: 46vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: var(--card-radius);
+	box-shadow: var(--card-shadow);
+	transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s allow-discrete;
+}
+
+.editor-log[hidden] {
+	display: none;
+	opacity: 0;
+	transform: translateY(8px);
+}
+
+@starting-style {
+	.editor-log:not([hidden]) {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+}
+
+.editor-log-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 7px 10px 6px;
+	font-size: 0.74rem;
+	font-weight: 600;
+	color: var(--text-sub);
+	border-bottom: 1px solid var(--item-border);
+}
+
+.editor-log-body {
+	margin: 0;
+	padding: 10px 12px;
+	overflow: auto;
+	font-family: var(--ed-font-mono);
+	font-size: 0.72rem;
+	line-height: 1.65;
+	color: var(--text-main);
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+/* ⚠️ 少动效：规则在上面，覆盖必须写在它们**后面**才算数 */
+@media (prefers-reduced-motion: reduce) {
+	.editor-log { transition: none; }
+
+	@starting-style {
+		.editor-log:not([hidden]) {
+			opacity: 1;
+			transform: none;
+		}
+	}
+}
+
+/* ── 链接弹层 ────────────────────────────────────────────────
+   挂在 body 下、fixed 定位（不塞进工具条里：工具条会换行，弹层跟着跳；也免得被 overflow 裁掉）。
+   圆角/描边/阴影一律用站点 token，跟卡片看齐。 */
+.editor-linkpop {
+	position: fixed;
+	z-index: 40;
+	width: 272px;
+	padding: 10px 11px 9px;
+	/* ⚠️ 站点没有 --bg 这个变量（只有 --bg-light 和 --card-bg）⇒ 写 var(--bg) 会静默回退成透明。
+	   弹层是「卡片」⇒ 用 --card-bg。 */
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: var(--card-radius);
+	box-shadow: var(--card-shadow);
+	/* 进出场动画（见下面 [hidden] / @starting-style）。
+	   ⚠️ 光切 hidden 是硬切：元素从 display:none 变 block 时没有「起始值」就没有补间
+	   ⇒ 得用 @starting-style 给进场第一帧；display 再用 allow-discrete 过渡，
+	     这样收起来时也是「先播完动画再 display:none」，不会啪一下没了。 */
+	transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s allow-discrete;
+	/* 缩放原点：默认顶上居中，实际由 JS 对齐到「链接」按钮中心 ⇒ 像是从按钮里长出来的 */
+	transform-origin: var(--linkpop-origin, 50% 0);
+}
+
+/* 收起态的终点值（配合上面的 display 过渡 = 退出动画） */
+.editor-linkpop[hidden] {
+	display: none;
+	opacity: 0;
+	transform: translateY(-4px) scale(0.96);
+}
+
+/* 进场第一帧（= [hidden] 那一套值），之后过渡到 .editor-linkpop 的常态值 */
+@starting-style {
+	.editor-linkpop:not([hidden]) {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.96);
+	}
+}
+
+/* 用户要「少动效」就干脆不动（⚠️ 别忘了把 @starting-style 也按掉，否则还是会闪一帧） */
+@media (prefers-reduced-motion: reduce) {
+	.editor-linkpop,
+	.editor-toast { transition: none; }
+
+	@starting-style {
+		.editor-linkpop:not([hidden]) {
+			opacity: 1;
+			transform: none;
+		}
+
+		/* ⚠️ toast 的 translateX(-50%) 是**居中**用的，不是动画 ⇒ 这里必须保留 */
+		.editor-toast:not([hidden]) {
+			opacity: 1;
+			transform: translateX(-50%);
+		}
+	}
+}
+
+.editor-linkpop-row {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin-bottom: 7px;
+}
+
+.editor-linkpop-row > label {
+	flex: 0 0 auto;
+	font-size: 0.74rem;
+	font-weight: 500;
+	color: var(--text-sub);
+}
+
+.editor-linkpop-row > input {
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 4px 8px;
+	font: inherit;
+	font-size: 0.78rem;
+	color: var(--text-main);
+	background: var(--bg-light);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+}
+
+.editor-linkpop-row > input:focus {
+	outline: none;
+	border-color: var(--primary-blue);
+}
+
+.editor-linkpop-btns {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 9px;
+}
+
+.editor-linkpop-btns > button {
+	padding: 3px 9px;
+	font: inherit;
+	font-size: 0.76rem;
+	font-weight: 500;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.editor-linkpop-btns > button:hover {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	border-color: var(--color-blue-border);
+}
+
+/* 主按钮（确定）：跟站点主按钮同一套配色，文字必须用 --on-primary（暗色模式下它不是白色） */
+.editor-linkpop-btns > button.is-primary {
+	color: var(--on-primary);
+	background: var(--primary-blue);
+	border-color: transparent;
+}
+
+.editor-linkpop-btns > button.is-primary:hover {
+	color: var(--on-primary);
+	background: var(--primary-blue);
+	border-color: transparent;
+	opacity: 0.85;
 }

@@ -132,7 +132,8 @@ function rehypeSmartQuotesBody() {
 //   *图注*（markdown 斜体，可省略）
 // 编译成 <p><img class="img-md"><em>图注</em></p>，复用现有 p:has(img) 居中 + em 图注样式；
 // 图注是普通 md 文本节点，智能引号也能正常生效。
-// 注意：只有写了 {.xxx} 才会进入该处理，普通 ![]() 完全不受影响。
+// 注意：普通 ![]() 也认 —— 只要「图片独占一段」且下一段正好是单独一句斜体，那句就被当图注并进来
+// （有没有 {.xxx} 尺寸类都一样）。
 function remarkFigure() {
   return (tree) => {
     const children = tree.children;
@@ -143,7 +144,7 @@ function remarkFigure() {
       const imgIdx = kids.findIndex((c) => c.type === 'image');
       if (imgIdx === -1) continue;
       const img = kids[imgIdx];
-      // 图片后紧跟 {.xxx} → 提取 class
+      // 图片后紧跟 {.xxx} → 提取 class（没写就不动 class）
       let cls = null;
       let clsIdx = -1;
       const after = kids[imgIdx + 1];
@@ -151,14 +152,22 @@ function remarkFigure() {
         const m = after.value.match(/^\s*\{\s*\.?([\w-]+)\s*\}\s*$/);
         if (m) { cls = m[1]; clsIdx = imgIdx + 1; }
       }
-      if (!cls) continue; // 无尺寸 class → 保持原样
-      img.data = img.data || {};
-      img.data.hProperties = img.data.hProperties || {};
-      img.data.hProperties.class = cls;
-      if (clsIdx !== -1) kids.splice(clsIdx, 1);
-      // 下一个兄弟段落若是「单独一句斜体」→ 作为图注并入本段
+      // 「图片自己占一段」的判定：除了图片、{...} 和空白，段里没别的行内东西
+      const others = kids.filter((c, i) => i !== imgIdx && i !== clsIdx && !(c.type === 'text' && !c.value.trim()));
+      if (cls) {
+        img.data = img.data || {};
+        img.data.hProperties = img.data.hProperties || {};
+        img.data.hProperties.class = cls;
+        if (clsIdx !== -1) kids.splice(clsIdx, 1);
+      }
+      // 下一个兄弟段落若是「单独一句斜体」→ 作为图注并入本段。
+      // ⚠️ 不要求先有尺寸类：`![Placeholder](x.webp)` + 下一行 `*图注*` 也是合法图注
+      //    （站点里已经有文章这么写）。以前只在写了 {.xxx} 时才合并 ⇒ 那种图注在页面上
+      //    只是一条普通斜体段落，还会被「中文斜体 = 宋体」的规则套上。
+      // ⚠️ 只认「图片自己占一段」的情形：行内图片后面跟的斜体段落照旧不动它。
       const next = children[i + 1];
       if (
+        others.length === 0 &&
         next && next.type === 'paragraph' &&
         next.children.length === 1 &&
         next.children[0].type === 'emphasis'
@@ -474,6 +483,48 @@ function blogEditorApi() {
       req.on('error', reject);
     });
 
+  // 图片上传走**原始二进制**（不裹 JSON/base64，省掉 33% 膨胀）
+  const readBinary = (req, limit = 16 * 1024 * 1024) =>
+    new Promise((resolve, reject) => {
+      const chunks = [];
+      let size = 0;
+      req.on('data', (c) => {
+        size += c.length;
+        if (size > limit) {
+          reject(new Error('图片太大（上限 ' + Math.round(limit / 1024 / 1024) + ' MB）'));
+          req.destroy();
+          return;
+        }
+        chunks.push(c);
+      });
+      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('error', reject);
+    });
+
+  // 白名单：只允许跑这两个脚本（编辑器里「发布」按钮用的），**不**做成通用命令执行器
+  const TASKS = {
+    pub: 'scripts/publish.mjs',
+  };
+
+  // 跑一个脚本并把 stdout/stderr 合在一起回给编辑器（发布要几十秒，就让它等着）
+  const runTask = async (task) => {
+    const entry = TASKS[task];
+    if (!entry) return { code: -1, output: '未知任务：' + task };
+    const { spawn } = await import('node:child_process');
+    return new Promise((resolve) => {
+      const child = spawn(process.execPath, [entry], { cwd: process.cwd(), env: { ...process.env, NO_COLOR: '1' } });
+      let out = '';
+      const onData = (c) => {
+        out += c.toString();
+        if (out.length > 200000) out = out.slice(-200000); // 只留尾部，别把内存撑爆
+      };
+      child.stdout.on('data', onData);
+      child.stderr.on('data', onData);
+      child.on('close', (code) => resolve({ code: code ?? 0, output: out.trim() || '（没有任何输出）' }));
+      child.on('error', (err) => resolve({ code: -1, output: String(err.message) }));
+    });
+  };
+
   return {
     name: 'blog-editor-api',
     apply: 'serve',
@@ -497,11 +548,31 @@ function blogEditorApi() {
           }
           if (req.method === 'PUT' && route === '/post') {
             const body = await readBody(req);
-            return send(200, io.writePost(body.path, body.content));
+            // 两种写法：直接给整份 content，或分开给 frontmatter + body（由 Node 侧按固定字段顺序拼回）
+            const content =
+              typeof body.content === 'string'
+                ? body.content
+                : io.serializeFrontmatter(body.frontmatter || {}) + '\n' + String(body.body ?? '');
+            return send(200, io.writePost(body.path, content));
           }
           if (req.method === 'POST' && route === '/post') {
             const body = await readBody(req);
             return send(200, io.createPost(body.path, body.content, !!body.overwrite));
+          }
+          // 图片上传：body = 原始二进制，文件名（含扩展名）走查询参数 `name`
+          if (req.method === 'POST' && route === '/image') {
+            const buf = await readBinary(req);
+            return send(200, io.saveImage(url.searchParams.get('name'), buf));
+          }
+          // 新建文章：中文 + en-US 两份一起建（模板/命名在 scripts/lib/post-io.mjs 的 newPostBlueprint）
+          if (req.method === 'POST' && route === '/new-post') {
+            const body = await readBody(req);
+            return send(200, { files: io.createNewPost(body, !!body.overwrite) });
+          }
+          // 跑白名单里的脚本（发布）
+          if (req.method === 'POST' && route === '/run') {
+            const body = await readBody(req);
+            return send(200, await runTask(String(body.task || '')));
           }
           return send(404, { error: '未知接口：' + req.method + ' ' + route });
         } catch (err) {

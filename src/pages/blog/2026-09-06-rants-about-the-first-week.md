@@ -5,8 +5,7 @@ date: '2026-09-06T17:27'
 draft: false
 category: ['essays']
 tags: ['rant']
-warning: opinion
-
+warning: ['opinion']
 ---
 
 ## 9 月 1 日
@@ -15,8 +14,9 @@ warning: opinion
 
 > （拍了两下桌子，同时意义不明地弯腿）  
 > May I have your attention plz, everyone?（英语）  
-> （叽里呱啦一大堆 English 一个词没听清）  
->> （下边同学：Chinese plz!）
+> （叽里呱啦一大堆 English 一个词没听清）
+>
+> > （下边同学：Chinese plz!）
 
 不是他到底在干什么？？？他那股书呆子劲儿真不像演的，像是天生的唐<sup>冒犯致歉</sup>...下发通知首要的就是让大家都能听懂听清楚啊！这一连串下来真的有上台踹他一脚的冲动！！！退一万步讲，他英语真讲得不孬也就罢了，关键他发音连我说梦话都比不上！舌头捋直好不好？吐字清晰好不好？？？
 
@@ -41,6 +41,7 @@ K:C
 A,/E/ E/E/ E>D | C>D E2 | E/A/ A/G/ E/>D/ C/G/ | E3 z|
 E/A/ A/G/ E>D | C>D E2 | D>E C>D | B,2 z A,/G,/ | A,4 ||
 ```
+
 ```jianpu
 title: 清早の阴乐
 key: C
@@ -61,3 +62,5 @@ time: 4
 我只能去相信相信的力量了...希望下周能放一天。。。
 
 要求已经很低了😭让俺睡个懒觉吧
+
+![asdf](/images/2026-09-06-rants-about-the-first-week.webp)

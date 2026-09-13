@@ -150,3 +150,94 @@ export function createPost(relPath, content, overwrite = false) {
   writeFileSync(abs, content, 'utf8');
   return { path: toPosix(relPath), bytes: Buffer.byteLength(content, 'utf8') };
 }
+
+const IMAGE_DIR = join('public', 'images');
+const IMAGE_EXT = new Set(['webp', 'png', 'jpg', 'jpeg', 'gif', 'avif']);
+
+/**
+ * 存一张从编辑器粘贴/拖进来的图片。
+ * ⚠️ 只允许落到 `public/images/` 下：名字里的路径分隔符与奇怪字符一律清掉（防目录穿越），
+ *    扩展名只放行图片类；重名**不覆盖**，改成 `-1`、`-2`…（二进制写坏了 git 里救不回来）。
+ */
+export function saveImage(name, buf) {
+  if (!buf || !buf.length) throw new Error('图片内容为空');
+  const raw = String(name || '');
+  const ext = (raw.match(/\.([a-z0-9]+)$/i)?.[1] || 'webp').toLowerCase();
+  const base =
+    raw
+      .replace(/\.[a-z0-9]+$/i, '')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/^[-.]+|[-.]+$/g, '')
+      .slice(0, 80) || 'image';
+  mkdirSync(IMAGE_DIR, { recursive: true });
+  const suffix = IMAGE_EXT.has(ext) ? ext : 'webp';
+  let file = `${base}.${suffix}`;
+  for (let n = 1; existsSync(join(IMAGE_DIR, file)); n++) file = `${base}-${n}.${suffix}`;
+  writeFileSync(join(IMAGE_DIR, file), buf);
+  return { file, url: '/images/' + file, bytes: buf.length };
+}
+
+// ── 新建文章 ────────────────────────────────────────────────
+// ⚠️ 模板与命名规则只有这一份：CLI 的 `npm run new` 和编辑器顶栏的「新建」都走 newPostBlueprint。
+//    （以前 new-post.mjs 里手写了整套模板，编辑器再抄一遍就等着两边跑偏。）
+
+/** 文件名用的 slug：小写、非字母数字一律折成短横 */
+export function slugify(s) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+/** 本地时间的 `YYYY-MM-DDTHH:MM` —— frontmatter 的 date 就是这个形状 */
+export function nowStamp(d = new Date()) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/**
+ * 新文章的两个文件（中文 + en-US）：
+ * · 文件名 `${日期}-${slug}.md`，日期就是 frontmatter 里 date 的前 10 位；
+ * · 草稿落各自的 drafts/ 子目录 ⇒ layout 的相对层级要跟着深一级（中文草稿是 blog/drafts/）；
+ * · frontmatter 一律走 serializeFrontmatter（字段顺序、引号转义跟编辑器保存时完全一致）；
+ * · 「AI 翻译」标记分中英两份各自开关（aiZh / aiEn）—— 不限定英文版：
+ *   中文写的、AI 翻成英文是一种情况，英文写的、AI 翻成中文是另一种，两边都可能。
+ */
+export function newPostBlueprint({ titleZh, titleEn, slug, date, draft = false, category, tags, warning, aiZh = false, aiEn = false } = {}) {
+  // ⚠️ 标题不能是空串：serializeFrontmatter 会把空值整行丢掉，写出去就是一篇没有 title 的文章。
+  //    某一侧没填就拿另一侧顶上（编辑器那边两侧都必填，这是兜底）。
+  const zhTitle = String(titleZh ?? '').trim();
+  const enTitle = String(titleEn ?? '').trim();
+  if (!zhTitle && !enTitle) throw new Error('中文标题和英文标题至少要有一个');
+  const title = { zh: zhTitle || enTitle, en: enTitle || zhTitle };
+  const clean = slugify(slug) || slugify(enTitle) || slugify(zhTitle) || 'post';
+  const stamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(date || '')) ? String(date).slice(0, 16) : nowStamp();
+  const file = `${stamp.slice(0, 10)}-${clean}.md`;
+  const base = {
+    date: stamp,
+    draft: draft === true,
+    category: Array.isArray(category) && category.length ? category : ['essays'],
+    tags: Array.isArray(tags) ? tags : [],
+    warning: Array.isArray(warning) ? warning : [],
+  };
+  const make = (lang) => {
+    const dir = join(BLOG_ROOT, ...(lang === 'en' ? ['en-US'] : []), ...(draft ? ['drafts'] : []));
+    // blog/ 起算两级，en-US 与 drafts 各再加一级
+    const depth = 2 + (lang === 'en' ? 1 : 0) + (draft ? 1 : 0);
+    const data = { layout: '../'.repeat(depth) + 'layouts/Layout.astro', title: title[lang], ...base };
+    if (lang === 'en' ? aiEn : aiZh) data.ai = true;
+    return { path: toPosix(join(dir, file)), lang, content: serializeFrontmatter(data) };
+  };
+  return [make('zh'), make('en')];
+}
+
+/** 落盘。⚠️ 先把两个目标都查一遍再写：不能一个成、一个败，留下半篇文章 */
+export function createNewPost(opts, overwrite = false) {
+  const files = newPostBlueprint(opts);
+  for (const f of files) {
+    if (existsSync(resolvePostPath(f.path)) && !overwrite) throw new Error('文件已存在：' + f.path);
+  }
+  return files.map((f) => Object.assign(createPost(f.path, f.content, overwrite), { lang: f.lang }));
+}

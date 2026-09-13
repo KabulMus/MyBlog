@@ -20,7 +20,7 @@ import './editor.css';
 			</div>
 			<div class="editor-bar-right">
 				<span id="summary" class="editor-meta">运行中…</span>
-				<a class="editor-icon-btn" href="/admin" aria-label="回到编辑器" title="回到编辑器">
+				<a class="editor-icon-btn" href="/admin" aria-label="回到编辑器">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
 				</a>
 			</div>
@@ -31,19 +31,16 @@ import './editor.css';
 
 		<script>
 			import { Editor } from '@tiptap/core';
-			import StarterKit from '@tiptap/starter-kit';
-			import { Markdown } from 'tiptap-markdown';
-			import { RawBlock, roundTrip, loadBody, dumpBody, splitBody } from './md/markdown-io.js';
+			import { roundTrip, loadBody, dumpBody, splitBody } from './md/markdown-io.js';
+			import { editorExtensions } from './md/extensions.js';
 
 			type Post = { path: string; lang: string; draft: boolean; title: string };
 
 			const host = new Editor({
 				element: document.createElement('div'),
-				extensions: [
-					StarterKit.configure({ codeBlock: false }),
-					Markdown.configure({ html: false, linkify: false, breaks: false, tightLists: true }),
-					RawBlock,
-				],
+				// ⚠️ 共用清单：之前这里手写了一份少几项的扩展列表，
+				//    导致自检把任务列表当成普通无序列表、报出假差异（踩过）。
+				extensions: editorExtensions,
 				content: '',
 			});
 

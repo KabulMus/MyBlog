@@ -6,6 +6,7 @@ import { stdin, stdout } from 'node:process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createSelectState, handleSelectKey, addCustom } from './lib/select-core.mjs';
+import { newPostBlueprint, slugify } from './lib/post-io.mjs';
 
 // 开启 keypress 事件（独立于 readline 接口，raw 选择器依赖它）
 emitKeypressEvents(stdin);
@@ -189,12 +190,7 @@ if (!useNow) {
 }
 const dateStr = `${datePrefix}T${timeStr}`;
 
-const slugify = (s) =>
-  s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-
 const arr = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
-
-const fmtArr = (a, def) => (a.length ? `['${a.join("', '")}']` : def);
 
 console.log(`📝 新文章（日期 ${dateStr}）\n`);
 
@@ -228,8 +224,13 @@ const tags = await select(
 // 重建 readline 接口，继续用普通输入问剩余问题
 const rl2 = createInterface({ input: stdin, output: stdout });
 const draft = (await rl2.question('先存草稿？(y/N，默认 N 直接发布)：')).trim().toLowerCase() === 'y';
-// 英文版默认显示「AI 翻译」pill（当前英语水平还不够，默认 true；日后英语水平够了改成 false 即可）
-const aiTranslate = (await rl2.question('英文版显示「AI 翻译」pill？(Y/n，默认 Y)：')).trim().toLowerCase() !== 'n';
+// 「AI 翻译」标记：默认只标英文版（多数情况下是中文写、AI 翻成英文）；
+// 反过来（英文写、AI 翻成中文）就选中文版，两份都标也行。
+const aiAnswer = (await rl2.question('「AI 翻译」标哪一份？(e=英文版(默认) / z=中文版 / b=两份 / n=不标)：'))
+  .trim()
+  .toLowerCase();
+const aiEn = !['z', 'b', 'n'].includes(aiAnswer);
+const aiZh = ['z', 'b'].includes(aiAnswer);
 rl2.close();
 
 // 内容警告（多选，顺序=显示顺序，可留空）：与 Layout.astro warningLabel / main.css cw-* 保持一致
@@ -245,52 +246,26 @@ const warnings = await select(
   { multi: true, ordered: true }
 );
 
-const catArr = fmtArr(effectiveCats, "['essays']");
-const tagArr = fmtArr(tags, '[]');
-const warningLine =
-  warnings.length === 1
-    ? `warning: ${warnings[0]}\n`
-    : warnings.length > 1
-      ? `warning: ['${warnings.join("', '")}']\n`
-      : '';
-const aiLine = aiTranslate ? 'ai: true\n' : '';
-
-// 草稿写入 drafts/（被 gitignore 不进 GitHub；CF 部署时无此目录，不会上线）
-const draftSub = draft ? 'drafts' : '';
-const zhFile = join(process.cwd(), 'src', 'pages', 'blog', draftSub, `${datePrefix}-${slug}.md`);
-const enFile = join(process.cwd(), 'src', 'pages', 'blog', 'en-US', draftSub, `${datePrefix}-${slug}.md`);
-
-// 草稿在 drafts/ 子目录，相对 layout 路径比正式目录多一级
-const zhLayout = draft ? '../../../layouts/Layout.astro' : '../../layouts/Layout.astro';
-const enLayout = draft ? '../../../../layouts/Layout.astro' : '../../../layouts/Layout.astro';
-
-const zhContent = `---
-layout: '${zhLayout}'
-title: '${titleZh}'
-date: '${dateStr}'
-draft: ${draft}
-category: ${catArr}
-tags: ${tagArr}
-${warningLine}
----
-`;
-const enContent = `---
-layout: '${enLayout}'
-title: '${titleEn.replace(/'/g, "\\'")}'
-date: '${dateStr}'
-draft: ${draft}
-${aiLine}category: ${catArr}
-tags: ${tagArr}
-${warningLine}
----
-`;
-
-mkdirSync(dirname(zhFile), { recursive: true });
-mkdirSync(dirname(enFile), { recursive: true });
-writeFileSync(zhFile, zhContent);
-console.log(`\n已创建：${zhFile}`);
-writeFileSync(enFile, enContent);
-console.log(`已创建：${enFile}`);
+// ⚠️ 模板与命名规则在 scripts/lib/post-io.mjs（编辑器顶栏那个「新建」按钮用同一份）——
+//    以前这里手写过整套模板，再抄一遍就等着两边跑偏。
+const files = newPostBlueprint({
+  titleZh,
+  titleEn,
+  slug,
+  date: dateStr,
+  draft,
+  category: effectiveCats,
+  tags,
+  warning: warnings,
+  aiZh,
+  aiEn,
+});
+for (const f of files) {
+  const abs = join(process.cwd(), f.path);
+  mkdirSync(dirname(abs), { recursive: true });
+  writeFileSync(abs, f.content);
+  console.log(`\n已创建：${abs}`);
+}
 
 console.log(
   draft

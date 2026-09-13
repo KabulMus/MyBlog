@@ -1,10 +1,23 @@
 ---
 // 本地博客编辑器（只在 dev 下挂载：见 astro.config.mjs 的 blogEditor 集成）
-// 不套 Layout —— 这是一个独立工具页，但样式 token 直接复用 main.css，跟站点同一套设计语言。
-// M0：文章列表 + 原文只读 + 右侧真页面预览（iframe 指向 dev server 上的真实文章页）
-// M1 起左侧会换成 TipTap 富文本编辑器，本页外壳不变。
+// 不套 Layout —— 独立工具页，但样式 token 直接复用 main.css，跟站点同一套设计语言。
+// M1：frontmatter 表单 + TipTap 正文 + 保存（写回文件 -> 右侧 iframe 自动热更新）
 import '../styles/main.css';
 import './editor.css';
+import { categories } from '../config/categories';
+import { tagDefs, tagOrder } from '../config/tags';
+
+// 分类 / 标签直接取配置真源（CLI 脚本里那份拷贝以后也可以换成这个）
+const editorConfig = {
+	categories: categories.map((c) => ({ id: c.id, zh: c.zh, en: c.en })),
+	tags: tagOrder.map((key) => ({ key, zh: tagDefs[key].zh, en: tagDefs[key].en, cats: tagDefs[key].cats ?? [] })),
+	warnings: [
+		{ key: 'opinion', zh: '主观', en: 'Opinion' },
+		{ key: 'spoilers', zh: '剧透', en: 'Spoilers' },
+		{ key: 'politics', zh: '政治', en: 'Politics' },
+		{ key: 'adult', zh: '成人', en: 'Adult' },
+	],
+};
 ---
 
 <html lang="zh-CN" data-pagefind-ignore>
@@ -13,13 +26,21 @@ import './editor.css';
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="robots" content="noindex, nofollow" />
 		<title>Blog Editor</title>
+		<!-- ⚠️ 必须跟 Layout.astro 一样引一遍字体：正文样式（main.css 的 .typography-body）用的是
+		     Inter / JetBrains Mono / Noto Serif SC / Source Serif 4 等，编辑器不引就全套回落成系统字体，
+		     跟真页面对不上。（Source Serif 4 是 main.css 自带 @font-face，其余都靠这两个 link） -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&family=Playfair+Display+SC:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" />
+		<link rel="preconnect" href="https://rsms.me/" />
+		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
 		<script src="/js/core.js" is:inline></script>
 	</head>
 	<body class="editor-body">
 		<header class="editor-bar">
 			<div class="editor-bar-left">
 				<span class="editor-brand">博客编辑器</span>
-				<button class="editor-icon-btn" id="theme-btn" type="button" onclick="toggleTheme()" aria-label="切换亮暗模式">
+				<button class="editor-icon-btn editor-icon-btn--plain" id="theme-btn" type="button" onclick="toggleTheme()" aria-label="切换亮暗模式">
 					<span class="icon-sun" aria-hidden="true">
 						<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M9.15039 9.15088L11.3778 11.3783"/><path d="M3 24H6.15"/><path d="M9.15039 38.8495L11.3778 36.6221"/><path d="M38.8495 38.8495L36.6221 36.6221"/><path d="M44.9996 24H41.8496"/><path d="M38.8495 9.15088L36.6221 11.3783"/><path d="M24 3V6.15"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24C12 30.6274 17.3726 36 24 36Z"/><path d="M24 45.0001V41.8501"/>
@@ -36,13 +57,14 @@ import './editor.css';
 				<select id="post-picker" class="editor-select" aria-label="选择文章">
 					<option value="">正在读取文章列表…</option>
 				</select>
+				<button class="editor-btn" id="new-btn" type="button">新建</button>
 			</div>
 			<div class="editor-bar-right">
 				<span id="post-meta" class="editor-meta"></span>
-				<button class="editor-icon-btn" id="reload-btn" type="button" aria-label="重新加载预览" title="重新加载预览">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
-				</button>
-				<a class="editor-icon-btn" id="open-btn" href="#" target="_blank" rel="noopener" aria-label="在新标签页打开" title="在新标签页打开">
+				<button class="editor-btn" id="source-btn" type="button">源码</button>
+				<button class="editor-btn" id="pub-btn" type="button">发布</button>
+				<button class="editor-btn editor-btn--primary" id="save-btn" type="button" disabled>保存</button>
+				<a class="editor-icon-btn" id="open-btn" href="#" target="_blank" rel="noopener" aria-label="在新标签页打开">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M19 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"/></svg>
 				</a>
 			</div>
@@ -50,33 +72,223 @@ import './editor.css';
 
 		<main class="editor-main">
 			<section class="editor-pane editor-pane--edit" aria-label="编辑区">
-				<div class="editor-pane-head">
-					<span>源码（只读）</span>
-					<span class="editor-hint">M1 会换成富文本编辑器</span>
+				<form class="editor-form" id="fm-form" autocomplete="off">
+					<div class="fm-row fm-row--title">
+						<label for="fm-title">标题</label>
+						<input id="fm-title" class="fm-title" type="text" />
+					</div>
+					<div class="fm-row">
+						<label for="fm-date">日期</label>
+						<span class="fm-date-wrap">
+							<input id="fm-date" type="datetime-local" />
+							<svg class="fm-date-icon" viewBox="0 0 48 48" aria-hidden="true">
+								<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z" />
+								<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z" />
+								<path d="M16 4V12" />
+								<path d="M32 4V12" />
+								<path d="M28 34H34" />
+								<path d="M14 34H20" />
+								<path d="M28 26H34" />
+								<path d="M14 26H20" />
+							</svg>
+						</span>
+					</div>
+					<div class="fm-row">
+						<label>标记</label>
+						<div class="fm-chips" id="fm-flags"></div>
+					</div>
+					<div class="fm-row">
+						<label>分类</label>
+						<div class="fm-chips" id="fm-category"></div>
+					</div>
+					<div class="fm-row">
+						<label>标签</label>
+						<div class="fm-chips" id="fm-tags"></div>
+					</div>
+					<div class="fm-row">
+						<label>内容警告</label>
+						<div class="fm-chips" id="fm-warning"></div>
+					</div>
+				</form>
+
+				<div class="editor-toolbar" id="toolbar">
+					<!-- 段落/标题：一个下拉管 H1–H6（文章里最常用的是 H2/H3，但级别不能缺）。
+					     图标是站内那套描边图标（viewBox 48 / stroke 4），stroke 用 currentColor ⇒ 跟着主题/选中态变。
+					     H1 置灰：站点里文章标题本身就是 H1，正文再写 H1 属于「能写但不推荐」—— 只是提示，仍然可点。 -->
+					<span class="hd-wrap">
+						<!-- 段落/标题：自绘下拉。原生 <select> 的**弹层**是 Chromium 自己画的（系统字体、灰色高亮、方角），
+						     跟编辑器不是一个长相 ⇒ 按钮 + 自绘菜单。收起态 = 图标 + 级别名 + 箭头，
+						     图标路径由 syncHeading() 从菜单里对应那一项搬过来（只维护一份 path）。 -->
+						<button type="button" id="heading-btn" class="editor-toolbar-select" aria-haspopup="listbox" aria-expanded="false" aria-label="段落 / 标题级别">
+							<svg id="hd-cur" class="hd-cur" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+							<span id="hd-label">正文</span>
+							<svg class="hd-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.75L12 15.25L17.5 9.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+						</button>
+					</span>
+					<!-- 弹层 position: fixed ⇒ 不参与这行 flex 布局，放工具条里也没事（但用 .editor-menu 前缀写样式，免得被工具条那套按钮规则抢走） -->
+					<div class="editor-menu" id="heading-menu" role="listbox" aria-label="段落 / 标题级别" hidden>
+						<button type="button" class="editor-menu-item" role="option" data-value="p" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.9333V6H40V10.9333" /><path d="M24 6V42" /><path d="M16 42H32" /></svg>正文</button>
+						<button type="button" class="editor-menu-item is-dim" role="option" data-value="h1" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M25 8V40" /><path d="M6 24H25" /><path d="M34.2261 24L39.0001 19.0166V40" /></svg>标题 1</button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h2" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M32 25C32 21.8334 34.6667 20 37 20C39.3334 20 42 21.8334 42 25C42 30.7 32 34.9333 32 40H42" /></svg>标题 2</button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h3" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M32 20H42L35 29C39 29 42 31 42 35C42 39 39 40 37 40C34.619 40 33 39 32 37.9" /></svg>标题 3</button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h4" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M39.9767 40V20L31 32.9967V35.0199H43" /></svg>标题 4</button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h5" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M40 21.0093H32V28.0341C32 28 34 27 37 27C40 27 41 29.5339 41 33.5C41 37.4661 40 40 36 40C33 40 32 38 32 36.0078" /></svg>标题 5</button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h6" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M36.5 40C39.5376 40 42 37.5376 42 34.5C42 31.4624 39.5376 29 36.5 29C33.4624 29 31 31.4624 31 34.5C31 37.5376 33.4624 40 36.5 40Z" /><path d="M41.5962 24.7392C40.7778 22.5461 38.8044 21 36.5 21C33.4624 21 31 23.6863 31 27V34" /></svg>标题 6</button>
+					</div>
+					<!-- 行内（图标按钮：stroke/fill 一律吃 currentColor ⇒ hover、按下态自动跟着变色。
+					     粗体那枚线加粗一档（4 → 5.5）拉开主次；没有可见文字的都补 aria-label。
+					     ⚠️ 图标按钮比文字按钮矮，靠 .editor-toolbar button 的 min-height 拉齐高度。） -->
+					<button type="button" data-cmd="bold" aria-label="粗体"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><!-- 线宽 7（= 屏幕 2.02px，其他图标是 1.25px）比 4 的图标往外多长 1.5 单位，
+						     上下会只剩 0.5 单位、贴着框边看着像被切。所以整个 B 绕中心缩到 0.925：
+						     画出来的范围回到 y 2–46，跟斜体/删除线/行内代码那几枚完全对齐。 -->
+						<g transform="translate(24 24) scale(0.925) translate(-24 -24)"><path fill-rule="evenodd" clip-rule="evenodd" d="M24 24C29.5056 24 33.9688 19.5228 33.9688 14C33.9688 8.47715 29.5056 4 24 4H11V24H24Z" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" /><path fill-rule="evenodd" clip-rule="evenodd" d="M28.0312 44C33.5368 44 38 39.5228 38 34C38 28.4772 33.5368 24 28.0312 24H11V44H28.0312Z" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" /></g></svg></button>
+					<button type="button" data-cmd="italic" aria-label="斜体"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M20 6H36" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M12 42H28" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M29 5.95215L19 41.9998" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="strike" aria-label="删除线"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M5 24H43" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M24 24C40 30 34 44 24 44C13.9999 44 12 36 12 36" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M35.9999 12C35.9999 12 33 4 23.9999 4C14.9999 4 11.4359 11.5995 15.6096 18" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M12 36C12 36 15.9999 44 24 44C32 44 36.564 36.4005 32.3903 30" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="code" aria-label="行内代码"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M16 13L4 25.4322L16 37" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M32 13L44 25.4322L32 37" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M28 4L21 44" stroke="currentColor" stroke-width="4" stroke-linecap="round" /></svg></button>
+					<button type="button" data-cmd="mark" aria-label="高亮"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M6 44L6 25H12V17H36V25H42V44H6Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M17 17V8L31 4V17" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<!-- 上标/下标：没有现成图标，自己仿的 —— 带衬线的 X + 缩小并抬/沉的「2」（X² / X₂）。
+					     三条 path：X 的两条对角线、四条「脚」（衬线，照标题下拉那枚 T 的做法用横杠）、那个 2（曲线）。
+					     视口就是 15（跟渲染尺寸 1:1），线宽 1.25 换算成屏幕等于 48 格的 4 / 24 格的 2。 -->
+					<button type="button" data-cmd="sup" aria-label="上标"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M2.29,5.88l5.5,6.75M7.79,5.88l-5.5,6.75" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" /><path d="M1.16,5.88h2.25M6.66,5.88h2.25M1.16,12.63h2.25M6.66,12.63h2.25" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.58,3.56c0-.78.87-1.22,1.63-1.22s1.63.45,1.63,1.22c0,1.4-3.26,2.43-3.26,3.67h3.26" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="sub" aria-label="下标"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><path d="M2.29,2.34l5.5,6.75M7.79,2.34l-5.5,6.75" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" /><path d="M1.16,2.34h2.25M6.66,2.34h2.25M1.16,9.09h2.25M6.66,9.09h2.25" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.58,8.97c0-.78.87-1.22,1.63-1.22s1.63.45,1.63,1.22c0,1.4-3.26,2.43-3.26,3.67h3.26" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="kbd" aria-label="键盘按键"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path fill-rule="evenodd" clip-rule="evenodd" d="M15 19C16.3807 19 17.5 17.8807 17.5 16.5C17.5 15.1193 16.3807 14 15 14C13.6193 14 12.5 15.1193 12.5 16.5C12.5 17.8807 13.6193 19 15 19Z" fill="currentColor" /><path fill-rule="evenodd" clip-rule="evenodd" d="M15 27C16.3807 27 17.5 25.8807 17.5 24.5C17.5 23.1193 16.3807 22 15 22C13.6193 22 12.5 23.1193 12.5 24.5C12.5 25.8807 13.6193 27 15 27Z" fill="currentColor" /><path fill-rule="evenodd" clip-rule="evenodd" d="M24 19C25.3807 19 26.5 17.8807 26.5 16.5C26.5 15.1193 25.3807 14 24 14C22.6193 14 21.5 15.1193 21.5 16.5C21.5 17.8807 22.6193 19 24 19Z" fill="currentColor" /><path fill-rule="evenodd" clip-rule="evenodd" d="M24 27C25.3807 27 26.5 25.8807 26.5 24.5C26.5 23.1193 25.3807 22 24 22C22.6193 22 21.5 23.1193 21.5 24.5C21.5 25.8807 22.6193 27 24 27Z" fill="currentColor" /><path fill-rule="evenodd" clip-rule="evenodd" d="M33 19C34.3807 19 35.5 17.8807 35.5 16.5C35.5 15.1193 34.3807 14 33 14C31.6193 14 30.5 15.1193 30.5 16.5C30.5 17.8807 31.6193 19 33 19Z" fill="currentColor" /><path fill-rule="evenodd" clip-rule="evenodd" d="M33 27C34.3807 27 35.5 25.8807 35.5 24.5C35.5 23.1193 34.3807 22 33 22C31.6193 22 30.5 23.1193 30.5 24.5C30.5 25.8807 31.6193 27 33 27Z" fill="currentColor" /><path d="M17 33H31" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<!-- 注音 ruby（<ruby>汉<rt>hàn</rt></ruby>）：站点 main.css 有整套 ruby 样式，ruby/rt 也在 RICH_TAGS 里 ⇒ 编辑器里直接显示真注音。
+					     图标是 Illustrator 导出的那版（viewBox 24）。⚠️ 原文件里写的是 stroke-width 1.25px，
+					     换算到 15px 只有 0.78px，比其它图标细 40% ⇒ 按现有那套规则改成 2（屏幕上 1.25px）。 -->
+					<button type="button" data-cmd="ruby" aria-label="注音 ruby"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.37,12.37l.63,1.24" /><path d="M5.1,14.43h13.8" /><path d="M7.61,16.5s1.12,2.58,3.93,4.02c2.81,1.43,7.36,2.58,7.36,2.58" /><path d="M16.39,14.43s-1.12,3.39-3.93,5.27c-2.81,1.88-7.36,3.39-7.36,3.39" /><!-- 上面这四条是「文」（亠 + 乂），描边沿用 2（屏幕上 1.25px）。
+					     下面一组是注音「wén」（ㄨㄣ + 阳平调号）：字形本来就小，四条 1.25px 的线挤在 6px 里会糊成一块
+					     ⇒ 单独降到 1.5（屏幕上 0.94px）。真注音里注音也本来就比正文轻，正合适。想再细就把 1.5 改小。 --><g stroke-width="1.5"><path d="M16.31,5.03v5.04" /><path d="M16.31,8.06c0-1.36.72-3.03,2.17-3.03,1.08,0,1.68,1.16,1.68,3.5v1.55" /><path d="M3.84,5.03l.96,5.04,1.59-4.4,1.59,4.4.96-5.04" /><path d="M10.71,8.21l3.77-1.26c-.14-1.11-.63-2.22-1.87-2.11-1.24.11-2.16,1.36-2.06,2.94.1,1.58,1.24,2.49,2.27,2.49.62,0,1.08-.27,1.39-.54" /><line x1="11.75" y1="2.54" x2="13.4" y2="1.65" /></g></svg></button>
+					<!-- 行内公式（$…$）：两侧的横线代表「夹在文字中间」，中间那个小 Σ 跟右边那个「公式块」按钮对应。
+					     图标换成 Illustrator 那版（viewBox 48 / 描边 4，跟其它 48 格图标同一档线宽）。 -->
+					<button type="button" data-cmd="mathinline" aria-label="行内公式"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M37 9L34 6H8L25 24L8 42H34L37 39" /><path d="M5 24H15" /><path d="M33 24H43" /></svg></button>
+					<button type="button" data-cmd="link" aria-label="链接"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M30 19H20C15.5817 19 12 22.5817 12 27C12 31.4183 15.5817 35 20 35H36C40.4183 35 44 31.4183 44 27C44 24.9711 43.2447 23.1186 42 21.7084" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M6 24.2916C4.75527 22.8814 4 21.0289 4 19C4 14.5817 7.58172 11 12 11H28C32.4183 11 36 14.5817 36 19C36 23.4183 32.4183 27 28 27H18" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="footnote" aria-label="脚注"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><line x1="4" y1="20" x2="20" y2="4.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="20" y1="20" x2="4" y2="4.66" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><!-- 下面四条是零长度 line + round linecap = 四个「点」。线宽单独调粗（2 → 4.5）：
+						     零长度的点在 15px 下按 2 画出来只有 1.25px，几乎看不见。别删、也别跟上面两条斜线用同一个线宽。 --><line x1="12" y1="4" x2="12" y2="4" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" /><line x1="12" y1="20" x2="12" y2="20" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" /><line x1="4" y1="12.33" x2="4" y2="12.33" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" /><line x1="20" y1="12" x2="20" y2="12" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<span class="editor-toolbar-sep"></span>
+					<!-- 段落/块级（放最后：这几枚是成型块，跟下面的插入块一类） -->
+					<button type="button" data-cmd="quote" aria-label="引用块"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M18.8533 9.11587C11.3227 13.9521 7.13913 19.5811 6.30256 26.0028C5.00021 35.9999 13.9404 40.8932 18.4703 36.4966C23.0002 32.1 20.2848 26.5195 17.0047 24.9941C13.7246 23.4686 11.7187 23.9999 12.0686 21.9614C12.4185 19.923 17.0851 14.2712 21.1849 11.6391C21.4569 11.4078 21.5604 10.959 21.2985 10.6185C21.1262 10.3946 20.7883 9.95545 20.2848 9.30102C19.8445 8.72875 19.4227 8.75017 18.8533 9.11587Z" fill="currentColor" /><path fill-rule="evenodd" clip-rule="evenodd" d="M38.6789 9.11587C31.1484 13.9521 26.9648 19.5811 26.1282 26.0028C24.8259 35.9999 33.7661 40.8932 38.296 36.4966C42.8259 32.1 40.1105 26.5195 36.8304 24.9941C33.5503 23.4686 31.5443 23.9999 31.8943 21.9614C32.2442 19.923 36.9108 14.2712 41.0106 11.6391C41.2826 11.4078 41.3861 10.959 41.1241 10.6185C40.9519 10.3946 40.614 9.95545 40.1105 9.30102C39.6702 8.72875 39.2484 8.75017 38.6789 9.11587Z" fill="currentColor" /></svg></button>
+					<button type="button" data-cmd="ul" aria-label="无序列表"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M8 28C10.2091 28 12 26.2091 12 24C12 21.7909 10.2091 20 8 20C5.79086 20 4 21.7909 4 24C4 26.2091 5.79086 28 8 28Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M8 12C9.10457 12 10 11.1046 10 10C10 8.89543 9.10457 8 8 8C6.89543 8 6 8.89543 6 10C6 11.1046 6.89543 12 8 12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M8 40C9.10457 40 10 39.1046 10 38C10 36.8954 9.10457 36 8 36C6.89543 36 6 36.8954 6 38C6 39.1046 6.89543 40 8 40Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M20 24H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M20 38H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M20 10H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="ol" aria-label="有序列表"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4.5 3.38v6.59" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M6 9.97h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M4.5 3.38l-1.5 1.46" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.5 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.5 19h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.5 5h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M2.84 14.12h3v1.83l-3 3.66v0.61h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="task" aria-label="任务列表"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.5 6.24l1.74 2.68 3.48-5.37" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M2.5 17.76l1.74 2.68 3.48-5.37" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.5 12h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.5 19h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M10.5 5h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-cmd="hr" aria-label="分割线"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M4 24H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M8 10H12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M20 10H28" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M36 10H40" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M8 38H12" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M20 38H28" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M36 38H40" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<span class="editor-toolbar-sep"></span>
+					<!-- 插入块 -->
+					<button type="button" data-insert="code" aria-label="代码块"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M9 7L23 21L9 35" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M17 41L39 41" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-insert="abc" aria-label="abc 五线谱"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M30 34.5C30 32.567 31.567 31 33.5 31H41V34.4C41 36.3882 39.3882 38 37.4 38H33.5C31.567 38 30 36.433 30 34.5Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M6 38.5C6 36.567 7.567 35 9.5 35H16V38.4C16 40.3882 14.3882 42 12.4 42H9.5C7.567 42 6 40.433 6 38.5Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M16 18.044V18.044L41 12.125" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M16 38V10L41 4V33.6924" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-insert="jianpu" aria-label="简谱"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2.9 6.2v11.6M16.79 12h2.57M15.76 6.2h3.6M6.5 6.2h3.6M15.76 17.8h3.6M10.1 12h-1.54c-1.14 0-2.06 1.04-2.06 2.32v2.61c0 0.48 0.35 0.87 0.77 0.87h5.4M19.36 12c1.42 0 2.57-1.3 2.57-2.9s-1.15-2.9-2.57-2.9M10.1 12c1.42 0 2.57-1.3 2.57-2.9s-1.15-2.9-2.57-2.9M19.36 17.8c1.42 0 2.57-1.3 2.57-2.9s-1.15-2.9-2.57-2.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><line x1="5.46" y1="21.21" x2="13.72" y2="21.21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><!-- 零长度 line + round linecap = 那个「点」（简谱的高音点），别删 --><line x1="9.4" y1="2.79" x2="9.4" y2="2.79" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-insert="image" aria-label="图片"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M39 6H9C7.34315 6 6 7.34315 6 9V39C6 40.6569 7.34315 42 9 42H39C40.6569 42 42 40.6569 42 39V9C42 7.34315 40.6569 6 39 6Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M18 23C20.7614 23 23 20.7614 23 18C23 15.2386 20.7614 13 18 13C15.2386 13 13 15.2386 13 18C13 20.7614 15.2386 23 18 23Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M27.7901 26.2194C28.6064 25.1269 30.2528 25.1538 31.0329 26.2725L39.8077 38.8561C40.7322 40.182 39.7835 42.0001 38.1671 42.0001H16L27.7901 26.2194Z" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-insert="table" aria-label="表格"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M42 6H6C4.89543 6 4 6.89543 4 8V40C4 41.1046 4.89543 42 6 42H42C43.1046 42 44 41.1046 44 40V8C44 6.89543 43.1046 6 42 6Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" /><path d="M4 18H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M17.5 18V42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M30.5 18V42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M4 30H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /><path d="M44 8V40C44 41.1046 43.1046 42 42 42H6C4.89543 42 4 41.1046 4 40V8" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
+					<button type="button" data-insert="math" aria-label="公式"><svg width="15" height="15" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M40 9L37 6H8L26 24L8 42H37L40 39" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" /></svg></button>
 				</div>
-				<pre id="source-view" class="editor-source">请先在上方选择一篇文章。</pre>
+				<div class="editor-doc" id="doc"></div>
+				<pre class="editor-source" id="source-view" hidden></pre>
 			</section>
+
 			<section class="editor-pane editor-pane--preview" aria-label="预览区">
 				<div class="editor-pane-head">
 					<span>预览</span>
 					<span id="preview-url" class="editor-hint"></span>
+					<button class="editor-linkish" id="reload-btn" type="button">刷新</button>
 				</div>
 				<iframe id="preview" class="editor-frame" title="预览" src="about:blank"></iframe>
 			</section>
 		</main>
 
+		<!-- 脚本输出面板（发布这类跑命令的动作）：平时藏着，跑的时候弹出来，输出原样贴进去 -->
+		<div class="editor-log" id="log-panel" hidden>
+			<div class="editor-log-head">
+				<span id="log-title">输出</span>
+				<button class="editor-linkish" id="log-close" type="button">关闭</button>
+			</div>
+			<pre class="editor-log-body" id="log-body"></pre>
+		</div>
+
+		<!-- 新建文章表单（取代 `npm run new` 那套交互式 TUI：那个是 readline 程序，spawn 不了）。
+		     规则跟 CLI 一致：日期前级进文件名、草稿落 drafts/、分类顺序 = 勾选顺序（第一个是主分类）。 -->
+		<div class="editor-modal" id="new-modal" hidden>
+			<div class="editor-modal-card editor-modal-card--form" role="dialog" aria-modal="true" aria-labelledby="new-modal-title">
+				<h3 class="editor-modal-title" id="new-modal-title">新建文章</h3>
+				<div class="np-grid">
+					<div class="fm-row"><label for="np-title-zh">中文标题</label><input id="np-title-zh" class="fm-title" type="text" /></div>
+					<div class="fm-row"><label for="np-title-en">English title</label><input id="np-title-en" class="fm-title" type="text" /></div>
+					<div class="fm-row"><label for="np-slug">URL 后缀</label><input id="np-slug" type="text" placeholder="留空按英文标题" /></div>
+					<div class="fm-row">
+						<label for="np-when">日期</label>
+						<span class="fm-date-wrap">
+							<input id="np-when" type="datetime-local" />
+							<svg class="fm-date-icon" viewBox="0 0 48 48" aria-hidden="true">
+								<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z" />
+								<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z" />
+								<path d="M16 4V12" />
+								<path d="M32 4V12" />
+								<path d="M28 34H34" />
+								<path d="M14 34H20" />
+								<path d="M28 26H34" />
+								<path d="M14 26H20" />
+							</svg>
+						</span>
+					</div>
+				</div>
+				<div class="np-block"><span class="np-key">分类</span><div class="fm-chips" id="np-category"></div></div>
+				<div class="np-block"><span class="np-key">标签</span><div class="fm-chips" id="np-tags"></div></div>
+				<div class="np-block"><span class="np-key">警告</span><div class="fm-chips" id="np-warning"></div></div>
+				<div class="np-block"><span class="np-key">标记</span><div class="fm-chips" id="np-flags"></div></div>
+				<p class="editor-modal-text np-error" id="np-error"></p>
+				<div class="editor-modal-btns">
+					<button type="button" id="new-cancel">取消</button>
+					<button type="button" id="np-create" class="is-primary">创建</button>
+				</div>
+			</div>
+		</div>
+
+		<div class="editor-toast" id="toast" hidden></div>
+
+		<!-- 链接弹层（挂在 body 下、fixed 定位，锚在「链接」按钮下方）。
+		     取代原来的 window.prompt：那个只能填地址、在自动化标签页里还会直接抛异常。 -->
+		<div class="editor-linkpop" id="link-pop" hidden>
+			<div class="editor-linkpop-row">
+				<label for="link-url">链接</label>
+				<input id="link-url" type="text" spellcheck="false" autocomplete="off" placeholder="https://example.com 或 /blog/xxx" />
+			</div>
+			<div class="editor-linkpop-row">
+				<label for="link-text">文字</label>
+				<input id="link-text" type="text" autocomplete="off" placeholder="留空 = 拿链接地址当文字" />
+			</div>
+			<div class="editor-linkpop-btns">
+				<button type="button" id="link-apply" class="is-primary">确定</button>
+				<button type="button" id="link-remove" hidden>移除链接</button>
+				<button type="button" id="link-open" hidden>打开</button>
+				<button type="button" id="link-cancel">取消</button>
+			</div>
+		</div>
+
+		<!-- 自绘确认弹窗（取代 window.confirm）。Chromium 自带的那些弹窗改不了字体/圆角/配色，
+		     跟编辑器放一起一眼就看出不是一套；而且自动化标签页里还可能被拦。 -->
+		<div class="editor-modal" id="modal" hidden>
+			<div class="editor-modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+				<h3 class="editor-modal-title" id="modal-title"></h3>
+				<p class="editor-modal-text" id="modal-text"></p>
+				<div class="editor-modal-btns">
+					<button type="button" id="modal-cancel">取消</button>
+					<button type="button" id="modal-ok" class="is-primary">确定</button>
+				</div>
+			</div>
+		</div>
+
+		<script type="application/json" id="editor-config" set:html={JSON.stringify(editorConfig)} />
+
 		<script>
-			type Post = {
-				path: string;
-				url: string;
-				lang: 'zh' | 'en';
-				draft: boolean;
-				ai: boolean;
-				date: string;
-				title: string;
-				bytes: number;
-			};
+			import { Editor } from '@tiptap/core';
+			import { loadBody, dumpBody } from './md/markdown-io.js';
+			import { editorExtensions } from './md/extensions.js';
+
+			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; ai: boolean; date: string; title: string; bytes: number };
 			type PostDetail = { path: string; url: string; raw: string; body: string; frontmatter: Record<string, unknown> };
+			type Config = {
+				categories: Array<{ id: string; zh: string; en: string }>;
+				tags: Array<{ key: string; zh: string; en: string; cats: string[] }>;
+				warnings: Array<{ key: string; zh: string; en: string }>;
+			};
 
 			const api = (p: string) => `/__editor/api${p}`;
 			// ⚠️ 必须走 unknown 中转：本仓库 TS 的 DOM lib 里 HTMLElement 与 HTMLSelectElement 等
@@ -85,88 +297,1115 @@ import './editor.css';
 			const picker = el<HTMLSelectElement>('post-picker');
 			const sourceView = el<HTMLPreElement>('source-view');
 			const frame = el<HTMLIFrameElement>('preview');
-			const meta = el<HTMLSpanElement>('post-meta');
+			const metaEl = el<HTMLSpanElement>('post-meta');
 			const previewUrl = el<HTMLSpanElement>('preview-url');
 			const openBtn = el<HTMLAnchorElement>('open-btn');
-			const reloadBtn = el<HTMLButtonElement>('reload-btn');
+			const saveBtn = el<HTMLButtonElement>('save-btn');
+			const sourceBtn = el<HTMLButtonElement>('source-btn');
+			const docHost = el<HTMLDivElement>('doc');
+			const toastEl = el<HTMLDivElement>('toast');
+			const titleInput = el<HTMLInputElement>('fm-title');
+			const dateInput = el<HTMLInputElement>('fm-date');
+			const config = JSON.parse(el<HTMLScriptElement>('editor-config').textContent || '{}') as Config;
+			const hdBtn = el<HTMLButtonElement>('heading-btn');
+			const hdLabel = el<HTMLSpanElement>('hd-label');
+			const hdIcon = el<SVGSVGElement>('hd-cur');
+			const hdMenu = el<HTMLDivElement>('heading-menu');
+
+			const chips = {
+				category: el<HTMLDivElement>('fm-category'),
+				tags: el<HTMLDivElement>('fm-tags'),
+				warning: el<HTMLDivElement>('fm-warning'),
+				flags: el<HTMLDivElement>('fm-flags'),
+			};
 
 			let posts: Post[] = [];
 			let current: PostDetail | null = null;
+			let frontmatter: Record<string, unknown> = {};
+			let dirty = false;
+			let lang: 'zh' | 'en' = 'zh';
+			let toastTimer = 0;
 
-			const fmtBadges = (p: Post) => {
-				const bits = [p.lang === 'en' ? 'EN' : 'ZH'];
-				if (p.draft) bits.push('草稿');
-				if (p.ai) bits.push('AI 译');
-				return bits.join(' · ');
+			const strArray = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : typeof v === 'string' && v ? [v] : []);
+			const esc = (s: string) => s.replace(/[&<>"']/g, (c) => (({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }) as Record<string, string>)[c]);
+			const fmtBadges = (p: Post) => [p.lang === 'en' ? 'EN' : 'ZH', p.draft ? '草稿' : '', p.ai ? 'AI 译' : ''].filter(Boolean).join(' · ');
+
+			const editor = new Editor({
+				element: docHost,
+				// 扩展清单：与往返自检页共用同一份（src/editor/md/extensions.js）
+				extensions: editorExtensions,
+				content: '',
+				editorProps: { attributes: { class: 'editor-prose typography-body' } },
+				onUpdate: () => setDirty(true),
+				onSelectionUpdate: () => syncToolbar(),
+			});
+
+			(window as unknown as { __editor: unknown }).__editor = editor; // 调试钩子：控制台里可直接 __editor.commands…
+
+			function setDirty(v: boolean) {
+				dirty = v;
+				saveBtn.disabled = !current || !v;
+				saveBtn.textContent = v ? '保存 •' : '保存';
+			}
+
+			/** 工具条状态回显：标题下拉跟着当前块类型走，行内按钮亮当前 marks（.is-on） */
+			const CMD_MARKS: Record<string, [string, Record<string, unknown>?]> = {
+				bold: ['bold'],
+				italic: ['italic'],
+				strike: ['strike'],
+				code: ['code'],
+				link: ['link'],
+				mark: ['htmlInline', { tag: 'mark' }],
+				sup: ['htmlInline', { tag: 'sup' }],
+				sub: ['htmlInline', { tag: 'sub' }],
+				kbd: ['htmlInline', { tag: 'kbd' }],
+				ruby: ['htmlInline', { tag: 'ruby' }],
+				quote: ['blockquote'],
+				ul: ['bulletList'],
+				ol: ['orderedList'],
+				task: ['taskList'],
 			};
 
+			function syncToolbar() {
+				syncHeading(); // 段落/标题下拉的收起态 + 菜单里那一项的选中态
+				for (const btn of document.querySelectorAll<HTMLButtonElement>('#toolbar button[data-cmd]')) {
+					const spec = CMD_MARKS[String(btn.dataset.cmd)];
+					if (!spec) continue;
+					btn.classList.toggle('is-on', spec[1] ? editor.isActive(spec[0], spec[1]) : editor.isActive(spec[0]));
+				}
+			}
+
+			/**
+			 * 段落/标题下拉：收起态 + 菜单选中态。
+			 * 图标直接从菜单里对应那一项的 svg 里搬 ⇒ 七枚图标只维护一份 path（跟以前偷 option 一个思路，
+			 * 现在偷的是自绘菜单项，不用再管 Chrome 那个「按钮内容不带元素尺寸」的坑）。
+			 */
+			function syncHeading(): string {
+				const { $from } = editor.state.selection;
+				let value = 'p';
+				for (let d = $from.depth; d > 0; d--) {
+					const node = $from.node(d);
+					if (node.type.name === 'heading') {
+						value = 'h' + node.attrs.level;
+						break;
+					}
+				}
+				for (const item of hdMenu.querySelectorAll<HTMLButtonElement>('.editor-menu-item')) {
+					const on = item.dataset.value === value;
+					if (on) {
+						const icon = item.querySelector('svg');
+						hdIcon.innerHTML = icon ? icon.innerHTML : '';
+						hdLabel.textContent = (item.textContent ?? '').trim();
+						// H1 置灰：站点里文章标题本就是 H1，正文再写属于「能写但不推荐」—— 只是提示，照样能点
+						hdBtn.classList.toggle('is-dim', item.classList.contains('is-dim'));
+					}
+					item.classList.toggle('is-on', on);
+					item.setAttribute('aria-selected', on ? 'true' : 'false');
+				}
+				return value;
+			}
+
+			function closeHeadingMenu(focusBtn = false) {
+				hdMenu.hidden = true;
+				hdBtn.setAttribute('aria-expanded', 'false');
+				if (focusBtn) hdBtn.focus();
+			}
+
+			function openHeadingMenu() {
+				const r = hdBtn.getBoundingClientRect();
+				hdMenu.hidden = false;
+				hdMenu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - hdMenu.offsetWidth - 8)) + 'px';
+				hdMenu.style.top = Math.min(r.bottom + 4, window.innerHeight - hdMenu.offsetHeight - 8) + 'px';
+				// 缩放原点对准按钮中心（跟链接弹层一个做法）
+				hdMenu.style.setProperty('--menu-origin', r.width / 2 + 'px 0');
+				hdBtn.setAttribute('aria-expanded', 'true');
+				// 焦点直接给当前那一项：打开后 ↑↓ + Enter 就能改
+				hdMenu.querySelector<HTMLButtonElement>('.editor-menu-item.is-on')?.focus();
+			}
+
+			function applyHeading(value: string) {
+				if (value === 'p') editor.chain().focus().setParagraph().run();
+				else editor.chain().focus().setHeading({ level: Number(value.slice(1)) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+				syncHeading();
+				setDirty(true);
+			}
+
+			hdBtn.addEventListener('click', () => {
+				if (hdMenu.hidden) openHeadingMenu();
+				else closeHeadingMenu();
+			});
+
+			hdMenu.addEventListener('click', (e) => {
+				const item = (e.target as HTMLElement).closest<HTMLButtonElement>('.editor-menu-item');
+				if (!item) return;
+				applyHeading(String(item.dataset.value));
+				closeHeadingMenu();
+			});
+
+			// 菜单键盘操作：↑↓/Home/End 移焦点、Enter 选中、Esc 收起（preventDefault 免得编辑器抢走）
+			hdMenu.addEventListener('keydown', (e) => {
+				const items = [...hdMenu.querySelectorAll<HTMLButtonElement>('.editor-menu-item')];
+				const index = items.indexOf(document.activeElement as HTMLButtonElement);
+				if (e.key === 'Escape') {
+					e.preventDefault();
+					closeHeadingMenu(true);
+				} else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+					e.preventDefault();
+					const step = e.key === 'ArrowDown' ? 1 : -1;
+					items[(index + step + items.length) % items.length]?.focus();
+				} else if (e.key === 'Home' || e.key === 'End') {
+					e.preventDefault();
+					items[e.key === 'Home' ? 0 : items.length - 1]?.focus();
+				} else if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					if (index >= 0) applyHeading(String(items[index].dataset.value));
+					closeHeadingMenu(true);
+				}
+			});
+
+			// 点菜单外面收起（点按钮本身除外：那次是 toggle）
+			document.addEventListener('pointerdown', (e) => {
+				if (hdMenu.hidden) return;
+				const t = e.target as HTMLElement;
+				if (hdMenu.contains(t) || t.closest('#heading-btn')) return;
+				closeHeadingMenu();
+			});
+			window.addEventListener('resize', () => { if (!hdMenu.hidden) closeHeadingMenu(); });
+
+			// ── 原生下拉（select）往哪边开 ────────────────────────────
+			/* ⚠️ 方向**必须自己算**，不能甩给 UA：它判断「下方放不下就翻到上方」时参照的是
+			   控件所在的**滚动容器**，不是窗口 —— 表格那个下拉待在 .md-table-scroll（才 157px 高）
+			   里，卡片那个待在 .md-block 的 overflow:hidden 里，所以窗口里明明还剩 199px 空当，
+			   它照样把 110px 高的菜单翻到控件上方（实测）。
+			   做法：打开前按窗口量一次 ⇒ 够就钉死往下、不够就钉死往上，CSS 那边已掐掉回退链，
+			   给什么方向就照做。 */
+			const PICKER_SELECTOR = 'select.editor-select, .md-table-align select';
+
+			function aimPicker(el: HTMLSelectElement) {
+				const r = el.getBoundingClientRect();
+				// 菜单高度估算：选项行 32px（内边距 10 + 行盒 22，见 editor.css），optgroup 那种
+				// 小标题行另算 28；卡片上下内边距 4×2 + 描边 2 + 间距 6 ≈ 16。
+				let h = 16;
+				for (const child of Array.from(el.children)) {
+					h += child.tagName === 'OPTGROUP' ? 28 + child.children.length * 32 : 32;
+				}
+				h = Math.min(h, 340, window.innerHeight * 0.6); // 上限跟 CSS 的 max-height 对齐
+				const fitsBelow = r.bottom + h <= window.innerHeight;
+				const fitsAbove = r.top - h >= 0;
+				// 上下都放不下时，挑空当大的那边（总比整块糊到屏幕外强）
+				const down = fitsBelow || (!fitsAbove && window.innerHeight - r.bottom >= r.top);
+				el.style.setProperty('--picker-area', down ? 'end span-end' : 'start span-end');
+				el.style.setProperty('--picker-margin', down ? '6px 0 0' : '0 0 6px');
+			}
+
+			// pointerdown 早于弹层打开（弹层是 mousedown 之后才定位的），keydown 管键盘打开那条路
+			const aimFromEvent = (e: Event) => {
+				const t = e.target as HTMLElement | null;
+				// ⚠️ 双 as 是没办法：`closest()` 的返回值在这个工程的 TS 里被判成「跟 HTMLSelectElement
+				// 不能充分重叠」，直接 `as` 会报错，所以先过一道 unknown。
+				// 后面那句 tagName 是运行时的兜底 —— 选择器已经不匹配非 select 了，只是别让类型说谎。
+				const el = t?.closest?.(PICKER_SELECTOR) as unknown as HTMLSelectElement | null;
+				if (el && el.tagName === 'SELECT') aimPicker(el);
+			};
+			document.addEventListener('pointerdown', aimFromEvent, true);
+			document.addEventListener(
+				'keydown',
+				(e) => {
+					if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || (e.altKey && e.key === 'ArrowDown')) aimFromEvent(e);
+				},
+				true
+			);
+
+			function toast(msg: string, kind: 'ok' | 'err' = 'ok') {
+				toastEl.textContent = msg;
+				toastEl.dataset.kind = kind;
+				toastEl.hidden = false;
+				window.clearTimeout(toastTimer);
+				toastTimer = window.setTimeout(() => { toastEl.hidden = true; }, 3200);
+			}
+
+			// ── frontmatter：分类 / 标签 / 内容警告 chips ───────────────
+			// ⚠️ 分类/标签/警告一律「中文 · English」双语（跟「草稿 · Draft」同一套写法），不跟文章语言走：
+			//    以前英文文章里只显示英文、中文文章里只显示中文，同一处东西两套叫法。
+			const bi = (zh: string, en: string) => `${zh} · ${en}`;
+
+			/** 一枚可切换的 chip。选中态配色直接借站点现成的类（.cat-tag.cat-* / .cw-pill.cw-*），
+			 *  改 main.css 时自动跟着变。
+			 *  ⚠️ 那套配色类**只在选中时**才写进 class（未选中要中性灰），所以另外存一份到 data-scheme
+			 *    —— 点选时 toggleChip 得自己把它补上，否则掉进「没有配色」的兜底（品牌蓝）。 */
+			const chipBtn = (group: string, key: string, text: string, on: boolean, onClasses = '') =>
+				`<button type="button" class="chip${on ? ' chip--on ' + onClasses : ''}" data-group="${group}" data-key="${key}" data-scheme="${onClasses}" aria-pressed="${on}">${esc(text)}</button>`;
+
+			/**
+			 * 就地开关一枚 chip —— **别整排重画**。
+			 * ⚠️ innerHTML 重画会造出全新元素：CSS 过渡（字重 500↔700、AI 图标描边 1.8↔2.5、底色/描边色）
+			 *    没有起点可插值，看起来就是「啪」一下变粗；顺带把键盘焦点也丢掉了。
+			 * ⚠️ 还得把 data-scheme 里那套配色类一起补上/去掉：它只在选中时才写进 class，
+			 *    光加 chip--on 的话会落到 `.chip--on:not(.cat-tag):not(.cw-pill)` 的兜底上 ⇒ 选中后
+			 *    变成品牌蓝，且要刷新页面（整排重画）才恢复（用户实测到的就是这个）。
+			 */
+			function toggleChip(btn: HTMLButtonElement, on: boolean) {
+				for (const cls of (btn.dataset.scheme ?? '').split(' ')) if (cls) btn.classList.toggle(cls, on);
+				btn.classList.toggle('chip--on', on);
+				btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+			}
+
+			/** 标签那排：候选 = 当前分类里有的（分类一变就得重画这排，所以拎出来单独一份） */
+			function renderTagChips() {
+				const catNow = strArray(frontmatter.category);
+				const tagNow = strArray(frontmatter.tags);
+				const allowed = config.tags.filter((t) => !t.cats.length || !catNow.length || t.cats.some((c) => catNow.includes(c)));
+				chips.tags.innerHTML = allowed
+					.map((t) => {
+						// 标签用它所属分类的配色；归属多个分类时，优先用当前文章选中的那个
+						const catId = t.cats.find((c) => catNow.includes(c)) ?? t.cats[0];
+						return chipBtn('tags', t.key, bi(t.zh, t.en), tagNow.includes(t.key), catId ? `cat-tag cat-${catId}` : '');
+					})
+					.join('');
+			}
+
+			function renderChips() {
+				const catNow = strArray(frontmatter.category);
+				const warnNow = strArray(frontmatter.warning);
+				chips.category.innerHTML = config.categories
+					.map((c) => chipBtn('category', c.id, bi(c.zh, c.en), catNow.includes(c.id), `cat-tag cat-${c.id}`))
+					.join('');
+				renderTagChips();
+				chips.warning.innerHTML = config.warnings
+					.map((w) => chipBtn('warning', w.key, bi(w.zh, w.en), warnNow.includes(w.key), `cw-pill cw-${w.key}`))
+					.join('');
+				renderFlags();
+			}
+
+			// 站点 AI 徽标里那枚图标（Illustrator 导的，viewBox 24）；颜色吃 currentColor，描边由 CSS 管
+			const AI_BADGE_SVG =
+				'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.49,2.91l1.22,3.15" /><path d="M1.68,6.05h12.8" /><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81" /><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33" /><polyline points="22.06 21.1 17.31 10.28 12.56 21.1" /><line x1="14.46" y1="17.21" x2="20.17" y2="17.21" /></svg>';
+
+			/**
+			 * 「草稿标记」「AI 翻译」两个开关 chip（跟分类标签同一套外形）。
+			 * 配色不自己编，直接借站点那两处的 token ⇒ 跟文章页/首页看到的颜色一模一样：
+			 *   草稿 = --color-amber*（站点 .page-index.is-draft 就是 #b45309 这个琥珀）
+			 *   AI   = --color-purple*（站点 .ai-badge 的紫）
+			 * ⚠️ AI 只在 en 文章上有意义 ⇒ 中文文章直接不渲染这一块（老实现是 hidden）。
+			 */
+			function renderFlags() {
+				const on = (v: unknown) => v === true || v === 'true';
+				const isDraft = on(frontmatter.draft);
+				const isAi = on(frontmatter.ai);
+				// 「草稿 · Draft」中英都写着（跟站点的双语文案一个路子）；AI 那枚跟站点 .ai-badge 一样
+				// 只有图标 + AI，含义靠 aria-label 给读屏（不弹悬浮提示）。
+				// ⚠️ AI 不限定英文版：谁知道作者哪天用英文写、再 AI 翻成中文（反过来也一样）⇒
+				//    中英两份都渲染这个 chip（以前只在 en 文章上出，等于把可能性写死了）。
+				chips.flags.innerHTML =
+					`<button type="button" class="chip flag-draft${isDraft ? ' chip--on' : ''}" data-flag="draft" aria-pressed="${isDraft}">草稿 · Draft</button>` +
+					`<button type="button" class="chip flag-ai${isAi ? ' chip--on' : ''}" data-flag="ai" aria-pressed="${isAi}" aria-label="AI 翻译"><span class="chip-ico">${AI_BADGE_SVG}</span>AI</button>`;
+			}
+
+			chips.flags.addEventListener('click', (e) => {
+				const btn = (e.target as HTMLElement).closest('button[data-flag]') as HTMLButtonElement | null;
+				if (!btn) return;
+				const flag = String(btn.dataset.flag) as 'draft' | 'ai';
+				const now = !(frontmatter[flag] === true || frontmatter[flag] === 'true');
+				// ai 关掉时写 undefined（老 checkbox 就是这么干的：让字段整个从 frontmatter 里消失，而不是写 false）
+				frontmatter[flag] = flag === 'ai' && !now ? undefined : now;
+				toggleChip(btn, now); // 就地改；重画的话过渡跑不起来（理由见 toggleChip）
+				setDirty(true);
+			});
+
+			for (const box of [chips.category, chips.tags, chips.warning]) {
+				box.addEventListener('click', (e) => {
+					const btn = (e.target as HTMLElement).closest('button[data-key]') as HTMLButtonElement | null;
+					if (!btn) return;
+					const group = btn.dataset.group as 'category' | 'tags' | 'warning';
+					const key = String(btn.dataset.key);
+					const list = strArray(frontmatter[group]);
+					const next = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+					frontmatter[group] = next;
+					toggleChip(btn, next.includes(key));
+					// ⚠️ 只有分类会牵动「哪些 tag 可选」⇒ 那时才重画标签那排；其余一律就地改，
+					//    被点的这枚留在原地，过渡才跑得起来。
+					if (group === 'category') renderTagChips();
+					setDirty(true);
+				});
+			}
+
+			titleInput.addEventListener('input', () => { frontmatter.title = titleInput.value; setDirty(true); });
+			dateInput.addEventListener('input', () => { frontmatter.date = dateInput.value; setDirty(true); });
+
+			// ── 工具条 ────────────────────────────────────────────────
+			// 「插入块」的模板：一律以 rawBlock 形式落地（kind + 原文）⇒ 保存时原样写进 markdown。
+			const BLOCK_TEMPLATES: Record<string, { kind: string; source: string }> = {
+				abc: {
+					kind: 'fence',
+					source: ['```abc', 'X:1', 'T: ', 'M:4/4', 'L:1/4', 'K:C', 'C D E F|', '```'].join('\n'),
+				},
+				jianpu: {
+					kind: 'fence',
+					source: ['```jianpu', 'title: ', 'key: C', 'beat: 4', 'time: 4', 'tempo: 90', '', '{C}1,2,3,4|', '```'].join('\n'),
+				},
+				image: { kind: 'image', source: '![图片说明](/images/2026-01-01-slug-name.webp)' },
+				table: {
+					kind: 'table',
+					source: ['| 表头 | 表头 |', '| --- | --- |', '|  |  |'].join('\n'),
+				},
+				math: { kind: 'math', source: ['$$', '', '$$'].join('\n') },
+				code: { kind: 'fence', source: ['```', '', '```'].join('\n') },
+			};
+
+			/** 下一个能用的脚注号（把文档里已有的引用都排掉） */
+			function nextFootnoteLabel(): string {
+				const used = new Set<string>();
+				editor.state.doc.descendants((n) => {
+					if (n.type.name === 'footnoteRef') used.add(String(n.attrs.label));
+				});
+				let i = 1;
+				while (used.has(String(i))) i++;
+				return String(i);
+			}
+
+			/**
+			 * 插脚注：
+			 *   ① 光标处插一个引用节点（序列化回 [^N]）；
+			 *   ② **紧跟着当前块**另起一行补定义 —— 定义行 = 「引用节点 + 冒号」，序列化回来正好是 `[^N]: `
+			 *      （不能写纯文本，会被转义成 \[^N\]）。
+			 *      ⚠️ 定义**不必**写在文末：remark-gfm 渲染时会自己把定义挪到底部「注释」区，写在引用附近反而好维护。
+			 *   ③ 光标跳到定义行末尾，方便接着写注释内容。
+			 */
+			function insertFootnote() {
+				const label = nextFootnoteLabel();
+				const ref = { type: 'footnoteRef', attrs: { label } };
+				const sel = editor.state.selection;
+				const at = sel.empty ? sel.from : sel.to;
+				editor.chain().focus().insertContentAt(at, ref).run();
+				// ⚠️ 插完立刻从**文档里**读那个节点的编号：自动重排（FootnoteRenumber）可能已经改了它，
+				//    继续用上面那个 label 的话，定义会带着过期编号、跟别的引用撞号（踩过）。
+				//    注意只取 attrs，别把 ProseMirror Node 塞进 content（Fragment.fromJSON 会 RangeError）。
+				const inserted = editor.state.doc.resolve(at).nodeAfter;
+				const defLabel = inserted && inserted.type.name === 'footnoteRef' ? String(inserted.attrs.label) : label;
+				const def = { type: 'paragraph', content: [{ type: 'footnoteRef', attrs: { label: defLabel } }, { type: 'text', text: ': ' }] };
+				// 插在**当前顶层块之后**（引用在列表/引用块里时，定义落在整个块之外，不会掉进列表项）
+				const topEnd = editor.state.selection.$from.after(1);
+				editor.chain().insertContentAt(topEnd, def).run();
+				// 新段落的正文从 topEnd+1 开始：引用（nodeSize 1）+「: 」两个字符 ⇒ 光标落在 topEnd+4
+				editor.chain().focus().setTextSelection(topEnd + 4).run();
+				toast('已插入脚注（定义就在下面一行，光标已过去；序号会自动重排）');
+			}
+
+			/**
+			 * 插注音 ruby：`<ruby>汉<rt>hàn</rt></ruby>`。
+			 * 站点 main.css 有整套 ruby 样式，ruby/rt 在编辑器里是**真格式**（能直接看到注音）
+			 * ⚠️ <ruby> 和 <rt> 用的是**两种不同的 mark**（htmlInline / htmlInlineRt）：
+			 *    同一种 mark 不能在同一段文字上叠两次（抛 RangeError: Invalid collection of marks）。
+			 * 注音占位插完就选中，直接打字覆盖即可。
+			 */
+			const RUBY_READING = 'zhùyīn';
+
+			function insertRuby() {
+				const sel = editor.state.selection;
+				const base = sel.empty ? '汉字' : editor.state.doc.textBetween(sel.from, sel.to);
+				const rubyMark = { type: 'htmlInline', attrs: { tag: 'ruby' } };
+				const rtMark = { type: 'htmlInlineRt', attrs: { tag: 'rt' } };
+				editor.chain().focus().insertContentAt({ from: sel.from, to: sel.to }, [
+					{ type: 'text', text: base, marks: [rubyMark] },
+					{ type: 'text', text: RUBY_READING, marks: [rubyMark, rtMark] },
+				]).run();
+				const end = sel.from + base.length + RUBY_READING.length;
+				editor.chain().focus().setTextSelection({ from: end - RUBY_READING.length, to: end }).run();
+				setDirty(true);
+				toast('已插入 ruby 注音（注音占位已选中，直接打拼音）；正文汉字可再改');
+			}
+
+			/**
+			 * 插行内公式 `$…$`：站点走 remark-math + rehype-katex，原文就是两个 $ 包起来，
+			 * 编辑器里按原文显示（跟站点渲染一致，不做假预览）。有选区就包住选区。
+			 * ⚠️ remark-math 不认「$ 与内容之间的空格」⇒ $ 贴在去掉首尾空白后的选区两端。
+			 */
+			function insertInlineMath() {
+				const sel = editor.state.selection;
+				if (sel.empty) {
+					// ⚠️ 不要只插两个裸 `$`：那样万一没填内容就保存，单独一行的 `$$` 会被 remark-math 当成**块级公式**渲染成空块。
+					//    所以插 `$x$` 并把 x 选中，直接打字覆盖即可。
+					const placeholder = 'x';
+					editor.chain().focus().insertContentAt(sel.from, '$' + placeholder + '$').run();
+					editor.chain().focus().setTextSelection({ from: sel.from + 1, to: sel.from + 1 + placeholder.length }).run();
+					toast('已插入行内公式 $x$（占位 x 已选中，直接打公式内容）');
+				} else {
+					const raw = editor.state.doc.textBetween(sel.from, sel.to);
+					const from = sel.from + (raw.length - raw.trimStart().length);
+					const to = sel.to - (raw.length - raw.trimEnd().length);
+					editor.chain().focus().insertContentAt(to, '$').run();
+					editor.chain().focus().insertContentAt(from, '$').run();
+					toast('已把选区包成行内公式');
+				}
+				setDirty(true);
+			}
+
+			/**
+			 * 链接弹层（取代 window.prompt）。为什么换掉 prompt：
+			 *   ① 它在这个（自动化）标签页里直接抛 “prompt() is not supported.” ⇒ 按钮**静默失效**；
+			 *   ② 只能填地址：看不见也改不了已有链接的文字，「删链接」要靠「故意留空」这种猜谜；
+			 *   ③ 没有选区时会挂一个**空链接**（光标上带 href 标记）⇒ 还得再打一遍字，
+			 *      中途点到别处甚至可能存出个 `[](url)`。
+			 * 现在的行为：光标在链接里 ⇒ 预填地址 + 文字，可改可删可打开；有选区 ⇒ 文字预填选区文字；
+			 *   纯光标 ⇒ 地址和文字一起插进来（文字留空就拿地址当文字），一步到位。
+			 */
+			const linkPop = el<HTMLDivElement>('link-pop');
+			const linkUrlInput = el<HTMLInputElement>('link-url');
+			const linkTextInput = el<HTMLInputElement>('link-text');
+			const linkRemoveBtn = el<HTMLButtonElement>('link-remove');
+			const linkOpenBtn = el<HTMLButtonElement>('link-open');
+			/** 打开弹层时锁定的范围：在链接里 ⇒ 整条链接；有选区 ⇒ 选区；纯光标 ⇒ 光标点（to = from） */
+			let linkTarget: { from: number; to: number; href: string | null } | null = null;
+
+			/** 补协议：`example.com/x` → `https://example.com/x`；`/blog/x`、`#锚`、`mailto:`、已有 http(s) 的原样。
+			 *  其它协议（javascript: 之类）返回空串 = 拒绝，别让它写进 markdown。 */
+			function normalizeHref(raw: string): string {
+				const v = raw.trim();
+				if (!v) return '';
+				if (v.startsWith('/') || v.startsWith('#')) return v;
+				if (v.startsWith('//')) return 'https:' + v;
+				const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(v);
+				if (scheme) return /^(https?|mailto|tel)$/i.test(scheme[1]) ? v : '';
+				return 'https://' + v;
+			}
+
+			function openLinkPop() {
+				const before = editor.state.selection;
+				const selText = before.empty ? '' : editor.state.doc.textBetween(before.from, before.to);
+				// extendMarkRange：光标**贴着**链接也算「在链接里」，会把整条链接选中（顺便让用户看见自己改的是哪条）。
+				// 没链接时它什么都不做（不动选区），所以下面还要拿 before 兜底。
+				editor.chain().focus().extendMarkRange('link').run();
+				const inLink = editor.isActive('link');
+				const s = editor.state.selection;
+				const range = inLink ? { from: s.from, to: s.to } : before.empty ? { from: before.from, to: before.from } : { from: before.from, to: before.to };
+				const href = inLink ? String(editor.getAttributes('link').href ?? '') : null;
+				linkTarget = { ...range, href };
+				linkUrlInput.value = href ?? '';
+				linkTextInput.value = inLink ? editor.state.doc.textBetween(range.from, range.to) : selText;
+				linkRemoveBtn.hidden = !inLink;
+				linkOpenBtn.hidden = !inLink;
+				linkPop.hidden = false;
+				// 锚在「链接」按钮正下方（贴边时往里收）
+				const btn = document.querySelector('#toolbar button[data-cmd="link"]');
+				const r = btn?.getBoundingClientRect();
+				if (r) {
+					const left = Math.max(8, Math.min(r.left, window.innerWidth - linkPop.offsetWidth - 8));
+					linkPop.style.left = left + 'px';
+					linkPop.style.top = Math.min(r.bottom + 6, window.innerHeight - linkPop.offsetHeight - 8) + 'px';
+					// 缩放原点对准按钮中心：进/出场看起来是「从按钮里长出来 / 缩回按钮里」
+					linkPop.style.setProperty('--linkpop-origin', r.left + r.width / 2 - left + 'px 0');
+				} else {
+					linkPop.style.setProperty('--linkpop-origin', '50% 0');
+				}
+				linkUrlInput.focus();
+				linkUrlInput.select();
+			}
+
+			function closeLinkPop() {
+				linkPop.hidden = true;
+				linkTarget = null;
+				editor.chain().focus().run();
+			}
+
+			function applyLink() {
+				if (!linkTarget) return;
+				const href = normalizeHref(linkUrlInput.value);
+				if (!href) {
+					toast('链接地址不合法：只支持 http/https/mailto/tel 或站内相对路径', 'err');
+					linkUrlInput.focus();
+					return;
+				}
+				const text = linkTextInput.value.trim() || href;
+				const from = linkTarget.from;
+				const isEdit = !!linkTarget.href;
+				editor.chain().focus()
+					.insertContentAt({ from, to: linkTarget.to }, { type: 'text', text, marks: [{ type: 'link', attrs: { href } }] })
+					.run();
+				// 光标停在链接**后面**，并且把「待输入的 link 标记」清掉：
+				// ⚠️ 光把光标放到边界上不够 —— 链接落在**段末**时，ProseMirror 的 ResolvedPos.marks() 会退回
+				//    「前一个节点的 marks」(= 链接) ⇒ 接着打的字就被算进链接里（蓝字越打越长，踩过）。
+				//    unsetMark 内部会 removeStoredMark ⇒ storedMarks 落成 []（空数组也算「有值」，
+				//    insertText 优先用它）⇒ 之后打的就是普通文字。
+				editor.chain().focus().setTextSelection(from + text.length).unsetMark('link').run();
+				closeLinkPop();
+				syncToolbar();
+				toast(isEdit ? '链接已更新' : '已插入链接');
+			}
+
+			function removeLink() {
+				const target = linkTarget;
+				if (!target?.href) return;
+				editor.chain().focus().setTextSelection({ from: target.from, to: target.to }).unsetLink().run();
+				// 同样要清掉待输入的 link 标记（理由见 applyLink 里的注释）
+				editor.chain().focus().setTextSelection(target.to).unsetMark('link').run();
+				closeLinkPop();
+				syncToolbar();
+				toast('已移除链接（文字保留）');
+			}
+
+			for (const input of [linkUrlInput, linkTextInput]) {
+				input.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter') { e.preventDefault(); applyLink(); }
+					else if (e.key === 'Escape') { e.preventDefault(); closeLinkPop(); }
+				});
+			}
+			el<HTMLButtonElement>('link-apply').addEventListener('click', applyLink);
+			el<HTMLButtonElement>('link-cancel').addEventListener('click', closeLinkPop);
+			linkRemoveBtn.addEventListener('click', removeLink);
+			linkOpenBtn.addEventListener('click', () => {
+				const href = normalizeHref(linkUrlInput.value) || linkTarget?.href || '';
+				if (href) window.open(href, '_blank', 'noopener');
+			});
+			// 点弹层外面收起来（点「链接」按钮本身除外：那次是「重新打开」）
+			document.addEventListener('pointerdown', (e) => {
+				if (linkPop.hidden) return;
+				const t = e.target as HTMLElement;
+				if (linkPop.contains(t) || t.closest('#toolbar button[data-cmd="link"]')) return;
+				closeLinkPop();
+			});
+			window.addEventListener('resize', () => { if (!linkPop.hidden) closeLinkPop(); });
+
+			// 编辑器里 Ctrl/⌘ + 点击 = 打开链接。普通点击只把光标放进去
+			// （openOnClick 已在 md/extensions.js 里关掉：默认行为是点一下就把整个标签页带走，没法点进链接里编辑）。
+			docHost.addEventListener('click', (e) => {
+				if (!e.ctrlKey && !e.metaKey) return;
+				const a = (e.target as HTMLElement).closest('a[href]');
+				if (!a) return;
+				e.preventDefault();
+				window.open(a.getAttribute('href') ?? '', '_blank', 'noopener');
+			});
+
+			/**
+			 * 图片粘贴 / 拖入上传（M3）。
+			 * 浏览器这边先转成 webp：`canvas.toBlob('image/webp')` 零依赖，不用装 sharp；
+			 * ⚠️ 唯独 GIF 不转 —— canvas 只能画第一帧，转完动图就成静图了。
+			 * 二进制直接 POST 给中间件（`/__editor/api/image`），落到 `public/images/`，
+			 * 然后就地插一个图片卡片 —— 跟工具条那枚「图片」按钮同一条路（rawBlock，原文 = `![alt](url)`）。
+			 */
+			async function fileToUpload(file: File): Promise<{ blob: Blob; ext: string }> {
+				if (file.type === 'image/gif') return { blob: file, ext: 'gif' };
+				try {
+					const bitmap = await createImageBitmap(file);
+					const scale = Math.min(1, 1600 / bitmap.width);
+					const canvas = document.createElement('canvas');
+					canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+					canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+					const ctx = canvas.getContext('2d');
+					if (!ctx) throw new Error('拿不到 2d context');
+					ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+					bitmap.close();
+					const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', 0.9));
+					if (!blob || blob.type !== 'image/webp') throw new Error('这个浏览器不会编 webp');
+					return { blob, ext: 'webp' };
+				} catch {
+					// 转不了就原样传，中间件按扩展名放行常见的图片格式
+					const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+					return { blob: file, ext };
+				}
+			}
+
+			async function uploadAndInsertImage(file: File) {
+				// 文件名用当前文章的 slug（跟现有 `2026-08-26-police-laughing.webp` 一个路子），重名中间件会补 -1、-2
+				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
+				try {
+					toast('图片转码上传中…');
+					const { blob, ext } = await fileToUpload(file);
+					const res = await fetch(api('/image?name=' + encodeURIComponent(`${slug}.${ext}`)), {
+						method: 'POST',
+						headers: { 'content-type': 'application/octet-stream' },
+						body: blob,
+					});
+					const out = (await res.json()) as { url?: string; file?: string; bytes?: number; error?: string };
+					if (!res.ok || !out.url) throw new Error(out.error ?? 'HTTP ' + res.status);
+					const sel = editor.state.selection;
+					const pos = sel.empty ? sel.from : sel.to;
+					editor.chain().focus().insertContentAt(pos, { type: 'rawBlock', attrs: { source: `![](${out.url})`, kind: 'image' } }).run();
+					toast(`已插入 ${out.url}（${Math.max(1, Math.round(Number(out.bytes ?? 0) / 1024))} KB；alt、尺寸、图注在卡片里补）`);
+				} catch (err) {
+					toast('图片上传失败：' + String((err as Error)?.message ?? err), 'err');
+				}
+			}
+
+			/** 从剪贴板/拖入的文件里挑出第一张图 */
+			const firstImage = (files: FileList | undefined | null) => [...(files ?? [])].find((f) => f.type.startsWith('image/')) ?? null;
+
+			docHost.addEventListener('paste', (e) => {
+				const file = firstImage(e.clipboardData?.files);
+				if (!file) return; // 普通文本粘贴放行，别拦
+				e.preventDefault();
+				void uploadAndInsertImage(file);
+			});
+
+			docHost.addEventListener('dragover', (e) => {
+			if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); // 不拦的话浏览器会直接导航到那张图
+		});
+
+			docHost.addEventListener('drop', (e) => {
+				const file = firstImage(e.dataTransfer?.files);
+				if (!file) return;
+				e.preventDefault();
+				void uploadAndInsertImage(file);
+			});
+
+			/**
+			 * 自绘确认弹窗（取代 window.confirm）。
+			 * 样式/动效与链接弹层同一套；字段用 textContent 写，不拼 HTML（以后要接用户输入也不用改）。
+			 */
+			const modal = el<HTMLDivElement>('modal');
+			const modalTitle = el<HTMLHeadingElement>('modal-title');
+			const modalText = el<HTMLParagraphElement>('modal-text');
+			const modalOk = el<HTMLButtonElement>('modal-ok');
+			const modalCancel = el<HTMLButtonElement>('modal-cancel');
+			let modalResolve: ((ok: boolean) => void) | null = null;
+
+			function askConfirm(opts: { title: string; text: string; ok?: string; cancel?: string }): Promise<boolean> {
+				// 上一个没关就又开了一个：前一个按「取消」算，避免 Promise 永远挂着
+				modalResolve?.(false);
+				modalTitle.textContent = opts.title;
+				modalText.textContent = opts.text;
+				modalOk.textContent = opts.ok ?? '确定';
+				modalCancel.textContent = opts.cancel ?? '取消';
+				modal.hidden = false;
+				modalOk.focus();
+				return new Promise((resolve) => { modalResolve = resolve; });
+			}
+
+			function closeModal(ok: boolean) {
+				const resolve = modalResolve;
+				modalResolve = null;
+				modal.hidden = true;
+				resolve?.(ok);
+			}
+
+			modalOk.addEventListener('click', () => closeModal(true));
+			modalCancel.addEventListener('click', () => closeModal(false));
+			// 点遮罩 = 取消（点卡片本体不算）
+			modal.addEventListener('pointerdown', (e) => { if (e.target === modal) closeModal(false); });
+			// 焦点在卡片里 ⇒ Escape/Enter 会冒泡到这里；焦点只可能在按钮上（modalOk.focus()），所以不会漏
+			modal.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape') { e.preventDefault(); closeModal(false); }
+				else if (e.key === 'Enter') { e.preventDefault(); closeModal(true); }
+			});
+
+			// ── 新建文章 ──────────────────────────────────────────────
+			// 模板与命名规则在服务端（scripts/lib/post-io.mjs 的 newPostBlueprint）
+			// —— 跟 `npm run new` 同一份，这边只负责收表单。
+			const newModal = el<HTMLDivElement>('new-modal');
+			const npTitleZh = el<HTMLInputElement>('np-title-zh');
+			const npTitleEn = el<HTMLInputElement>('np-title-en');
+			const npSlug = el<HTMLInputElement>('np-slug');
+			const npWhen = el<HTMLInputElement>('np-when');
+			// 新建表单的「标记」：跟编辑区那排同一套 chip（草稿 · Draft / AI），AI 分中英两份 ——
+			// 哪一份是 AI 翻的由作者说了算（中文写+AI 翻英文，或反过来，都行）。
+			// 默认：草稿关、中文版 AI 关、英文版 AI 开。
+			const npFlagsBox = el<HTMLDivElement>('np-flags');
+			let npFlags = { draft: false, aiZh: false, aiEn: true };
+
+			function renderNewFlags() {
+				const chip = (flag: 'draft' | 'aiZh' | 'aiEn', cls: string, on: boolean, inner: string, label: string) =>
+					`<button type="button" class="chip ${cls}${on ? ' chip--on' : ''}" data-flag="${flag}" aria-pressed="${on}" aria-label="${label}">${inner}</button>`;
+				npFlagsBox.innerHTML =
+					chip('draft', 'flag-draft', npFlags.draft, '草稿 · Draft', '存成草稿（放 drafts/）') +
+					chip('aiZh', 'flag-ai', npFlags.aiZh, `<span class="chip-ico">${AI_BADGE_SVG}</span>AI (ZH)`, '中文版标「AI 翻译」') +
+					chip('aiEn', 'flag-ai', npFlags.aiEn, `<span class="chip-ico">${AI_BADGE_SVG}</span>AI (EN)`, '英文版标「AI 翻译」');
+			}
+
+			npFlagsBox.addEventListener('click', (e) => {
+				const btn = (e.target as HTMLElement).closest('button[data-flag]') as HTMLButtonElement | null;
+				if (!btn) return;
+				const flag = btn.dataset.flag as 'draft' | 'aiZh' | 'aiEn';
+				npFlags[flag] = !npFlags[flag];
+				toggleChip(btn, npFlags[flag]); // 就地改（理由见 toggleChip）
+			});
+			const npError = el<HTMLParagraphElement>('np-error');
+			const npCreateBtn = el<HTMLButtonElement>('np-create');
+			const npBoxes = {
+				category: el<HTMLDivElement>('np-category'),
+				tags: el<HTMLDivElement>('np-tags'),
+				warning: el<HTMLDivElement>('np-warning'),
+			};
+			let npPick: { category: string[]; tags: string[]; warning: string[] } = { category: [], tags: [], warning: [] };
+
+			const two = (n: number) => String(n).padStart(2, '0');
+			const nowLocal = () => {
+				const d = new Date();
+				return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}T${two(d.getHours())}:${two(d.getMinutes())}`;
+			};
+			const slugify = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+			/** 表单里的 chips：外形/双语跟 frontmatter 那排完全一样（共用 bi / chipBtn），状态存在 npPick 里 */
+			function renderNewTagChips() {
+				// 标签候选 = 所选分类里有的（跟 CLI 一致）
+				const allowed = config.tags.filter((t) => !t.cats.length || !npPick.category.length || t.cats.some((c) => npPick.category.includes(c)));
+				npBoxes.tags.innerHTML = allowed
+					.map((t) => {
+						const catId = t.cats.find((c) => npPick.category.includes(c)) ?? t.cats[0];
+						return chipBtn('tags', t.key, bi(t.zh, t.en), npPick.tags.includes(t.key), catId ? `cat-tag cat-${catId}` : '');
+					})
+					.join('');
+			}
+
+			function renderNewChips() {
+				npBoxes.category.innerHTML = config.categories
+					.map((c) => chipBtn('category', c.id, bi(c.zh, c.en), npPick.category.includes(c.id), `cat-tag cat-${c.id}`))
+					.join('');
+				renderNewTagChips();
+				npBoxes.warning.innerHTML = config.warnings
+					.map((w) => chipBtn('warning', w.key, bi(w.zh, w.en), npPick.warning.includes(w.key), `cw-pill cw-${w.key}`))
+					.join('');
+			}
+
+			for (const box of [npBoxes.category, npBoxes.tags, npBoxes.warning]) {
+				box.addEventListener('click', (e) => {
+					const btn = (e.target as HTMLElement).closest('button[data-key]') as HTMLButtonElement | null;
+					if (!btn) return;
+					const group = btn.dataset.group as 'category' | 'tags' | 'warning';
+					const key = String(btn.dataset.key);
+					const list = npPick[group];
+					const next = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+					npPick[group] = next;
+					toggleChip(btn, next.includes(key));
+					if (group === 'category') renderNewTagChips(); // 改分类要重算可选标签
+				});
+			}
+
+			function openNewModal() {
+				npPick = { category: ['essays'], tags: [], warning: [] };
+				npTitleZh.value = '';
+				npTitleEn.value = '';
+				npSlug.value = '';
+				npWhen.value = nowLocal();
+				npFlags = { draft: false, aiZh: false, aiEn: true };
+				npError.textContent = '';
+				renderNewChips();
+				renderNewFlags();
+				newModal.hidden = false;
+				npTitleZh.focus();
+			}
+
+			const closeNewModal = () => { newModal.hidden = true; };
+
+			async function createThePost() {
+				const titleZh = npTitleZh.value.trim();
+				const titleEn = npTitleEn.value.trim();
+				const when = npWhen.value.trim();
+				const slug = slugify(npSlug.value || titleEn || titleZh);
+				if (!titleZh) { npError.textContent = '中文标题得填'; npTitleZh.focus(); return; }
+				if (!titleEn) { npError.textContent = '英文标题也得填（en-US 那份要用）'; npTitleEn.focus(); return; }
+				if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) { npError.textContent = '日期时间格式不对（用右边那个日历选的）'; npWhen.focus(); return; }
+				if (!slug) { npError.textContent = 'URL 后缀生成不出来，手填一个（小写字母/数字/短横）'; npSlug.focus(); return; }
+				// 同名先拦一道：服务端也会拦，但先说清楚比白跑一趟强
+				const file = `${when.slice(0, 10)}-${slug}.md`;
+				const clash = posts.filter((p) => p.path.endsWith('/' + file));
+				if (clash.length) { npError.textContent = '已经有同名文件了：' + clash.map((p) => p.path).join('、'); return; }
+				npCreateBtn.disabled = true;
+				npError.textContent = '创建中…';
+				try {
+					const res = await fetch(api('/new-post'), {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({
+							titleZh, titleEn, slug, date: when,
+							draft: npFlags.draft,
+							category: npPick.category,
+							tags: npPick.tags,
+							warning: npPick.warning,
+							aiZh: npFlags.aiZh,
+							aiEn: npFlags.aiEn,
+						}),
+					});
+					const out = (await res.json()) as { files?: Array<{ path: string; lang: string }>; error?: string };
+					if (!res.ok || !out.files?.length) throw new Error(out.error ?? 'HTTP ' + res.status);
+					closeNewModal();
+					await loadList();
+					const zh = out.files.find((f) => f.lang === 'zh') ?? out.files[0];
+					picker.value = zh.path;
+					localStorage.setItem('editor:last-post', zh.path);
+					await loadPost(zh.path);
+					toast(`已新建 ${out.files.map((f) => f.path.split('/').pop()).join(' 和 ')}（中文那份已经打开，正文填完点保存）`);
+				} catch (err) {
+					npError.textContent = '创建失败：' + String((err as Error)?.message ?? err);
+				} finally {
+					npCreateBtn.disabled = false;
+				}
+			}
+
+			el<HTMLButtonElement>('new-btn').addEventListener('click', openNewModal);
+			npCreateBtn.addEventListener('click', () => void createThePost());
+			el<HTMLButtonElement>('new-cancel').addEventListener('click', closeNewModal);
+			// 点遮罩 = 取消（点卡片本体不算）
+			newModal.addEventListener('pointerdown', (e) => { if (e.target === newModal) closeNewModal(); });
+			newModal.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape') { e.preventDefault(); closeNewModal(); }
+				else if (e.key === 'Enter') { e.preventDefault(); void createThePost(); }
+			});
+
+			// ── 发布（跑 scripts/publish.mjs）────────────────────────
+			const logPanel = el<HTMLDivElement>('log-panel');
+			const logTitle = el<HTMLSpanElement>('log-title');
+			const logBody = el<HTMLPreElement>('log-body');
+			const pubBtn = el<HTMLButtonElement>('pub-btn');
+
+			el<HTMLButtonElement>('log-close').addEventListener('click', () => { logPanel.hidden = true; });
+
+			/**
+			 * 跑一个服务端脚本（中间件里是白名单，只认 pub），输出原样贴进面板。
+			 * 发布要几十秒，中途没反馈会让人以为卡死；退出码非 0 一律当失败报出来。
+			 */
+			async function runTask(task: string, label: string) {
+				logTitle.textContent = label;
+				logBody.textContent = '（执行中…）';
+				logPanel.hidden = false;
+				pubBtn.disabled = true;
+				try {
+					const res = await fetch(api('/run'), {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ task }),
+					});
+					const out = (await res.json()) as { code?: number; output?: string; error?: string };
+					const code = Number(out.code ?? -1);
+					logBody.textContent = out.output || out.error || '（没有输出）';
+					toast(`${label}${code === 0 ? '完成' : '失败（退出码 ' + code + '）'}`, code === 0 ? 'ok' : 'err');
+					if (code === 0) reloadPreview();
+				} catch (err) {
+					logBody.textContent = String((err as Error)?.message ?? err);
+					toast(label + '失败', 'err');
+				} finally {
+					pubBtn.disabled = false;
+				}
+			}
+
+			pubBtn.addEventListener('click', async () => {
+				// 没保存就先提一句：没落盘的改动根本不会进这次 commit（作者会以为已经发出去了）
+				if (dirty) {
+					const go = await askConfirm({
+						title: '还有没保存的改动',
+						text: '这些改动还没落盘，不会被这次 commit 带上。要现在发布吗？',
+						ok: '仍然发布',
+						cancel: '先去保存',
+					});
+					if (!go) return;
+				}
+				const ok = await askConfirm({
+					title: '发布到线上？',
+					text: '会跑 scripts/publish.mjs：git add -A → commit → push，Cloudflare Pages 自动构建。注意 add -A 会把工作区里其他未提交的改动也一起提交。',
+					ok: '发布',
+				});
+				if (!ok) return;
+				await runTask('pub', '发布');
+			});
+
+			el<HTMLDivElement>('toolbar').addEventListener('click', (e) => {
+				const target = e.target as HTMLElement;
+				const insertBtn = target.closest('button[data-insert]') as HTMLButtonElement | null;
+				if (insertBtn) {
+					const key = String(insertBtn.dataset.insert);
+					const tpl = BLOCK_TEMPLATES[key];
+					if (tpl) {
+						// ⚠️ 用 insertContentAt（而不是 insertContent）：后者会**替换当前选区**，
+						//    万一选区落在某张卡片上，整块就被新块顶掉了（踩过）。
+						//    这里只看「光标 => 就地插；有选区 => 插到选区末尾之后」。
+						const sel = editor.state.selection;
+						const pos = sel.empty ? sel.from : sel.to;
+						editor.chain().focus().insertContentAt(pos, { type: 'rawBlock', attrs: { source: tpl.source, kind: tpl.kind } }).run();
+						setDirty(true);
+					}
+					return;
+				}
+				const btn = target.closest('button[data-cmd]') as HTMLButtonElement | null;
+				if (!btn) return;
+				const chain = editor.chain().focus();
+				switch (btn.dataset.cmd) {
+					case 'h2': chain.toggleHeading({ level: 2 }).run(); break;
+					case 'h3': chain.toggleHeading({ level: 3 }).run(); break;
+					case 'h2': chain.toggleHeading({ level: 2 }).run(); break;
+					case 'h3': chain.toggleHeading({ level: 3 }).run(); break;
+					case 'bold': chain.toggleBold().run(); break;
+					case 'italic': chain.toggleItalic().run(); break;
+					case 'strike': chain.toggleStrike().run(); break;
+					case 'code': chain.toggleCode().run(); break;
+					// 四个行内 HTML 标签共用同一个 mark（htmlInline），靠 tag 属性区分
+					case 'mark':
+					case 'sup':
+					case 'sub':
+					case 'kbd': chain.toggleMark('htmlInline', { tag: btn.dataset.cmd }).run(); break;
+					// ruby / 行内公式不走 toggleMark：它们是「整段结构」或纯原文，要自己插
+					case 'ruby': insertRuby(); break;
+					case 'mathinline': insertInlineMath(); break;
+					case 'task': chain.toggleTaskList().run(); break;
+					case 'footnote': insertFootnote(); break;
+					case 'quote': chain.toggleBlockquote().run(); break;
+					case 'ul': chain.toggleBulletList().run(); break;
+					case 'ol': chain.toggleOrderedList().run(); break;
+					case 'hr': chain.setHorizontalRule().run(); break;
+					case 'link': openLinkPop(); break;
+				}
+				syncToolbar(); // 命令跑完立刻回显状态（标题/列表/粗体…）
+			});
+
+			// ── 列表 ──────────────────────────────────────────────────
 			async function loadList() {
 				const res = await fetch(api('/posts'));
 				if (!res.ok) throw new Error('读取文章列表失败（HTTP ' + res.status + '）');
 				posts = (await res.json()) as Post[];
-				const groups: Array<{ label: string; test: (p: Post) => boolean }> = [
-					{ label: '中文 · 已发布', test: (p) => p.lang === 'zh' && !p.draft },
-					{ label: 'English · Published', test: (p) => p.lang === 'en' && !p.draft },
-					{ label: '草稿 · Drafts（中文）', test: (p) => p.lang === 'zh' && p.draft },
-					{ label: '草稿 · Drafts（English）', test: (p) => p.lang === 'en' && p.draft },
+				// ⚠️ 只按「草稿 / 正式」分两类：中英要**成对排在同一行**（CSS 给 optgroup 上了两列网格，
+				//    列顺序 = 源码顺序 ⇒ 中英交替塞进去，同一篇就在一行）。以前按语言分四组，
+				//    想找同一篇的另一语言得上下翻半天。
+				const groups: Array<{ label: string; draft: boolean }> = [
+					{ label: '已发布 · Published', draft: false },
+					{ label: '草稿 · Drafts', draft: true },
 				];
 				picker.innerHTML = '';
 				for (const g of groups) {
-					const items = posts.filter(g.test);
+					const items = posts.filter((p) => p.draft === g.draft);
 					if (!items.length) continue;
+					// 配对键 = 文件名：中英同一篇共用 `日期-slug.md`（目录不同而已）
+					const rows: Array<{ zh?: Post; en?: Post }> = [];
+					const at = new Map<string, number>();
+					for (const p of items) {
+						const file = p.path.split('/').pop() ?? p.path;
+						let i = at.get(file);
+						if (i === undefined) {
+							i = rows.push({}) - 1;
+							at.set(file, i);
+						}
+						rows[i][p.lang] = p;
+					}
 					const og = document.createElement('optgroup');
 					og.label = g.label;
-					for (const p of items) {
-						const opt = document.createElement('option');
-						opt.value = p.path;
-						opt.textContent = `${p.date.slice(0, 10)} · ${p.title} [${fmtBadges(p)}]`;
-						og.appendChild(opt);
+					// ⚠️ 零高占位项：两列网格里第一格被 UA 生成的组标签占了（那个盒子作者 CSS 碰不到，
+					//    给 optgroup::before 写 grid-column 也没用）——不补这一格，每对都会错开一格。
+					const pad = document.createElement('option');
+					pad.className = 'optgroup-pad';
+					pad.disabled = true;
+					og.appendChild(pad);
+					for (const row of rows) {
+						for (const side of ['zh', 'en'] as const) {
+							const p = row[side];
+							const opt = document.createElement('option');
+							if (p) {
+								opt.value = p.path;
+								// 不带 [ZH]/[EN · AI 译] 那种尾巴：两列已经把语言摆明白了（左中右英），
+								// 草稿与否也在组标题里 —— 标题旁边再挂一串方括号只是噪音。
+								opt.textContent = `${p.date.slice(0, 10)} · ${p.title}`;
+							} else {
+								// 缺一侧就补一个占位项：不补的话后面所有行都会错位（换行的代价）
+								opt.value = '';
+								opt.disabled = true;
+								opt.textContent = side === 'zh' ? '（没有中文版）' : '（no English version）';
+							}
+							og.appendChild(opt);
+						}
 					}
 					picker.appendChild(og);
 				}
 				if (!posts.length) picker.innerHTML = '<option value="">（没有找到任何文章）</option>';
 			}
 
+			// ── 载入 / 保存 ──────────────────────────────────────────
 			async function loadPost(path: string) {
 				if (!path) return;
 				const res = await fetch(api('/post?path=' + encodeURIComponent(path)));
-				if (!res.ok) {
-					sourceView.textContent = '读取失败：HTTP ' + res.status;
-					return;
-				}
+				if (!res.ok) { toast('读取失败：HTTP ' + res.status, 'err'); return; }
 				const detail = (await res.json()) as PostDetail;
 				current = detail;
-				sourceView.textContent = detail.raw;
+				frontmatter = { ...detail.frontmatter };
+				lang = (posts.find((p) => p.path === path)?.lang ?? 'zh') as 'zh' | 'en';
+				// 正文样式（.typography-body）有 html[lang] 分支（中/英字体、中文斜体）⇒ 跟着文章语言切
+				document.documentElement.lang = lang === 'en' ? 'en-US' : 'zh-CN';
 				const p = posts.find((x) => x.path === path);
-				meta.textContent = p ? `${fmtBadges(p)} · ${(p.bytes / 1024).toFixed(1)} KB` : '';
+				metaEl.textContent = p ? `${fmtBadges(p)} · ${(p.bytes / 1024).toFixed(1)} KB` : '';
+
+				titleInput.value = String(frontmatter.title ?? '');
+				dateInput.value = String(frontmatter.date ?? '').slice(0, 16);
+				renderChips(); // 含「标记」那一行（草稿 / AI）
+
+				loadBody(editor, detail.body);
+				sourceView.textContent = detail.raw;
+				setDirty(false);
+				syncToolbar();
+
 				previewUrl.textContent = detail.url;
 				openBtn.href = detail.url;
-				reload();
+				reloadPreview();
 			}
 
-			const reload = () => {
+			const reloadPreview = () => {
 				if (!current) return;
-				frame.src = current.url + (current.url.includes('?') ? '&' : '?') + 'editor=1&t=' + Date.now();
+				frame.src = current.url + (current.url.includes('?') ? '&' : '?') + 't=' + Date.now();
 			};
 
-			picker.addEventListener('change', () => {
+			async function save() {
+				if (!current) return;
+				const target = current.path;
+				saveBtn.disabled = true;
+				const body = dumpBody(editor);
+				const res = await fetch(api('/post'), {
+					method: 'PUT',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ path: target, frontmatter, body }),
+				});
+				const out = (await res.json()) as { error?: string; bytes?: number };
+				if (!res.ok) { toast('保存失败：' + (out.error ?? res.status), 'err'); saveBtn.disabled = false; return; }
+
+				const afterRes = await fetch(api('/post?path=' + encodeURIComponent(target)));
+				if (afterRes.ok) {
+					current = (await afterRes.json()) as PostDetail;
+					sourceView.textContent = current.raw;
+					const length = current.raw.length;
+					toast(`已保存到 ${target.split('/').pop()}（${length} 字符）`);
+				} else {
+					toast('已保存');
+				}
+				setDirty(false);
+				reloadPreview();
+				window.setTimeout(reloadPreview, 800); // Astro 热更新后再刷一次更稳
+			}
+
+			// ── 事件 ─────────────────────────────────────────────────
+			picker.addEventListener('change', async () => {
+				// 自己画的确认框，不用 window.confirm（Chromium 那个没法跟编辑器一个长相）
+				const ok = !dirty || (await askConfirm({
+					title: '有未保存的改动',
+					text: '切到别的文章会丢掉这些改动，确认切换？',
+					ok: '切换',
+				}));
+				if (!ok) {
+					picker.value = current?.path ?? '';
+					return;
+				}
 				if (picker.value) localStorage.setItem('editor:last-post', picker.value);
 				void loadPost(picker.value);
 			});
-			reloadBtn.addEventListener('click', reload);
+
+			saveBtn.addEventListener('click', () => void save());
+			el<HTMLButtonElement>('reload-btn').addEventListener('click', reloadPreview);
+			sourceBtn.addEventListener('click', () => {
+				const showSource = sourceView.hidden;
+				sourceView.hidden = !showSource;
+				docHost.hidden = showSource;
+				el<HTMLDivElement>('toolbar').hidden = showSource;
+				el<HTMLFormElement>('fm-form').hidden = showSource;
+				sourceBtn.textContent = showSource ? '正文' : '源码';
+				if (showSource) sourceView.textContent = current?.raw ?? '';
+			});
+
+			document.addEventListener('keydown', (e) => {
+				if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+					e.preventDefault();
+					if (!saveBtn.disabled) void save();
+				}
+			});
+			window.addEventListener('beforeunload', (e) => { if (dirty) e.preventDefault(); });
 
 			loadList()
 				.then(() => {
 					const remember = localStorage.getItem('editor:last-post');
 					const target = posts.some((p) => p.path === remember) ? String(remember) : posts[0]?.path;
-					if (target) {
-						picker.value = target;
-						return loadPost(target);
-					}
+					if (target) { picker.value = target; return loadPost(target); }
 				})
-				.catch((err) => {
-					sourceView.textContent = String(err && err.message ? err.message : err);
-				});
+				.catch((err) => { toast(String((err as Error)?.message ?? err), 'err'); });
 		</script>
 	</body>
 </html>
