@@ -35,12 +35,20 @@ Enjoy (jk):
 
 ```abc
 X:1
-T:Morning gloom
+T:Morning Gloom
 M:4/4
 L:1/4
 K:C
-A>G E>D | C>D E2 | E/A/ A/G/ E/>D/ C/G/ | E3 z|
-E/A/ A/G/ E>D | C>D E2 | D>E C>D | B,2 z B,/G,/ | A,4 ||
+A,/E/ E/E/ E>D | C>D E2 | E/A/ A/G/ E/>D/ C/G/ | E3 z|
+E/A/ A/G/ E>D | C>D E2 | D>E C>D | B,2 z A,/G,/ | A,4 ||
+```
+```jianpu
+title: Morning Gloom
+key: C
+beat: 4
+time: 4
+6/8_, 3/8, 3/8, 3/8, 3., 2/8 | 1., 2/8, 3, -| 3/8, 6/8, 6/8, 5/8, 3/8., 2/16, 1/8, 5/8 | 3, -, -, 0 |
+3/8, 6/8, 6/8, 5/8, 3., 2/8 | 1., 2/8, 3, - | 2., 3/8, 1., 2/8 | 7_, -, 0, 6/8_, 5/8_ | 6_, -, -, - ||
 ```
 
 ## September 4

@@ -253,10 +253,269 @@ function remarkAbc() {
   };
 }
 
+// 🎼 简谱围栏支持：```jianpu 代码块 → .jianpu-score 占位（源码兜底在 <pre class="jianpu-source">）。
+// 页面脚本（Layout.astro）检测到 .jianpu-score 时懒加载 simple-notation 渲染。
+// 围栏内容约定：可选头部行 title/composer/lyricist/key/beat/time/tempo/lyric:…，其余为谱面文本（如 1,1,5,5|6,6,5,-|…）。
+function remarkJianpu() {
+  return (tree) => {
+    const children = tree.children;
+    for (let i = 0; i < children.length; i++) {
+      const n = children[i];
+      if (!n || n.type !== 'code') continue;
+      if (n.lang !== 'jianpu' && n.lang !== 'jp') continue;
+      const code = escapeHtml(n.value || '');
+      children[i] = {
+        type: 'html',
+        value:
+          '<div class="jianpu-score" data-pagefind-ignore>' +
+          '<pre class="jianpu-source"><code class="language-jianpu">' + code + '</code></pre></div>',
+      };
+    }
+  };
+}
+
+/**
+ * ⚡️ 简谱：simple-notation 把整份 Bravura 以 base64 字面量（417,800 字符 ≈ 306 KB）内嵌在自己的 JS 里
+ * （运行时拼成 `url('data:application/x-font-woff;base64,${XX}')` 注入 <style>），这也是它体积的大头
+ * （535 KB → 剥掉后只剩 ~117 KB）。
+ *
+ * 这个插件在打包/开发时把那串 data URI 换成静态文件 URL：
+ *   ① JS chunk 少 418 KB（gzip 少 ~312 KB）
+ *   ② 字体独立成文件 → 可长缓存，且只有页面真的用到变音记号/休止符时才下载
+ * 字体由 scripts/build-bravura-font.mjs 从库内嵌的那份抽出并 subset（6.1 KB，码位/字形与原字体一致）。
+ * ⚠️ 同时把那份 base64 字面量清空：dev 模式不做 tree-shaking，不清空等于白忙。
+ */
+function jianpuBravuraFont() {
+  const FONT_URL = '/fonts/Bravura-Symbols.woff2';
+  const RE_USE = /data:application\/x-font-woff;base64,\$\{\w+\}/;
+  const RE_DEF = /"([A-Za-z0-9+/]{50000,}={0,2})"/;
+  return {
+    name: 'jianpu-bravura-font-url',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.includes('simple-notation') || !code.includes('data:application/x-font-woff')) return null;
+      if (!RE_USE.test(code)) {
+        console.warn('[jianpu] 没匹配到内嵌 Bravura 的 data URI —— simple-notation 版本可能变了');
+        return null;
+      }
+      return { code: code.replace(RE_USE, FONT_URL).replace(RE_DEF, '""'), map: null };
+    },
+  };
+}
+
+/**
+ * 🎼 五线谱/简谱切换：把**紧贴着的**两个乐谱占位（即 ````abc` + ````jianpu` 两个围栏）合成一个可切换组件。
+ *
+ * 设计取舍（2026-09-13 与作者确认）：
+ *   ① **不引入新语法**：还是普普通通的 ````abc` / ````jianpu` 两个围栏 —— 乐理文章里只想用一种记谱法时就单独写一个，照旧单独渲染；
+ *   ② **只有「紧贴」才配对**（中间只有空行/空白），中间夹了正文就各算各的 → 语义可预测；
+ *   ③ 只配对**一对**：两者记谱法不同才配；连写三个时只配前两个，第三个保持独立；
+ *   ④ **源文件里先写的那种就是默认显示的那一种**（作者可控）；
+ *   ⑤ **单独一种记谱法也套同一个圆角外框**（`is-single`，没有右上角控件）→ 全文谱面外观统一，
+ *      但它不带 data-notation，切换器脚本会直接跳过它（不会误藏）。
+ *
+ * ⚠️ 必须排在 remarkAbc / remarkJianpu **之后**：那两个已经把 code 节点换成了 html 占位，这里只认它们产出的 div。
+ * 产出结构：
+ *   <div class="score-switch" data-pagefind-ignore>
+ *     <div class="score-switch-tabs" role="group" aria-label="记谱法">…两个按钮…</div>
+ *     <div class="abc-score" data-notation="abc">…</div>
+ *     <div class="jianpu-score" data-notation="jianpu">…</div>
+ *   </div>
+ * 两块仍带原来的类名 → 现有两套渲染逻辑与样式直接生效；块间的隐藏/切换由 Layout.astro 的 initScoreSwitches 负责。
+ */
+const SCORE_PANE_RE = /^<div class="(abc|jianpu)-score"/;
+// 🎼 右上角「转换」按钮的图标（作者提供的正式图）。
+// ⚠️ 颜色**不能**照抄源图里的 `stroke="#333"` —— 用 currentColor，跟随按钮的 color/hover（和代码块的复制按钮一样）。
+// ⚠️ 源图 viewBox 是 48 栅格、原 stroke-width=4（视觉粗细 1/12）；图标固定渲染 14px，
+//    要跟旁边复制按钮（24 栅格 / 2.4 = 1/10）看起来一样粗 → 这里用 4.8（≈ 1/10）。嫌粗嫌细就改这一个数。
+const SCORE_CONVERT_ICON =
+  '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+  '<path d="M42 19H6"/>' +
+  '<path d="M30 7 42 19"/>' +
+  '<path d="M6.8 29h36"/>' +
+  '<path d="M6.8 29 18.8 41"/>' +
+  '</svg>';
+// 站内双语：en-US 目录下的文章用英文标签（中文页用中文）。
+// 工具栏排版照抄代码块的「语言标签 + 复制按钮」→ 这里就是「当前记谱法 + 转换按钮」。
+const NOTATION_LABEL = {
+  zh: { abc: '五线谱', jianpu: '简谱', group: '记谱法', toAbc: '转换为五线谱', toJianpu: '转换为简谱' },
+  en: {
+    // 故意不对称：staff 本身就是「五线谱」这个词（配上五线 + 音符毫无歧义）；
+    // 而简谱在英语世界少见，光写 Numbered 容易看不出是「记谱法」→ 这侧保留 notation。
+    abc: 'Staff',
+    jianpu: 'Numbered notation',
+    group: 'Notation',
+    toAbc: 'Switch to staff notation',
+    toJianpu: 'Switch to numbered notation',
+  },
+};
+function remarkScoreSwitch() {
+  return (tree, file) => {
+    const filePath = String((file && file.path) || '');
+    const L = /[\\/]en-US[\\/]/.test(filePath) ? NOTATION_LABEL.en : NOTATION_LABEL.zh;
+    const kids = tree.children;
+    const out = [];
+    for (let i = 0; i < kids.length; i++) {
+      const a = kids[i];
+      const b = kids[i + 1];
+      const ak = a && a.type === 'html' && a.value ? SCORE_PANE_RE.exec(a.value) : null;
+      const bk = b && b.type === 'html' && b.value ? SCORE_PANE_RE.exec(b.value) : null;
+      if (ak && bk && ak[1] !== bk[1]) {
+        const first = ak[1];
+        const other = first === 'abc' ? 'jianpu' : 'abc';
+        const toLabel = (kind) => (kind === 'abc' ? L.toAbc : L.toJianpu);
+        // 非默认的那块在**静态 HTML 里就带上 hidden**：没 JS 时也不会两块一起显示（JS 接手后会自己管）
+        const pane = (kind, value) =>
+          value.replace(
+            SCORE_PANE_RE,
+            '<div class="$1-score" data-notation="' +
+              kind +
+              '" data-label="' +
+              L[kind] +
+              '"' +
+              (kind === first ? '' : ' hidden') +
+              '>'
+          );
+        out.push({
+          type: 'html',
+          value:
+            '<div class="score-switch" data-pagefind-ignore>' +
+            '<div class="score-toolbar" role="group" aria-label="' +
+            L.group +
+            '">' +
+            '<span class="score-lang" data-score-lang>' +
+            '<span data-lang-for="abc" data-active="' +
+            (first === 'abc' ? 'true' : 'false') +
+            '"' +
+            (first === 'abc' ? '' : ' aria-hidden="true"') +
+            '>' +
+            L.abc +
+            '</span>' +
+            '<span data-lang-for="jianpu" data-active="' +
+            (first === 'jianpu' ? 'true' : 'false') +
+            '"' +
+            (first === 'jianpu' ? '' : ' aria-hidden="true"') +
+            '>' +
+            L.jianpu +
+            '</span>' +
+            '</span>' +
+            '<button type="button" class="score-convert-btn" data-score-convert' +
+            ' data-label-abc="' +
+            L.toAbc +
+            '" data-label-jianpu="' +
+            L.toJianpu +
+            '" aria-label="' +
+            toLabel(other) +
+            '">' +
+            SCORE_CONVERT_ICON +
+            '</button>' +
+            '</div>' +
+            pane(ak[1], a.value) +
+            pane(bk[1], b.value) +
+            '</div>',
+        });
+        i++; // 跳过 b
+        continue;
+      }
+      // 单独一种记谱法：也套同样的圆角外框 + 右上角**同样形式**的标签条，
+      // 只是没有转换按钮（只有一种记谱法，没得转换）→ 高度用 CSS 的 min-height 跟按钮对齐
+      out.push(
+        ak
+          ? {
+              type: 'html',
+              value:
+                '<div class="score-switch is-single">' +
+                '<div class="score-toolbar">' +
+                '<span class="score-lang"><span data-lang-for="' +
+                ak[1] +
+                '" data-active="true">' +
+                L[ak[1]] +
+                '</span></span>' +
+                '</div>' +
+                a.value +
+                '</div>',
+            }
+          : a
+      );
+    }
+    tree.children = out;
+  };
+}
+
+// ⚡️ 本地博客编辑器（/admin）—— 两半，都只在 dev 下存在：
+//   ① blogEditor()：给 Astro 注入 /admin 路由（生产构建里没有这个页面）；
+//   ② blogEditorApi()：给 Vite dev server 挂一个文件读写接口（apply:'serve' ⇒ 构建时根本不加载），
+//      数据层复用 scripts/lib/post-io.mjs，与 CLI 脚本同一套读写/校验逻辑。
+//    设计语言直接复用 main.css 的 token ⇒ 界面跟站点一致；预览用 iframe 指向真实文章页 ⇒ 自定义语法全部保真。
+function blogEditor() {
+  return {
+    name: 'blog-editor',
+    hooks: {
+      'astro:config:setup': ({ command, injectRoute }) => {
+        if (command !== 'dev') return;
+        injectRoute({ pattern: '/admin', entryPoint: './src/editor/index.astro' });
+        injectRoute({ pattern: '/admin/roundtrip', entryPoint: './src/editor/roundtrip.astro' });
+      },
+    },
+  };
+}
+
+function blogEditorApi() {
+  const readBody = (req) =>
+    new Promise((resolve, reject) => {
+      let raw = '';
+      req.on('data', (c) => {
+        raw += c;
+        if (raw.length > 8 * 1024 * 1024) reject(new Error('请求体过大'));
+      });
+      req.on('end', () => {
+        try { resolve(raw ? JSON.parse(raw) : {}); } catch (e) { reject(new Error('JSON 解析失败：' + e.message)); }
+      });
+      req.on('error', reject);
+    });
+
+  return {
+    name: 'blog-editor-api',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use('/__editor/api', async (req, res) => {
+        const send = (code, data) => {
+          res.statusCode = code;
+          res.setHeader('content-type', 'application/json; charset=utf-8');
+          res.setHeader('cache-control', 'no-store');
+          res.end(JSON.stringify(data));
+        };
+        try {
+          const io = await import('./scripts/lib/post-io.mjs');
+          const url = new URL(req.url || '/', 'http://localhost');
+          const route = url.pathname.replace(/\/+$/, '') || '/';
+          if (req.method === 'GET' && route === '/posts') return send(200, io.listPosts());
+          if (req.method === 'GET' && route === '/post') {
+            const p = url.searchParams.get('path');
+            if (!p) return send(400, { error: '缺少 path 参数' });
+            return send(200, io.readPost(p));
+          }
+          if (req.method === 'PUT' && route === '/post') {
+            const body = await readBody(req);
+            return send(200, io.writePost(body.path, body.content));
+          }
+          if (req.method === 'POST' && route === '/post') {
+            const body = await readBody(req);
+            return send(200, io.createPost(body.path, body.content, !!body.overwrite));
+          }
+          return send(404, { error: '未知接口：' + req.method + ' ' + route });
+        } catch (err) {
+          send(500, { error: String((err && err.message) || err) });
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
   site: 'https://blog.ethan929.com',
   markdown: {
-    remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 乐谱 + 识别 $ $$ 语法
+    remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkJianpu, remarkScoreSwitch, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 五线谱 + 简谱 + 「紧贴的两种记谱法合成切换器」+ 识别 $ $$ 语法
     rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody], // ⚡️ KaTeX 公式 + 正文智能引号（统一状态机）
     // ⚡️ 关闭内置 smartypants 的引号转换，改由 rehypeSmartQuotesBody 统一接管；
     //    保留破折号/省略号；backticks 也关闭（否则正文两个单引号 '' 会被合并成右双引号 ”）
@@ -268,6 +527,11 @@ export default defineConfig({
     },
   },
   vite: {
+    plugins: [jianpuBravuraFont(), blogEditorApi()],
+    optimizeDeps: {
+      // ⚡️ 简谱库必须走普通 transform（见上面 jianpuBravuraFont），不能被 esbuild 预打包绕过
+      exclude: ['simple-notation'],
+    },
     css: {
       // ⚡️ 方案 2-1：直接强制指定 vite 的 CSS 目标，覆盖默认的激进压缩
       target: ['chrome80', 'safari13', 'firefox75', 'edge80']
@@ -279,6 +543,7 @@ export default defineConfig({
   },
   integrations: [
     sitemap(),
+    blogEditor(),
   ],
   server: {
     host: true

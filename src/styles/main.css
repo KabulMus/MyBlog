@@ -7,6 +7,15 @@
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Semibold.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Musical'; src: url('/public/fonts/Musical-Light.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: swap; }
+/* Bravura-Digits - **我们自己的**乐谱雕刻字形族（SMuFL 的 timeSig0–9，用于拍号/速度数字）。
+   自建子集（码位见 scripts/build-bravura-font.mjs），文件只有几 KB。
+   ⚠️⚠️ 故意**不叫 `Bravura`**：simple-notation 每次渲染都会往 SVG 里注入一个同名的 `@font-face`，
+   那份在注入瞬间是 loading → canvas 量字形会**静默落到兜底字体**（量出 41px 而不是 20px 的荒唐值）。
+   用独立族名就与库完全解耦（库自己的变音记号/休止符仍用 `Bravura`，不受影响）。
+   ⚠️ 名字里**不能有空格**：带空格的名字写进 `font-family` 属性时不合法，整个声明会被丢掉。
+   ⚠️ @font-face 是惰性的：没用到就不会下载。
+   ⚠️ font-display: block：字形没就绪时「先不画、就绪再画」，避免闪一下豆腐块。 */
+@font-face { font-family: 'Bravura-Digits'; src: url('/fonts/Bravura-Symbols.woff2') format('woff2'); font-display: block; }
 
 /* --- 2. 颜色变量 --- */
 :root {
@@ -2965,7 +2974,161 @@ html[lang='en-US'] .cat-filter-btn {
 }
 
 /* ==========================================================================
-   🎼 ABC 乐谱（```abc 围栏 → abcjs 渲染为 SVG，见 astro.config remarkAbc / Layout 脚本）
+   🎼 简谱（simple-notation）：```jianpu 围栏 → 客户端渲染
+   ========================================================================== */
+.typography-body .jianpu-score {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 1.5rem auto;
+    max-width: 100%;
+    overflow-x: auto;
+}
+/* 谱面尺寸：库输出固定宽 SVG（脚本已补 viewBox），这里用变量控制等比缩放。
+   --jianpu-width 默认 100%；想让谱面更大就设 120% 等（超出容器时横向滚动）。 */
+.typography-body .jianpu-score svg {
+    display: block;
+    width: var(--jianpu-width, 100%);
+    height: auto;
+    max-width: none;
+    flex: none;
+}
+/* 谱面墨色：库把颜色写死为 fill/stroke="black"（表现属性优先级最低），CSS 可直接覆盖为主题色。 */
+.jianpu-score svg [fill='black'] {
+    fill: var(--jianpu-ink, var(--text-main));
+}
+.jianpu-score svg [stroke='black'] {
+    stroke: var(--jianpu-ink, var(--text-main));
+}
+/* 反复「小房子」里的 1./2. 标签：库给的是**无衬线**中文栈（SimHei / Microsoft YaHei / PingFang SC…），
+   跟谱面的衬线字不一致 → 换成和音符/歌词同一套（组内只有这一个 text，直接按分组选即可）。 */
+.jianpu-score svg g[sn-tag^='section-repeat-'] text {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-style: italic;
+}
+/* 关闭库自带的音符交互：g[sn-tag="pointer"] 里是每个音符一个的命中矩形（note-index / note-data），
+   库靠它做悬停高亮、点选、播放光标联动——静态阅读用不上。
+   ① pointer-events:none 让整块 SVG 不可命中（悬停/点击/拖选一律无反应，与 .abc-score 一致）；
+   ② 命中层本身不可见，直接 display:none 藏掉，顺带省掉几百个节点。 */
+.jianpu-score svg {
+    pointer-events: none;
+    /* 乐谱整体不可选中（用户要求）：音符 / 歌词 / 小节线 / 小房子拖选都不该选中。
+       pointer-events 只管鼠标命中，Ctrl+A 全选照样会把 SVG 文字带走 → 还得 user-select:none。 */
+    user-select: none;
+    -webkit-user-select: none;
+}
+.jianpu-score svg g[sn-tag='pointer'] {
+    display: none;
+}
+/* 例外：标题行 + 信息行（调号 / 拍号 / 速度 / 作曲）保持**可选中**（用户要求）：
+   把命中与选择都开回来；其余分组（score / chord / tieline / beam…）继续继承上面的 none。 */
+.jianpu-score svg g[sn-tag='info'] {
+    pointer-events: auto;
+    user-select: text;
+    -webkit-user-select: text;
+}
+.jianpu-score svg g[sn-tag='info'] text,
+.jianpu-score svg g[sn-tag='info'] tspan {
+    user-select: text;
+    -webkit-user-select: text;
+}
+/* 选中态：与正文完全一致（SVG <text> 的字形颜色由 fill 决定，::selection 里必须直接写 fill，
+   全局 ::selection 的 color / -webkit-text-fill-color 管不到它 —— 与 .abc-score 同一套路）。
+   ⚠️ 分两步写：
+   ① **先把谱面里所有元素的选中样式清掉**。user-select:none 只管「能不能被选中」，管不了染色 ——
+     只要元素落在 Ctrl+A 的选区里，全局 ::selection 的蓝底白字（或下面那条 fill）照样会盖上去，
+      症状：全选时音符/歌词也变白。fill:inherit 让它回到自己本来的墨色（[fill='black'] 那条）；
+   ② 信息行（标题/调号/拍号/速度/作曲，唯一可选中的部分）再穿回和正文一样的选中配色。 */
+.jianpu-score svg ::selection {
+    background: transparent;
+    color: inherit;
+    fill: inherit;
+    -webkit-text-fill-color: inherit;
+}
+.jianpu-score svg g[sn-tag='info'] ::selection {
+    background: var(--primary-blue);
+    color: var(--on-primary);
+    fill: var(--on-primary);
+    -webkit-text-fill-color: var(--on-primary);
+}
+/* 谱面文字字体：库同样把字体写成 font-family="SimSun, STSong, …, KaiTi" 表现属性，
+   表现属性优先级低于任何 CSS 规则，所以用属性选择器即可整体替换。
+   ⚠️ 只匹配「宋体栈」的元素，避开调号/拍号/速度行的 tspan（自带 sans-serif）和速度符 𝅘𝅥（自带 serif）
+       —— 这两个由下面单独一条规则处理。
+   Source Serif 4 只有拉丁子集（数字 ✓），中文歌词交给 Noto Serif SC。 */
+.jianpu-score svg text[font-family*='SimSun'],
+.jianpu-score svg tspan[font-family*='SimSun'] {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+}
+/* 调号（1 = C）与速度（𝅘𝅥 = 88）：库给的是系统 sans-serif / serif 栈，跟谱面衬线体不搭 → 统一成衬线。
+   ⚠️ 𝅘𝅥（U+1D15F，音乐符号区）**Source Serif 4 里没有** → 栈里必须保留 Bravura：
+      自建的子集 /fonts/Bravura-Symbols.woff2 恰好含这个码位（且 @font-face 没有 unicode-range，能接管它），
+      否则会掉成豆腐块。 */
+.jianpu-score svg g[sn-tag='info'] tspan[font-family='sans-serif'],
+.jianpu-score svg g[sn-tag='info'] tspan[font-family='serif'] {
+    font-family: 'Source Serif 4', Bravura, 'Noto Serif SC', serif;
+}
+/* 作曲行（右对齐的那个 text）：改斜体（标题是 middle、调号/速度是 start，不会误伤）。
+   调号里那个「1」的 700 字重由 JS 包 tspan 设置（见 normalizeJianpuInfo）——CSS 选不到单个字符。 */
+.jianpu-score svg g[sn-tag='info'] text[text-anchor='end'] {
+    font-style: italic;
+}
+/* 信息区字号（调号/速度/作曲 → 16px、𝅘𝅥 → 20.5px）**写在 JS 里**（`setJianpuInfoFontSize`）：
+   渲染在离屏 scratch 容器里完成，那里没有 .jianpu-score 类、拿不到这份 CSS，
+   量字号/行盒时会拿到库的原始值（14 / 18），后面按它做的垂直居中就会差几个像素。 */
+/* 库给「音符数字」加了一层同色描边（stroke="black" stroke-width="1"）当加粗用。
+   换成 Source Serif 4（可变字体 200–900）后，改用**真字重**代替这层描边：
+   描边清零 + font-weight 700（只有真粗体，不会糊成一坨）。
+   ⚠️ 选择器沿用库自己的标记 text[stroke-width='1']——它就是「库想加粗的那批元素」，
+      这样只会命中音符数字：歌词/标题/调号本来就是 sw=0，而小节线是 line 元素（sw=1/3），
+      若用通配清零/加粗会把小节线一起擦粗。 */
+.jianpu-score svg g[sn-tag^='note-'] > text[stroke-width='1'] {
+    stroke-width: 0;
+    font-weight: 700;
+}
+/* 音符字号：库把 font-size="18" 写成表现属性，CSS 可直接覆盖（text-anchor=middle，放大不会跑位）。
+   上限由「八度点」决定：18px 时净空 4.5px，20px 剩 2.5px，22px 起只剩 1.5px 会糊在一起。 */
+.jianpu-score svg g[sn-tag^='note-'] > text[font-size='18'] {
+    font-size: 20px;
+}
+/* 倚音字号：库按主数字 18px 定了 12px（= 2/3）；主数字现在被放大到 20px，
+   倚音不跟着长就偏小 → 按同比例改成 12 × 20/18 ≈ 13.3px。
+   音符组里的直接子 text 只有三种：18 = 数字、14 = 歌词、12 = 倚音（唯一的 fs=12）。 */
+.jianpu-score svg g[sn-tag^='note-'] > text[font-size='12'] {
+    font-size: 13.3px;
+}
+/* 歌词字重：音符数字是真粗体 700，歌词略提一档到 600（同类衬线，但主次分明）。
+   音符组里的直接子 text 只有两种：font-size=18 = 音符数字（sw=1），font-size=14 = 歌词（sw=0）。
+   歌词字号维持库原值 14px（简谱里歌词本来就该比音符小）。 */
+.jianpu-score svg g[sn-tag^='note-'] > text[font-size='14'] {
+    font-weight: 600;
+}
+/* 渲染完成后隐藏源码兜底（JS 也会移除节点，这里再兜一层） */
+.jianpu-score.is-rendered .jianpu-source {
+    display: none !important;
+}
+/* 渲染前 / 无 JS 时的源码兜底（低调小号等宽块） */
+.jianpu-score .jianpu-source {
+    margin: 0 !important;
+    padding: 0.6rem 0.9rem !important;
+    border: 1px solid var(--item-border) !important;
+    border-radius: var(--card-radius) !important;
+    background: var(--card-bg) !important;
+    box-shadow: none !important;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.jianpu-score .jianpu-source code {
+    display: block;
+    padding: 0 !important;
+    background: transparent;
+    color: var(--text-sub);
+    font-size: 0.78rem;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+/* ==========================================================================
+   🎼 ABC 五线谱（```abc 围栏 → abcjs 渲染为 SVG，见 astro.config remarkAbc / Layout 脚本）
    ========================================================================== */
 .typography-body .abc-score {
     display: flex;
@@ -3035,7 +3198,10 @@ html.hero-lock .page-hero.has-hero-image.is-hero-ready {
 .abc-score .abcjs-title {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
     font-weight: 700;
-    font-size: 24;
+    /* 27 就是 abcjs 在 scale=1 下的默认标题字号（实测 27px）；原来这里写成无单位的 24，
+       是无效声明被浏览器丢掉了。写实了以后和简谱标题锁在一起：简谱那侧见
+       Layout.astro 的 JIANPU_TITLE_SIZE（同为 27）→ 两种记谱法切换时标题一样大。 */
+    font-size: 27px;
 }
 .abc-score .abcjs-composer {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
@@ -3049,4 +3215,160 @@ html.hero-lock .page-hero.has-hero-image.is-hero-ready {
     color: var(--on-primary);
     fill: var(--on-primary);
     -webkit-text-fill-color: var(--on-primary);
+}
+
+/* ==========================================================================
+   🎼 五线谱 / 简谱切换（astro.config.mjs 的 remarkScoreSwitch 产出 .score-switch）
+   作者把 ```abc 与 ```jianpu 两个围栏**紧贴着**写，就合成为一个可切换组件；
+   外框沿用代码块那套（1px 边 + 圆角 + 卡片底），右上角放一个 segmented 小控件。
+   ⚠️ 必须排在这两块自己的 CSS **之后**：`.score-switch > .jianpu-score { margin: 0 }`
+      与 `.typography-body .jianpu-score` 特异性相同，靠靠后来赢。
+   ⚠️ 两块乐谱的 CSS 带 display:flex，会盖掉 `hidden` 属性 → 隐藏必须显式压住（见下面 [hidden] 那条）。
+   ========================================================================== */
+.score-switch {
+    /* 内边距写成变量：交叉淡化时旧块要绝对定位，靠这几个变量跟内边距对齐 */
+    --score-switch-pad-top: 0.55rem;
+    --score-switch-pad-bottom: 0.35rem;
+    --score-switch-pad-x: 0.5rem;
+    position: relative;
+    margin: 1.5rem auto;
+    padding: var(--score-switch-pad-top) var(--score-switch-pad-x) var(--score-switch-pad-bottom);
+    border: 1px solid var(--item-border);
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    /* 和代码块 <pre> 一样：让右上角的工具栏被圆角自然裁掉（工具栏自己就是方的） */
+    overflow: hidden;
+}
+.score-switch [hidden] {
+    display: none !important;
+}
+/* 单独一种记谱法：同样的外框，但没有右上角控件 → 内边距上下对称 */
+.score-switch.is-single {
+    --score-switch-pad-top: 0.35rem;
+    --score-switch-pad-bottom: 0.35rem;
+}
+.score-switch > .abc-score,
+.score-switch > .jianpu-score {
+    margin: 0;
+    /* 切换记谱法时的交叉淡化时长（与 Layout.astro 的 FADE_MS 一致） */
+    transition: opacity 160ms ease;
+}
+/* 旧块：脱离文档流、贴在外框内边距以内 → 与新块完全重合（叠在上面，因为它是定位元素）
+   ⚠️ 必须 !important：abcjs 给 .abc-score 写了内联 style
+      （`display:inline-block; position:relative; width:100%; padding-bottom:23.4%; overflow:hidden`），
+      内联样式优先级高于普通作者规则 —— 只有作者 !important 能盖住它。
+   ⚠️ width 要一起改成 auto：那条内联 width:100% 是「相对包含块」的，会跟 left/right 打架（右边会多出内边距的宽度）。 */
+.score-switch > .abc-score.is-layered,
+.score-switch > .jianpu-score.is-layered {
+    position: absolute !important;
+    width: auto !important;
+    top: var(--score-switch-pad-top);
+    left: var(--score-switch-pad-x);
+    right: var(--score-switch-pad-x);
+}
+.score-switch > .is-enter,
+.score-switch > .is-exit {
+    opacity: 0;
+}
+/* 交叉淡化期间：裁掉溢出（旧块可能比新块高），外框高度从旧块平滑走到新块 */
+.score-switch.is-crossfading {
+    overflow: hidden;
+    transition: height 160ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+    .score-switch > .abc-score,
+    .score-switch > .jianpu-score,
+    .score-lang > span,
+    .score-switch.is-crossfading,
+    .score-switch.is-crossfading .score-lang {
+        transition: none;
+    }
+}
+/* 未渲染时的源码兜底：已经在外框里了，不要再套一层边框/底色 */
+.score-switch .abc-source,
+.score-switch .jianpu-source {
+    border: 0 !important;
+    background: transparent !important;
+}
+/* 右上角工具栏：[当前记谱法] + [转换按钮] —— 形式完全照代码块的 .code-toolbar / .code-copy-btn：
+   贴死右上角（top/right: 0）、只圆左下角、半透明底 + 左/下两条边；高度 28px、图标 14px、hover 变色。
+   底色用中性半透明灰（而不是代码块的 rgba(255,255,255,.05)）——代码块是深色底，谱面外框是卡片色，亮/暗主题都吃这个灰。 */
+.score-toolbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    /* 29 = .score-convert-btn 的 28 + 1px 底边：只有标签、没按钮的（单谱外框）也保持同高 */
+    min-height: 29px;
+    background-color: rgba(127, 127, 127, 0.07);
+    border-left: 1px solid var(--item-border);
+    border-bottom: 1px solid var(--item-border);
+    border-bottom-left-radius: var(--card-radius);
+}
+.score-lang {
+    /* 当前显示的那个名字留在文档流里 → 标签宽度就按它收缩（❌不要用 grid 叠放：那会按较长的那个名字留一大段空白）；
+       另一个名字绝对定位叠在上面淡出/淡入，不参与布局 */
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-sub);
+    padding: 0 10px;
+    user-select: none;
+    /* ⚠️ 宽度做过渡时，容器会有一段时间比文字窄 → flex 子项被压窄就会**换行** → 标签高度变成两行 = 切换时跳一下。
+       nowrap 让文字保持一行（溢出），再用 overflow:hidden 把它裁掉 → 高度恒定，只有宽度在动。 */
+    white-space: nowrap;
+    overflow: hidden;
+}
+.score-lang > span {
+    /* 时长与 .score-switch > …-score 的交叉淡化、以及 Layout.astro 的 FADE_MS 一致 */
+    transition: opacity 160ms ease;
+}
+.score-lang > span[data-active='false'] {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+}
+/* 切换时标签宽度也一起过渡（否则 「Numbered notation → Staff」会瞬间缩掉 87px） */
+.score-switch.is-crossfading .score-lang {
+    transition: width 160ms ease;
+}
+.score-convert-btn {
+    width: 32px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-sub);
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--item-border);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+    .score-convert-btn:hover {
+        color: var(--text-main);
+    }
+}
+.score-convert-btn svg {
+    /* 只想定尺寸：粗细/颜色交给图标自身的属性（viewBox 48 + stroke-width 4.8 + currentColor），
+       这样以后换图只要改 astro.config.mjs 里那个常量 ↙ */
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+}
+@media print {
+    .score-toolbar {
+        display: none;
+    }
 }

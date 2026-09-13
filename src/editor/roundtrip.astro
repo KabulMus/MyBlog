@@ -1,0 +1,91 @@
+---
+// 无损往返自检页（dev-only，与 /admin 一起注入）
+// 对每篇文章做「解析 → 未编辑 → 序列化」，逐字比对；不一致的给出第一处差异。
+// 这是 M1 的安全底线：只要这里全绿，编辑 abc/简谱/短代码的文章就不会被改写。
+import '../styles/main.css';
+import './editor.css';
+---
+
+<html lang="zh-CN" data-pagefind-ignore>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>Markdown 往返自检</title>
+	</head>
+	<body class="editor-body editor-body--scroll">
+		<header class="editor-bar">
+			<div class="editor-bar-left">
+				<span class="editor-brand">Markdown 往返自检</span>
+			</div>
+			<div class="editor-bar-right">
+				<span id="summary" class="editor-meta">运行中…</span>
+				<a class="editor-icon-btn" href="/admin" aria-label="回到编辑器" title="回到编辑器">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+				</a>
+			</div>
+		</header>
+		<main class="editor-report">
+			<div id="report"></div>
+		</main>
+
+		<script>
+			import { Editor } from '@tiptap/core';
+			import StarterKit from '@tiptap/starter-kit';
+			import { Markdown } from 'tiptap-markdown';
+			import { RawBlock, roundTrip, loadBody, dumpBody, splitBody } from './md/markdown-io.js';
+
+			type Post = { path: string; lang: string; draft: boolean; title: string };
+
+			const host = new Editor({
+				element: document.createElement('div'),
+				extensions: [
+					StarterKit.configure({ codeBlock: false }),
+					Markdown.configure({ html: false, linkify: false, breaks: false, tightLists: true }),
+					RawBlock,
+				],
+				content: '',
+			});
+
+			// 调试钩子：控制台里可以 __rt.load / __rt.dump 手动对比某一段
+			(window as unknown as { __rt: unknown }).__rt = { editor: host, loadBody, dumpBody, splitBody };
+
+			async function run() {
+				const report = document.getElementById('report') as HTMLDivElement;
+				const summary = document.getElementById('summary') as HTMLSpanElement;
+				const posts = (await (await fetch('/__editor/api/posts')).json()) as Post[];
+				let pass = 0;
+				const fails: string[] = [];
+				for (const p of posts) {
+					const res = await fetch('/__editor/api/post?path=' + encodeURIComponent(p.path));
+					if (!res.ok) {
+						fails.push(`<li><b>${p.path}</b>：读取失败 HTTP ${res.status}</li>`);
+						continue;
+					}
+					const detail = (await res.json()) as { body: string };
+					const r = roundTrip(host, detail.body);
+					if (r.same) pass++;
+					else {
+						fails.push(
+							`<li><b>${p.path}</b>（${p.lang}${p.draft ? ' 草稿' : ''}）第 ${r.diff?.line} 行：` +
+								`<div class="diff"><div class="diff-before">- ${escapeHtml(r.diff?.before ?? '')}</div>` +
+								`<div class="diff-after">+ ${escapeHtml(r.diff?.after ?? '')}</div></div></li>`
+						);
+					}
+				}
+				summary.textContent = `${pass} / ${posts.length} 篇逐字一致`;
+				report.innerHTML = fails.length
+					? `<h2>不一致 ${fails.length} 篇</h2><ul class="report-list">${fails.join('')}</ul>`
+					: '<h2 class="report-ok">全部逐字一致 ✅ 编辑器不会改写任何未编辑的内容</h2>';
+			}
+
+			function escapeHtml(s: string) {
+				return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+			}
+
+			run().catch((err) => {
+				(document.getElementById('summary') as HTMLSpanElement).textContent = '出错：' + String(err?.message ?? err);
+			});
+		</script>
+	</body>
+</html>
