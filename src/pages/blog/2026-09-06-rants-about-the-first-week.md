@@ -62,5 +62,3 @@ time: 4
 我只能去相信相信的力量了...希望下周能放一天。。。
 
 要求已经很低了😭让俺睡个懒觉吧
-
-![asdf](/images/2026-09-06-rants-about-the-first-week.webp)

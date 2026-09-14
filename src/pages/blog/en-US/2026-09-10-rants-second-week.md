@@ -1,6 +1,6 @@
 ---
 layout: '../../../layouts/Layout.astro'
-title: 'Still rants'
+title: 'Still some rants'
 date: '2026-09-10T21:37'
 draft: false
 ai: true

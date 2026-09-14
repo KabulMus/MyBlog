@@ -3,7 +3,6 @@ layout: '../../../layouts/Layout.astro'
 title: 'In Memoriam'
 date: '2026-09-09T12:00'
 draft: false
-ai: true
 category: ['essays']
 tags: ['note']
 warning: ['politics']
