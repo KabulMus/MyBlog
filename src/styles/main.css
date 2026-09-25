@@ -1069,7 +1069,7 @@ html[lang='zh-CN'] .typography-body i {
     background: var(--item-border);
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
     font-size: 0.9em;
 }
 /* ==========================================================================
@@ -1111,7 +1111,7 @@ html[lang='zh-CN'] .typography-body i {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
     font-size: 0.78rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -1156,7 +1156,8 @@ html[lang='zh-CN'] .typography-body i {
     overflow-x: auto !important;        
     padding: 28px 32px;       /* ⚡️ 把顶部 Padding 稍微加大（由 18px 变 28px），防止第一行代码和语言标签撞车 */
     
-    font-family: 'JetBrains Mono', 'Fira Code', 'Inter Var', monospace;
+    /* 中文回落思源黑体（Noto Sans SC）：不写的话代码里的汉字会掉到系统默认等宽中文（Windows 上基本就是宋体） */
+    font-family: 'JetBrains Mono', 'Fira Code', 'Inter Var', 'Noto Sans SC', monospace;
     font-size: 0.92rem;
     line-height: 1.6;
     color: #e3e3e6;

@@ -2789,12 +2789,13 @@ function getLangSwitchHref(pathname: string) {
 			};
 
 			// 逐字收集：每个字符拿到自己的盒子和所属文本节点，顺便按行分好组
-			const collectLines = (block, fontSize) => {
+			const collectLines = (block: Element, fontSize: number) => {
 				const lines = [];
 				const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
 				let node;
 				while ((node = walker.nextNode())) {
 					const text = node.nodeValue;
+					if (!text) continue;
 					for (let i = 0; i < text.length; i++) {
 						const ch = text[i];
 						if (ch === ' ' || ch === '\t' || ch === '\n') continue;
