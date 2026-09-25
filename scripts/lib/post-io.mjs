@@ -1,6 +1,6 @@
 // 文章仓库读写（CLI 脚本与本地编辑器 /admin 共用）
 // ⚠️ 只在 Node 侧使用（编辑器路由只在 dev 下挂载，见 astro.config.mjs）。
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 
 const BLOG_ROOT = join('src', 'pages', 'blog');
@@ -14,7 +14,7 @@ export const POST_DIRS = [
 ];
 
 /** frontmatter 字段顺序（写回时保持一致，避免 YAML 抖动） */
-export const FM_ORDER = ['layout', 'title', 'date', 'draft', 'ai', 'category', 'tags', 'warning'];
+export const FM_ORDER = ['layout', 'title', 'date', 'image', 'draft', 'ai', 'category', 'tags', 'warning'];
 
 const toPosix = (p) => p.split(sep).join('/');
 
@@ -34,6 +34,17 @@ export function postUrl(relPath) {
   return '/' + posix.replace(/^src\/pages\//, '').replace(/\.md$/, '');
 }
 
+/**
+ * YAML 单引号字符串的转义规则：里面的撇号**写两遍**（`''`）。
+ * ⚠️ 以前这里写的是 `\'`（反斜杠转义）—— 那是**非法 YAML**：只有下面那个「极简解析」认，
+ *    js-yaml（Astro 解析 frontmatter 用的）会直接报 `bad indentation of a mapping entry`，
+ *    整篇路由 500。标题里带一个撇号就能踩到（踩过）。
+ */
+const quoteYaml = (v) => `'${String(v).replace(/'/g, "''")}'`;
+
+/** 反向：剥掉外层引号，再把 `''` 还原成 `'`（顺手认老的 `\'` 写法，历史文件还能读正） */
+const unquoteYaml = (s) => s.replace(/^['"]|['"]$/g, '').replace(/''/g, "'").replace(/\\'/g, "'");
+
 function parseScalar(s) {
   if (s === '') return '';
   if (s === 'true') return true;
@@ -44,9 +55,9 @@ function parseScalar(s) {
       .split(',')
       .map((x) => x.trim())
       .filter(Boolean)
-      .map((x) => x.replace(/^['"]|['"]$/g, ''));
+      .map((x) => unquoteYaml(x));
   }
-  return s.replace(/^['"]|['"]$/g, '');
+  return unquoteYaml(s);
 }
 
 /**
@@ -81,10 +92,10 @@ export function serializeFrontmatter(data) {
   const keys = [...FM_ORDER.filter((k) => k in data), ...Object.keys(data).filter((k) => !FM_ORDER.includes(k))];
   const out = keys.map((key) => {
     const v = data[key];
-    if (Array.isArray(v)) return `${key}: [${v.map((x) => `'${String(x)}'`).join(', ')}]`;
+    if (Array.isArray(v)) return `${key}: [${v.map((x) => quoteYaml(x)).join(', ')}]`;
     if (typeof v === 'boolean') return `${key}: ${v}`;
     if (v === '' || v === null || v === undefined) return null;
-    return `${key}: '${String(v).replace(/'/g, "\\'")}'`;
+    return `${key}: ${quoteYaml(v)}`;
   });
   return '---\n' + out.filter(Boolean).join('\n') + '\n---\n';
 }
@@ -102,6 +113,8 @@ function readMeta(relPath) {
     tags: Array.isArray(data.tags) ? data.tags : data.tags ? [data.tags] : [],
     warning: Array.isArray(data.warning) ? data.warning : data.warning ? [data.warning] : [],
     ai: data.ai === true || data.ai === 'true',
+    // frontmatter 里的草稿标记（跟目录级那个 `draft` 不是一回事：正文目录里也可能写 draft: true）
+    isDraft: data.draft === true || data.draft === 'true',
     hasFrontmatter: undefined,
     bytes: st.size,
     mtime: st.mtimeMs,
@@ -122,6 +135,17 @@ export function listPosts() {
       }
     }
   }
+  /**
+   * 文章序号（跟站点 Layout.astro 那套完全一致）：**同语言**、在正文目录里且 frontmatter 不是草稿、
+   * 按日期正序排 ⇒ 1..N。站点文章页标题下面那个 `#17` 就是这个数，编辑器下拉行首显示的必须是同一个，
+   * 不能按编辑器自己的展示顺序另编一套。日期相同的用文件名兜底，保证每次读出来顺序一致。
+   */
+  const rank = { zh: 0, en: 0 };
+  const numbered = posts
+    .filter((p) => !p.draft && !p.isDraft)
+    .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime() || a.file.localeCompare(b.file));
+  for (const p of numbered) p.index = ++rank[p.lang];
+
   return posts.sort((a, b) => String(b.date).localeCompare(String(a.date)) || a.file.localeCompare(b.file));
 }
 
@@ -149,6 +173,18 @@ export function createPost(relPath, content, overwrite = false) {
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, content, 'utf8');
   return { path: toPosix(relPath), bytes: Buffer.byteLength(content, 'utf8') };
+}
+
+/**
+ * 删掉一篇原文。
+ * ⚠️ 只删传入的这一个文件：中英是两份独立文件，删哪份就只动哪份（`resolvePostPath`
+ *    已经保证范围锁死在 src/pages/blog 下的 .md）；要不要先确认由调用方负责。
+ */
+export function deletePost(relPath) {
+  const abs = resolvePostPath(relPath);
+  if (!existsSync(abs)) throw new Error('文件不存在：' + relPath);
+  unlinkSync(abs);
+  return { path: toPosix(relPath) };
 }
 
 const IMAGE_DIR = join('public', 'images');

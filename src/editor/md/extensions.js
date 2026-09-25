@@ -6,7 +6,7 @@
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from 'tiptap-markdown';
 import { RawBlock } from './markdown-io.js';
-import { FootnoteDefGuard, FootnoteRef, FootnoteRenumber, HtmlInline, HtmlInlineRt } from './inline-extensions.js';
+import { FootnoteDefGuard, FootnoteRef, FootnoteRenumber, HtmlInline, HtmlInlineRt, PunctFullWidth } from './inline-extensions.js';
 import { ListTaskItem, ListTaskList } from './list-extensions.js';
 
 export const editorExtensions = [
@@ -27,6 +27,8 @@ export const editorExtensions = [
 	FootnoteDefGuard,
 	// 自动编号：按正文里引用的出现顺序重排 [^N]（编辑器里就不会出现 1-3-2 这种编号）
 	FootnoteRenumber,
+	// 开明式标点：句末点号（。！？）全角，跟站点渲染层一致（只挂装饰，不改文档内容）
+	PunctFullWidth,
 	// 任务列表：自己接了一层序列化（项间不插空行）
 	ListTaskList,
 	ListTaskItem.configure({ nested: true }),

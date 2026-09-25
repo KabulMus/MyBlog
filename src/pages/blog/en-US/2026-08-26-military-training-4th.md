@@ -33,11 +33,11 @@ But hey, you two being buddies is fine—why drag our two companies into a const
 
 ---
 
-> 对面的，来一个！ 来一个，对面的！  
-> *Hey over there! Sing us one! Sing us one, over there!*  
-> 让你唱，你就唱！ 扭扭捏捏不像样！  
-> *Told to sing, then sing! Stop being all shy and awkward!*  
-> 像什么？**大姑娘**！ 像什么？**小绵羊**！  
-> *Acting like what? A **bashful girl**! Like what? A **little lamb**!*
+> 对面的，来一个！来一个，对面的！  
+ **Hey over there! Sing us one! Sing us one, over there!*  
+> 让你唱，你就唱！扭扭捏捏不像样！  
+ **Told to sing, then sing! Stop being all shy and awkward!*  
+> 像什么？**大姑娘**！像什么？**小绵羊**！  
+ **Acting like what? A **bashful girl**! Like what? A **little lamb**!*
 
 The song battle lol...🤣

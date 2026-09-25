@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import sitemap from '@astrojs/sitemap';
+import { SENTENCE_END, BOUNDARY, keepsFullWidth } from './src/lib/punct-width.mjs';
 
 // ⚡️ 智能引号状态机（与 Layout.astro 的 smartQuotes 完全同一套逻辑，等长替换 1:1）。
 // 不依赖任何硬编码单词列表：只靠结构（前后字符 + 是否存在配对的闭引号）判断开引号 / 闭引号 / 撇号。
@@ -124,6 +125,79 @@ function rehypeSmartQuotesBody() {
         offset += len;
       });
     });
+  };
+}
+
+// ⚡️ 开明式标点：句末点号（。！？）只在「真的收尾」时占全角 —— 连用时（！！！）只有最后一个占，
+// 后面紧跟闭标号时（（？）、他说「真吗？」）也压半宽；其余全角标点（，、；：括号书名号直角引号）
+// 继续吃 body 的 halt 半宽。判定规则两边共用 src/lib/punct-width.mjs，编辑器的装饰读的是同一份。
+// halt 是字体特性、只能整个元素一起开关，没法按字符选，所以只能把要全角的点号单独包一层，
+// 用 .punct-full 把继承来的半宽撒销掉。
+// ⚠️ 判定必须**跨行内元素**看邻居：`（依旧**周！深！**）` 那个感叹号在 <strong> 里，按单个文本节点
+//    看它就是「节点末尾」（看不到后面的闭标号）⇒ 会被误判成全角。所以先把一整块的文字摊平再判。
+// ⚠️ 必须排在 rehypeSmartQuotesBody **之后**：引号状态机是按文本节点长度等长写回的，
+//    先切碎节点会让它的配对位置对不上。
+// ⚠️ 不加码 blockquote/li/figcaption 之类的例外：断行规则和文本内容都不受 span 影响。
+function rehypePunctFullWidth() {
+  const PROTECTED = new Set(['code', 'pre', 'kbd', 'samp', 'script', 'style', 'math', 'annotation']);
+  return (tree) => {
+    // 第一遍：按文档顺序把可见文字摊平成一条字符串（与逐字符对应的位置表并行维护）。
+    // 受保护的整块、块级元素边界、硬换行（<br>）都插一个 BOUNDARY 哨兵：它既不是句末点号也
+    // 不是闭标号，于是「段末的点号」和「后面跟着行内代码或换行的点号」都会诚实地按
+    // 「后面没东西」处理 —— 那就是行尾，该压半宽。
+    let text = '';
+    const cells = [];
+    (function collect(node) {
+      if (PROTECTED.has(node.tagName)) { text += BOUNDARY; cells.push(null); return; }
+      const cls = node.properties && node.properties.className;
+      if (Array.isArray(cls) && cls.includes('katex')) { text += BOUNDARY; cells.push(null); return; }
+      if (node.tagName === 'br') { text += BOUNDARY; cells.push(null); return; } // 硬换行：这里就是行尾
+      if (node.type === 'text') {
+        for (let i = 0; i < node.value.length; i++) { text += node.value[i]; cells.push({ node, i }); }
+        return;
+      }
+      const children = node.children;
+      if (!children) return;
+      const isBlock = BLOCK_TAGS.has(node.tagName);
+      if (isBlock) { text += BOUNDARY; cells.push(null); }
+      for (const child of children) collect(child);
+      if (isBlock) { text += BOUNDARY; cells.push(null); }
+    })(tree);
+
+    // 第二遍：判完再把命中的文本节点按字符切开
+    const hits = new Map();
+    for (let k = 0; k < text.length; k++) {
+      const cell = cells[k];
+      if (!cell || !SENTENCE_END.has(text[k]) || !keepsFullWidth(text, k)) continue;
+      if (!hits.has(cell.node)) hits.set(cell.node, new Set());
+      hits.get(cell.node).add(cell.i);
+    }
+    if (!hits.size) return;
+
+    (function apply(node) {
+      const children = node.children;
+      if (!children) return;
+      const out = [];
+      for (const child of children) {
+        if (child.type !== 'text') { apply(child); out.push(child); continue; }
+        const hit = hits.get(child);
+        if (!hit || !hit.size) { out.push(child); continue; }
+        let buf = '';
+        const flush = () => { if (buf) { out.push({ type: 'text', value: buf }); buf = ''; } };
+        for (let i = 0; i < child.value.length; i++) {
+          if (!hit.has(i)) { buf += child.value[i]; continue; }
+          flush();
+          out.push({
+            type: 'element',
+            tagName: 'span',
+            properties: { className: ['punct-full'] },
+            children: [{ type: 'text', value: child.value[i] }],
+          });
+        }
+        flush();
+      }
+      node.children = out;
+    })(tree);
   };
 }
 
@@ -559,6 +633,12 @@ function blogEditorApi() {
             const body = await readBody(req);
             return send(200, io.createPost(body.path, body.content, !!body.overwrite));
           }
+          // 删除一篇原文（只删这一个文件，中英各一份互不影响）
+          if (req.method === 'DELETE' && route === '/post') {
+            const body = await readBody(req);
+            if (!body.path) return send(400, { error: '缺少 path 参数' });
+            return send(200, io.deletePost(body.path));
+          }
           // 图片上传：body = 原始二进制，文件名（含扩展名）走查询参数 `name`
           if (req.method === 'POST' && route === '/image') {
             const buf = await readBinary(req);
@@ -587,7 +667,7 @@ export default defineConfig({
   site: 'https://blog.ethan929.com',
   markdown: {
     remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkJianpu, remarkScoreSwitch, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 五线谱 + 简谱 + 「紧贴的两种记谱法合成切换器」+ 识别 $ $$ 语法
-    rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody], // ⚡️ KaTeX 公式 + 正文智能引号（统一状态机）
+    rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody, rehypePunctFullWidth], // ⚡️ KaTeX 公式 + 正文智能引号（统一状态机）+ 开明式标点（句末点号全角）
     // ⚡️ 关闭内置 smartypants 的引号转换，改由 rehypeSmartQuotesBody 统一接管；
     //    保留破折号/省略号；backticks 也关闭（否则正文两个单引号 '' 会被合并成右双引号 ”）
     smartypants: {

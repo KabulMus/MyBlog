@@ -15,17 +15,36 @@
 :root {
 	--ed-font-ui: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
 	--ed-font-mono: 'JetBrains Mono', 'Fira Code', 'Inter Var', monospace;
+	/* 最底层那个「壳」的底色：把正文色掺一点进页面底 ⇒ 亮色下比页面灰一档、暗色下比页面亮一档。
+	   编辑区用的是 --bg-light（跟预览里的真页面同一个底色），壳跟它拉开一截才看得出两张面板的边界。 */
+	--ed-bg-shell: color-mix(in srgb, var(--text-main) 8%, var(--bg-light));
 }
 
 .editor-body {
+	/* ⚠️ 手机上高度不能写 100vh：那是「地址栏收起时」那一档（最大视口），地址栏一显示，
+	   壳的底就被推到屏幕外吃掉一截。dvh 跟着实际看得见的那块走。
+	   最外面那条 var 是 JS 写的「可视视口高度」（见 index.astro）：键盘弹起时布局视口不缩、
+	   只有可视视口缩，那一档 dvh 反应不过来，得听 JS 的；JS 没跑或拿不到就退回 dvh。 */
 	height: 100vh;
+	height: 100dvh;
+	height: var(--ed-vv-h, 100dvh);
 	margin: 0;
 	padding: 0;
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	background: var(--bg-light);
+	background: var(--ed-bg-shell);
 	color: var(--text-main);
+}
+
+/* ⚠️ 表单控件（input / button / select / textarea）**拿不到** main.css 里 body 上那套
+   `font-feature-settings: "liga" 1, "calt" 1, "halt" 1`：UA 给控件的样式里有 `font` 简写，
+   而 font 简写会把 font-feature-settings 重置成 normal ⇒ 输入框里打出来的中文标点不会半宽
+   （halt 没了），跟站点正文/标签的字距对不上。这里显式补回来，控件和它们的内部文本（option…）都吃到。
+   ⚠️ 站点那边（main.css 的 `button, input, select, textarea { font-family: inherit }`）同一个坑还在，
+      只是站点控件里没写过中文标点，所以一直没露出来。 */
+.editor-body :is(input, button, select, textarea) {
+	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
 }
 
 /* ── 顶栏（照抄 .navbar 的半透明 + 模糊语言）────────── */
@@ -33,7 +52,10 @@
 	flex: 0 0 auto;
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	/* 窄了直接换行：三组（品牌 / 下拉 / 按钮）不再互相压字，手机上写文也顺 */
+	flex-wrap: wrap;
+	column-gap: 12px;
+	row-gap: 8px;
 	padding: 8px 12px;
 	background: var(--navbar-bg);
 	backdrop-filter: blur(12px);
@@ -52,7 +74,11 @@
 /* ⚠️ 这里必须开 flex：以前没开，块级的 .editor-select 会把「新建」按钮挤到**下一行**去
    （用户看到的就是那个按钮不在下拉后面）。 */
 .editor-bar-center {
-	flex: 1 1 auto;
+	/* 基准 240px：装得下就让下拉占满剩下的宽，装不下就整组换到下一行（比把下拉挤成 44px 强）。
+	   ⚠️ 这个值同时是**换行阈值**（换行按基准宽判，不看压缩后的宽）：需要
+	   「左边那组 + 列距 + 基准」排得下，左边那枚亮暗按钮才不会自己占一行。
+	   240 是 320px 宽（可用 296px）能同行的上限（255）下再留点余量留出来的。 */
+	flex: 1 1 240px;
 	min-width: 0;
 	display: flex;
 	align-items: center;
@@ -62,9 +88,11 @@
 /* 下拉吃掉剩余宽度（长标题靠 ellipsis 收），新建按钮保持自己的宽度。
    ⚠️ 必须 flex: 0 0 auto：flex 项默认能压缩，上面那个下拉的固有宽度一大，按钮就被挤到 48px
    ——「新建」两个字换行，按钮变成 45px 高（跟右侧那排 27px 的按钮完全不是一个样子）。 */
-.editor-bar-center > .editor-select { flex: 1 1 auto; min-width: 0; }
+.editor-bar-center > .editor-post-trigger { flex: 1 1 auto; min-width: 0; }
 .editor-bar-center > .editor-btn { flex: 0 0 auto; white-space: nowrap; }
-.editor-bar-right { flex: 0 0 auto; justify-content: flex-end; }
+/* ⚠️ flex-shrink 不能是 0：窄到一行装不下这排按钮时，得允许它缩窄（内部 flex-wrap 换行），
+   否则它会直接溢出到顶栏外面去。 */
+.editor-bar-right { flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; }
 
 .editor-brand {
 	font-size: 0.9rem;
@@ -88,17 +116,190 @@
 	transition: border-color 0.2s ease;
 }
 
-.editor-select:hover { border-color: var(--text-sub); }
+/* hover 直接转主色（以前是压到 --text-sub 中灰，跟旁边那枚已经变蓝的箭头不一致）——
+   于是 hover 和 focus-visible 同色，这是有意为之：全部可点/可输入的框都是「碰到就蓝」。 */
+.editor-select:hover { border-color: var(--primary-blue); }
 .editor-select:focus-visible { border-color: var(--primary-blue); }
 
+/* ── 顶栏的「文章下拉」：自绘（触发器 + 菜单）────────────────────────
+   不用原生 select / base-select 的原因见 index.astro 顶栏那段注释：手机上一串坑。
+   注意：这个类**不是** .editor-select —— 那个还是给卡片里的小下拉（列对齐 / 图片尺寸）用的。 */
+.editor-post-trigger {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 620px;
+	padding: 5px 10px;
+	/* ⚠️ 这里**不要**写 font-family：它旁边那几枚按钮（新建 / 源码 / 保存…）都是继承 body 的
+	   Inter Var，只有它曾经套了 --ed-font-ui（Encode Sans SC，那是**只给 chips 用**的，
+	   见文件开头那段约定）⇒ 一排控件里就它一个长相不一样。 */
+	font-size: 0.82rem;
+	font-weight: 500;
+	color: var(--text-main);
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	outline: none;
+	cursor: pointer;
+	transition: border-color 0.2s ease;
+}
+
+.editor-post-trigger:hover,
+.editor-post-trigger[aria-expanded='true'] { border-color: var(--primary-blue); }
+
+.editor-post-label {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-align: left;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 箭头（自己画的 svg）：常态灰、hover / 展开变主色、展开时翻个面 ——
+   跟工具条那几个下拉一个手感 */
+.editor-post-arrow {
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	color: var(--text-sub);
+	transition: rotate 0.2s ease, color 0.2s ease;
+}
+
+.editor-post-trigger:hover .editor-post-arrow,
+.editor-post-trigger[aria-expanded='true'] .editor-post-arrow { color: var(--primary-blue); }
+.editor-post-trigger[aria-expanded='true'] .editor-post-arrow { rotate: 180deg; }
+
+/* 菜单本体：借用 .editor-menu 那套（fixed + card 外观 + 进出场），这里只补三列网格。
+   ⚠️ 三列写在菜单（一个 grid）上，不是每组一个 —— 这样「已发布」和「草稿」两组的标题列也对齐。 */
+.editor-post-menu {
+	display: grid;
+	grid-template-columns: max-content 1fr 1fr;
+	max-height: min(340px, 60vh);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 4px;
+}
+
+/* 分组分隔线：跨满三列，只占 1px 高（不写组标题，但得看得出这是另一组） */
+.editor-post-menu .pm-sep {
+	grid-column: 1 / -1;
+	margin: 4px 6px;
+	border-top: 1px solid var(--item-border);
+}
+
+.editor-post-menu .pm-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.45em;
+	padding: 6px 10px 4px;
+	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-size: 0.76rem;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-sub);
+	white-space: nowrap;
+}
+
+/* 宽度不够（菜单被压窄）时只留序号：日期那一段自己画的菜单里一行 CSS 就能藏，
+   不像 base-select 那样受「option 固有宽度看文本」的牵制。阈值跟菜单宽 = min(680, 视口-16) 对齐。 */
+@media (max-width: 700px) {
+	.editor-post-menu .pm-date { display: none; }
+}
+
+.editor-post-menu .pm-item {
+	display: block;
+	width: 100%;
+	min-width: 0;
+	padding: 6px 10px 4px;
+	font-size: 0.82rem;
+	font-weight: 500;
+	color: var(--text-main);
+	text-align: left;
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	cursor: pointer;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.editor-post-menu .pm-item:hover,
+.editor-post-menu .pm-item:focus-visible {
+	background: var(--color-blue-bg);
+	outline: none;
+}
+
+/* 当前那篇：主色 + 加粗（跟菜单里「当前块类型」同一套待遇） */
+.editor-post-menu .pm-item[aria-selected='true'] {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	border-color: var(--color-blue-border);
+	font-weight: 600;
+}
+
+/* 缺另一语言时的占位格 */
+.editor-post-menu .pm-item.is-missing {
+	color: var(--text-sub);
+	opacity: 0.55;
+	pointer-events: none;
+}
+
+.editor-post-menu .pm-empty {
+	grid-column: 1 / -1;
+	padding: 8px 10px;
+	color: var(--text-sub);
+}
+
 .editor-meta {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	font-size: 0.74rem;
 	font-weight: 500;
 	color: var(--text-sub);
 	white-space: nowrap;
 }
 
-/* 图标按钮 = 站点的圆形悬浮按钮语言（.article-back-btn / .theme-toggle-btn） */
+/* 语言徽标（中 / En 两枚自绘图标）：viewBox 48 + 描边 4，跟工具条那套同一档线宽 */
+.editor-meta .meta-lang { display: inline-flex; align-items: center; }
+.editor-meta .meta-lang svg { display: block; width: 14px; height: 14px; }
+
+/* AI 译：跟「标记」里那枚 pill 同一套图标 + 文字，但颜色跟旁边那两项一样（副文本色），
+   不再单独用紫色 —— 顶栏那行小字要的是一整条一致的灰。
+   描边 2：这个图标是 viewBox 24 的，2/24 = 4/48 ⇒ 跟语言图标那两枚一样粗。 */
+.editor-meta .meta-ai { display: inline-flex; align-items: center; gap: 3px; }
+.editor-meta .meta-ai svg {
+	display: block;
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+/* 文件大小：等宽（JetBrains Mono）+ 等宽数字 ⇒ 换一篇文章时那串数字不会左右跳 */
+.editor-meta .meta-size {
+	font-family: var(--ed-font-mono);
+	font-variant-numeric: tabular-nums;
+}
+
+/* ⚠️ 图标要跟文字一条线：居中排的是**盒子**中线，而文字墨迹（大写高）中线比盒中线高
+   ≈0.06em（Inter / JetBrains 的 ascent 都比 cap 高一截）⇒ 图标整体上提 0.06em（0.74rem 下 ≈0.7px），
+   才跟旁边的字、以及中间那两个分隔点对齐。别再改成“居中就完事”。 */
+.editor-meta svg { translate: 0 -0.06em; }
+
+/* 圆形悬浮按钮语言（.article-back-btn / .theme-toggle-btn）：现在只剩 roundtrip 那个「回到编辑器」在用，
+   顶栏那几枚统一走下面的 .editor-btn--icon（方框，跟顶栏一排对齐）。 */
 .editor-icon-btn {
 	display: inline-flex;
 	align-items: center;
@@ -135,37 +336,26 @@
 	}
 }
 
-/* 不留圆底的那一枚（顶栏左上角亮暗切换）：图标直接落在顶栏上 */
-.editor-icon-btn--plain,
-.editor-icon-btn--plain:hover {
-	width: auto;
-	height: auto;
-	padding: 0;
-	background: none;
-	border: 0;
-	border-radius: 0;
-	box-shadow: none;
-	transform: none;
-}
-
-.editor-icon-btn--plain svg { width: 19px; height: 19px; }
-
-/* 亮暗图标互斥（与站点同样的约定） */
-.editor-icon-btn .icon-sun,
-.editor-icon-btn .icon-moon {
+/* 亮暗图标互斥（与站点同样的约定）。
+   ⚠️ 选择器用共享类 `.theme-switch`，不用具体按钮类：这枚按钮有两种形态 ——
+   宽屏在顶栏里（`.editor-btn--icon`），≤560 时被 JS 搬到右下角当 FAB（`.editor-fab`），
+   图标显隐得两边都管用（见 index.astro 里的 placeThemeBtn）。 */
+.theme-switch .icon-sun,
+.theme-switch .icon-moon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 }
-.editor-icon-btn .icon-moon { display: none; }
-html[data-theme='dark'] .editor-icon-btn .icon-sun { display: none; }
-html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
+.theme-switch .icon-moon { display: none; }
+html[data-theme='dark'] .theme-switch .icon-sun { display: none; }
+html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 
 /* ── 主体：两栏（编辑 + 预览）────────────────────── */
 .editor-main {
 	flex: 1 1 auto;
 	min-height: 0;
 	display: grid;
+	/* 宽屏：编辑 + 预览两栏并排（窄屏预览收进浮层，见文件后面那两段媒体查询） */
 	grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
 	gap: 12px;
 	padding: 12px;
@@ -183,6 +373,12 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	overflow: hidden;
 }
 
+/* 编辑面板的底 = 站点页面底色（跟右边预览里的真页面一致）；
+   表单输入框、卡片仍然是 --card-bg，所以控件不会溶进底色里。
+   ⚠️ 这里必须能纵向滚：手机键盘弹起时可见区可能只有四百来像素，而表单 + 工具条就有 350 以上，
+   正文会被挤成 0 高（下面的 min-height 会拦住它）→ 装不下的那部分全靠这一条滚出来。 */
+.editor-pane--edit { background: var(--bg-light); overflow-y: auto; }
+
 .editor-pane-head {
 	flex: 0 0 auto;
 	display: flex;
@@ -196,7 +392,22 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	border-bottom: 1px solid var(--item-border);
 }
 
-.editor-pane-head > span:first-child { color: var(--text-main); }
+/* ⚠️ 「预览」两个字得写死不换行：CJK 可以在任意字间断行 ⇒ 它作为 flex 项，宽一紧张就会被压成「预 / 览」两行 */
+.editor-pane-head > span:first-child {
+	flex: 0 0 auto;
+	color: var(--text-main);
+	white-space: nowrap;
+}
+
+/* 预览栏头里那两枚（刷新 / 关闭）：还是 .editor-linkish 那套「蓝字无框」的语言，只是内容换成图标；
+   留一点内边距当点击区（图标自己只有 14px）。 */
+.editor-pane-head .editor-linkish { padding: 2px 3px; }
+
+.editor-pane-head .editor-linkish svg {
+	display: block;
+	width: 14px;
+	height: 14px;
+}
 
 .editor-hint {
 	flex: 1 1 auto;
@@ -227,14 +438,113 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	width: 100%;
 	min-height: 0;
 	border: 0;
-	background: var(--card-bg);
+	background: var(--bg-light);
 }
 
-@media (max-width: 900px) {
-	.editor-main {
-		grid-template-columns: 1fr;
-		grid-template-rows: minmax(180px, 1fr) minmax(240px, 1.4fr);
+/* 右下角的预览按钮（触屏也用得上 ⇒ 48px 圆形，跟站点那几枚浮动按钮同一套：卡片底 + 描边 + 阴影） */
+.editor-fab {
+	position: fixed;
+	right: 18px;
+	bottom: 18px;
+	z-index: 50; /* 比浮层遮罩（55）低：预览开着的时候被遮罩盖住，不会冒在卡片上 */
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	padding: 0;
+	color: var(--text-main);
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: 50%;
+	box-shadow: var(--card-shadow);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.editor-fab svg { display: block; width: 22px; height: 22px; }
+
+@media (hover: hover) and (pointer: fine) {
+	.editor-fab:hover {
+		color: var(--primary-blue);
+		box-shadow: var(--card-hover-shadow);
+		transform: scale(1.06);
 	}
+}
+
+/* 顶栏那枚亮暗切换搬到右下角时的落点：跟预览那枚同一个语言（48 圆形 + 卡片底 + 阴影），
+   叠在它上面一个（预览在 bottom: 18，它 76）。只在 ≤560 由 JS 挂上 .editor-fab，所以
+   上面那条「≥901 隐藏 .editor-fab」不会把它带走。 */
+.editor-fab--theme { bottom: 76px; }
+
+/* 宽屏：预览栏常驻在第二栏 ⇒ 右下角那枚眼睛和头里的「关闭」都用不着 */
+@media (min-width: 901px) {
+	.editor-fab { display: none; }
+	.preview-close { display: none; }
+	.editor-preview-veil { display: none; }
+}
+
+/* 窄屏（窄窗口 / 手机）：单栏；预览栏变成整屏浮层，由右下角那枚眼睛开合，遮罩和 Esc 负责关 */
+@media (max-width: 900px) {
+	.editor-main { grid-template-columns: minmax(0, 1fr); }
+
+	/* 进出场：以前只是切 display（硬切）。照 .editor-linkpop 那套补上 —— 收起态写出终点值，
+	   display 用 allow-discrete 过渡（不然收回时「啪」一下没了），进场第一帧交给 @starting-style。
+	   ⚠️ 别只写 .is-open 那一份：补间规则写在双方共有的基础态上，退出才有的补。 */
+	.editor-pane--preview {
+		position: fixed;
+		inset: 20px;
+		z-index: 60;
+		display: none;
+		opacity: 0;
+		transform: translateY(10px) scale(0.98);
+		box-shadow: var(--card-hover-shadow);
+		transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s allow-discrete;
+	}
+
+	.editor-pane--preview.is-open {
+		display: flex;
+		opacity: 1;
+		transform: none;
+	}
+
+	@starting-style {
+		.editor-pane--preview.is-open {
+			opacity: 0;
+			transform: translateY(10px) scale(0.98);
+		}
+	}
+
+	/* 遮罩跟着淡入淡出（它靠 hidden 切换，同样是 display 过渡 + 进场第一帧） */
+	.editor-preview-veil {
+		position: fixed;
+		inset: 0;
+		z-index: 55;
+		background: rgb(15 23 42 / 0.32);
+		opacity: 1;
+		transition: opacity 0.16s ease, display 0.16s allow-discrete;
+	}
+
+	.editor-preview-veil[hidden] {
+		display: none;
+		opacity: 0;
+	}
+
+	@starting-style {
+		.editor-preview-veil:not([hidden]) {
+			opacity: 0;
+		}
+	}
+}
+
+/* 手机上写文：顶栏那行「博客编辑器」没必要占着第一行，收起来让下拉能跟它同一行 */
+@media (max-width: 560px) {
+	.editor-brand { display: none; }
+	/* 品牌字一收、主题按钮又被搬到右下角（JS），这组其实空了 —— 但 0 宽的 flex 项**照样吃一个
+	   column-gap**，下拉会白白往右挪 12px（用户报的「左侧间距大」就是这个）⇒ 整组一起收掉。
+	   ⚠️ 用 `:not(:has(.theme-switch))` 判「按钮确实不在里面了」，不直接 display: none ——
+	   万一 JS 没跑（按钮还在组里），这里不能把它一起藏了。 */
+	.editor-bar-left:not(:has(.theme-switch)) { display: none; }
 }
 
 @media print {
@@ -397,6 +707,32 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 
 .md-block-mini:hover { color: var(--color-red); border-color: currentColor; }
 
+/* 图标小按钮（卡片头的「删除」）：就一个图标，不套矩形框（边框在这纯属多余）——
+   靠内边距把点击区撑到 25×21，hover 只把图标转红（底色/边框都不动）。
+   尺寸 13px（比工具条的 15px 小一号）：卡片头那排本来就只有 0.7rem 大。 */
+.md-block-mini--icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px 6px;
+	line-height: 0;
+	background: none;
+	border: 0;
+	border-radius: 0;
+}
+
+.md-block-mini--icon:hover { color: var(--color-red); }
+
+.md-block-mini--icon svg {
+	display: block;
+	width: 13px;
+	height: 13px;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
 .md-field-add { align-self: flex-start; }
 .md-field-add:hover { color: var(--primary-blue); border-color: currentColor; }
 
@@ -486,7 +822,10 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 .md-field { display: flex; align-items: center; gap: 6px; }
 
 .md-field-label {
-	flex: 0 0 84px;
+	/* ⚠️ 别给固定宽度（曾经 84px）：图片卡片那三栏都是两字标签（路径/图注/尺寸），
+	   固定 84px 时文字只占 23px，剩下那截空白就白挂在那儿，看着像输入框被推到右边去了。
+	   宽度跟着文字走（nowrap + 不伸缩），同一张卡片里的标签又都同长，输入框自然还是对齐的。 */
+	flex: 0 0 auto;
 	font-size: 0.72rem;
 	font-weight: 600;
 	color: var(--text-sub);
@@ -508,7 +847,8 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	transition: border-color 0.2s ease;
 }
 
-.md-field-input:hover { border-color: var(--text-sub); }
+/* hover 直接转主色（跟编辑区那几处框、按钮同一套；:focus 本来就是主色，于是两者同色，有意为之） */
+.md-field-input:hover { border-color: var(--primary-blue); }
 .md-field-input:focus { border-color: var(--primary-blue); }
 .md-field-input::placeholder { color: var(--text-sub); opacity: 0.7; }
 
@@ -671,7 +1011,28 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	transition: border-color 0.2s ease;
 }
 
-.md-table-cell:hover { border-color: var(--text-sub); }
+/* 卡片里的图标按钮（图片卡片「路径」那行右侧的上传）：跟同一行的输入框齐高，
+   长相跟 frontmatter 题图那枚一样（描边 + 副文本色，hover 转主色） */
+.md-field-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	padding: 3px;
+	line-height: 0;
+	color: var(--text-sub);
+	background: transparent;
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.md-field-btn:hover { color: var(--primary-blue); border-color: currentColor; }
+.md-field-btn svg { display: block; width: 15px; height: 15px; }
+
+/* hover 直接转主色（理由同 .md-field-input） */
+.md-table-cell:hover { border-color: var(--primary-blue); }
 .md-table-cell:focus { border-color: var(--primary-blue); }
 /* 表头行（分隔行之上）加粗，跟站点表头一个意思 */
 .md-table-cell[data-head='1'] { font-weight: 700; }
@@ -734,7 +1095,53 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 }
 
 .editor-btn--primary:hover { color: var(--on-primary); border-color: var(--primary-blue); opacity: 0.85; }
+
+/* 危险动作（删除）：收起态跟次按钮一样，hover 才转红 —— 跟卡片里那些「删除」小按钮同一套写法。
+   ⚠️ 必须排在 `.editor-btn:hover` 之后：两者优先级相同，靠后生效。 */
+.editor-btn--danger:hover { color: var(--color-red); border-color: currentColor; }
+
 .editor-btn:disabled { opacity: 0.45; cursor: default; pointer-events: none; }
+
+/* 图标按钮（顶栏那几枚：新建 / 源码 / 发布 / 删除 / 保存 / 打开）：外观跟次按钮完全同一套，
+   只是内容换成图标 —— 不再是圆底 + 阴影 + hover 放大的浮动按钮语言。
+   内边距四边相同 ⇒ 29×29 的正方形（15 图标 + 2×6 内边距 + 2×1 描边）；
+   圆角也统一写 6px：保存那枚本来是主按钮的 8px，同一排里两种圆角会显得不是一套。 */
+.editor-btn--icon {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 6px;
+	line-height: 0;
+	text-decoration: none;
+	border-radius: 6px;
+}
+
+.editor-btn--icon svg { display: block; width: 15px; height: 15px; }
+
+/* 表单行里那枚图标按钮（题图的「上传」）：内边距收到 5px —— 15 + 10 + 2×1 = 27px，
+   跟同一行的输入框（26px）齐平（顶栏那排是 6px，做成 29px，放这儿会顶出来一截）。 */
+.fm-row .editor-btn--icon { padding: 5px; }
+
+/* 「有未保存改动」：按钮改成图标后没地方写「保存 •」了 ⇒ 改用右上角一枚小圆点
+   （主按钮底色是主色，currentColor 正好是它上面的文字色，看得见）。 */
+.editor-btn--icon.is-dirty::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+/* 「源码」这类开关按钮的按下态：跟工具条那套 .is-on 同一个配色 */
+.editor-btn.is-on {
+	color: var(--primary-blue);
+	background: var(--color-blue-bg);
+	border-color: var(--color-blue-border);
+}
 
 .editor-linkish {
 	padding: 0;
@@ -826,8 +1233,15 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	transition: border-color 0.2s ease;
 }
 
-.fm-row input:hover { border-color: var(--text-sub); }
+/* hover 直接转主色（跟下拉框、按钮那一套保持一致） */
+.fm-row input:hover { border-color: var(--primary-blue); }
 .fm-row input:focus-visible { border-color: var(--primary-blue); }
+
+/* ⚠️ 占位符的颜色得自己写：UA 默认那色是写死的 rgb(117,117,117)，**不跟主题变量** ⇒
+   深色下它跟旁边那些跟着 --text-sub 走的字对不上（用户报的「题图」那格）。
+   跟卡片里的 .md-field-input 用同一套：副文本色 + 0.7 不透明度。
+   （`#np-slug` 那类新建弹窗里的输入框也在 .fm-row 里，一并吃到。） */
+.fm-row input::placeholder { color: var(--text-sub); opacity: 0.7; }
 
 /* 标题栏：英文用站点的 Montserrat（跟 .page-index / 站内数字/英文信息同一族），中文回落 Inter → Noto Sans SC。
    字重 600 与站点 .page-index 一致（表单控件默认是 400，正好容易被忽略）。
@@ -839,7 +1253,7 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 
 /* 日期栏：字重 400（跟普通输入框一致）；Montserrat + 等宽数字（照抄站点 .page-index 的写法：
    font-variant-numeric: tabular-nums，这样秒/分/年月对齐，不会随数字宽度跳动）。
-   另外把 Chrome 原生的日历按钮换成站点同款日历图标（stroke 4/48 那套），并给分段加选中高亮。
+   分段选中高亮保留；原生日历按钮与那枚自绘日历图标都已删（原因见下面一段）。
    ⚠️ 选 `.fm-date-wrap > input` 而不是 `#fm-date`：新建文章弹窗里的日期框也在同构 wrapper 里。 */
 .fm-date-wrap > input {
 	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
@@ -848,14 +1262,15 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 }
 
 /* ── 日期栏的日历图标 ─────────────────────────────────────────
-   踩坑记录（两次）：
+   日历图标这事前后试了三次，都已作废：
    ① 直接给 `::-webkit-calendar-picker-indicator` 设 mask + background-color 不行 —— Chrome 自带的日历背景图
       还在，两层图形叠在一起；把 background-image 清空又会让图标整个消失。
    ② 改用 wrapper 的 `::after` + mask(data URI) 也画不出来（mask 生效了但图形为空）。
-   最终做法跟站点一致：**内联 SVG**（Layout.astro 的 .date-icon 就是内联 SVG），
-   颜色用 currentColor ⇒ 跟着主题和 hover 变，几何形状直接复用站点那 8 条 path。 */
+   ③ 第三次改成内联 SVG（直接拿站点 .date-icon 那 8 条 path）。
+   最后日期弹层整个不要了 ⇒ 原生日历按钮和那枚自绘图标一起删，现在只留下面那段。 */
+/* 日期栏：不要弹层，纯键盘输入 —— 原生日历按钮直接 display: none（连点击区都不留）；
+   wrapper 留着，它只负责让 input 撑满这一行。 */
 .fm-date-wrap {
-	position: relative;
 	display: flex;
 	flex: 1 1 200px;
 	min-width: 0;
@@ -866,39 +1281,7 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	width: 100%;
 }
 
-.fm-date-icon {
-	position: absolute;
-	top: 50%;
-	right: 9px;
-	width: 15px;
-	height: 15px;
-	transform: translateY(-50%);
-	fill: none;
-	stroke: currentColor;
-	stroke-width: 4;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-	color: var(--text-sub);
-	pointer-events: none; /* 点击穿透到下面那个透明的原生日历按钮上 */
-	transition: color 0.2s ease;
-}
-
-.fm-date-wrap:hover .fm-date-icon,
-.fm-date-wrap:focus-within .fm-date-icon {
-	color: var(--primary-blue);
-}
-
-/* 原生日历按钮：保留尺寸与点击区域（正好在我的图标下面），但不绘制自己的图形。
-   ⚠️ 选择器按 wrapper 走而不是 `#fm-date`：新建文章那个表单里的日期框要用同一套。 */
-.fm-date-wrap > input::-webkit-calendar-picker-indicator {
-	width: 15px;
-	height: 15px;
-	margin-left: 4px;
-	padding: 0;
-	background: none;
-	opacity: 0;
-	cursor: pointer;
-}
+.fm-date-wrap > input::-webkit-calendar-picker-indicator { display: none; }
 
 /* 分段（年/月/日/时/分）：点进去选中的那一段用主色浅底高亮，跟站点 pill 同一套 token */
 .fm-date-wrap > input::-webkit-datetime-edit {
@@ -942,6 +1325,165 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	flex: 1 1 260px;
 }
 
+/* 「标记」那一行只有两枚 chip（总宽 ~140px），却跟分类/标签共用 260px 的基准 ⇒
+   换行按基准判，于是 348px 宽以下标签会自己占一行、两枚 chip 掉到下一行（明明塞得下，用户报的就是这个）。
+   这一行改回跟内容走：尺寸由内容决定，真的放不下时才会整盒换到下一行。
+   分类/标签/内容警告不动 —— 那几排 chip 本来就宽，基准 260 正是让它们该换行时换行。 */
+.fm-chips--flags { flex: 0 1 auto; }
+
+/* ── 「标记 / 分类 / 标签 / 内容警告」在手机上并成一个下拉 ──────────────
+   宽屏（≥561）：那盒 .fm-meta 是 `display: contents`，四组直接当 .fm-row--meta 的子项排成四行
+   （跟以前一模一样，每个小标题还是 56px 那一列），触发器 .fm-dd 平时 display: none。
+   手机：四行 128px 实在占地方（用户要求并起来）⇒ 那盒变成一个 popover（HTML 自带的开关，
+   popovertarget 指过去，零 JS），触发器上那行字汇总已选项 ⇒ 四行变一行 27px。 */
+
+/* 面板里的五组：宽屏时它们就是「行」，手机时是弹层里的一段（小标题 + 内容） */
+.fm-meta-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	/* ⚠️ nowrap：这些组套了 .fm-row，而 .fm-row 是 flex-wrap: wrap（那是给整行表单用的）。
+	   题图那组的「label + 输入框 + 上传按钮」总宽正好等于行宽（实测 596.4 / 596.4），
+	   叠上 wrap 就被判成两行 ⇒ 组高从 26.6 涨到 60.2，下面凭空多出一段留白。
+	   chip 那几排的换行归 .fm-chips 自己管（它是块级 flex 容器），跟这里没关系。 */
+	flex-wrap: nowrap;
+}
+
+/* 小标题：宽屏下就是原来那四个 <label>（56px 列，0.74rem/700/副文本色） */
+.fm-meta-label {
+	flex: 0 0 56px;
+	font-size: 0.74rem;
+	font-weight: 700;
+	color: var(--text-sub);
+}
+
+/* 宽屏：容器不参与布局（它只是手机弹层的外壳），四组直接排在下面的 .fm-row--meta 里 */
+.fm-meta { display: contents; }
+
+.fm-row--meta {
+	/* ⚠️ 必须写 align-items: stretch：`.fm-row` 给的是 center，而这里改成了纵向 flex，
+	   交叉轴是**横向** —— center 会让四组缩成内容宽（小标题列全歪） */
+	align-items: stretch;
+	flex-direction: column;
+}
+
+.fm-dd {
+	display: none;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	/* 手机上这一行只有它一枚，跟内容走（要占满整行就给宽） */
+	flex: 1 1 auto;
+	min-width: 0;
+	padding: 4px 9px;
+	/* 字体跟那一排 chip 对齐（见 .chip：Encode Sans SC + 0.78rem / 500）。
+	   ⚠️ 收起态显示的就是 chip 上那串字，两边字体不一致的话，同一个词在收起/展开两种状态下长得不一样。
+	   另外 <button> 的 UA 字体不继承（font: inherit 只管住 font 简写的几个子属性）。 */
+	font-family: var(--ed-font-ui);
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--text-main);
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: border-color 0.2s ease;
+}
+
+.fm-dd:hover { border-color: var(--primary-blue); }
+
+.fm-dd-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 箭头：跟工具条/表格那些下拉同一套描边语言（viewBox 24 / 描边 2） */
+.fm-dd-arrow {
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	color: var(--text-sub);
+	transition: rotate 0.2s ease;
+}
+
+/* 打开时箭头翻个面：触发器就是那个 popover 的 invoker，直接看隔壁容器开没开
+   （:has() + 相邻兄弟 ⇒ 不用 JS 挂类；跟顶部文章下拉那枚箭头的手感一致） */
+.fm-dd:has(+ .fm-meta[popover]:popover-open) .fm-dd-arrow { rotate: 180deg; }
+
+/* ⚠️ 宽屏（≥561）必须把那几个属性显式还原：那盒带着 popover 属性，而 UA 对 [popover] 是
+   **无条件**给「position: fixed + inset: 0 + margin: auto + overflow: auto + 系统描边/底色 +
+   0.25em 内边距」的；这里用作者声明把它的 display: none 盖成了 contents，于是其余几条全都还在 ⇒
+   不还原的话，宽屏下它会变成屏幕正中一坨浮动方块（踩过）。 */
+@media (min-width: 561px) {
+	.fm-meta[popover] {
+		position: static;
+		inset: auto;
+		margin: 0;
+		width: auto;
+		height: auto;
+		overflow: visible;
+		padding: 0;
+		border: 0;
+		background: none;
+	}
+}
+
+@media (max-width: 560px) {
+	.fm-dd { display: flex; width: 100%; }
+
+	/* 手机上这一行只剩触发器那枚按钮（面板是 popover，显隐/摆位都归 UA） */
+	.fm-row--meta { display: block; }
+
+	/* ⚠️ 位置与外观全部写在**基础态**上（收起/展开两条都吃这一份），不写在 :popover-open 里：
+	   ① 只写在展开态 ⇒ 收起时状态一换，补间规则就跟着失效，退出根本没动画（只进不出）；
+	   ② 同理，位置那几条若只写在展开态，退出补间期间它们会**瞬间回退**到 UA 给 [popover] 的那套
+	      （position: fixed + inset: 0 + margin: auto）⇒ 面板先「跳」到屏幕正中再淡出（用户报的就是这个）。
+	   transition 里 display / overlay 配 allow-discrete 才把「进出场」也纳进补间。 */
+	.fm-meta[popover] {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		position-area: bottom span-all;
+		margin: 6px 12px 0;
+		width: auto;
+		max-width: none;
+		max-height: min(320px, 55vh);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		padding: 8px;
+		background: var(--card-bg);
+		border: 1px solid var(--item-border);
+		border-radius: 10px;
+		box-shadow: var(--card-hover-shadow);
+		transition: opacity 0.16s ease, transform 0.16s ease, display 0.16s allow-discrete, overlay 0.16s allow-discrete;
+	}
+
+	/* 收起态：只负责「不显示 + 淡到透明 + 略往上缩」，位置/外观照旧继承上面那条。
+	   （popover 收起时本来就被 UA 判成 display: none，这里显式写一遍，免得宽屏那条
+	   display: contents 把它拽出来 —— 作者声明优先于 UA 声明。）
+	   ⚠️ 内联轴用 span-all + 左右外边距（跟顶部文章下拉同一个套路）：若只用 span-right，
+	   内容一宽就会被浏览器往左推、右边缘贴死窗口（左边留缝右边没有）。 */
+	.fm-meta[popover]:not(:popover-open) {
+		display: none;
+		opacity: 0;
+		transform: translateY(-4px) scale(0.985);
+	}
+
+	@starting-style {
+		.fm-meta[popover]:popover-open {
+			opacity: 0;
+			transform: translateY(-4px) scale(0.985);
+		}
+	}
+}
+
 /* chip = 站点的 .cat-tag / .tag / .cw-pill 那套：
    未选 = 只有描边的小框（副文本色，字重 500）；选中 = 站点现成的彩色 pill（字重 700） */
 .chip {
@@ -952,7 +1494,9 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	font-weight: 500;
 	line-height: 1.2;
 	color: var(--text-sub);
-	background: transparent;
+	/* 未选中 = 白底 + 描边的小框（以前是透明底，落在编辑区那片浅灰上显得「空」；
+	   选中态各自的彩色底照旧盖掉这一条）。 */
+	background: var(--card-bg);
 	border: 1px solid var(--item-border);
 	border-radius: 6px;
 	cursor: pointer;
@@ -960,11 +1504,32 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	transition: all 0.2s ease;
 }
 
+/* 选中时字重 500 → 700，字一粗整个 chip 就宽一截（实测 0.9–5.4px）⇒ 整排跟着挤动。
+   做法照站点导航栏那套「粗体占位」（.nav-links a::before）：文字外面套一层 .chip-text，
+   它自己也撑一份粗体副本 —— 高度 0 + 不显示，**只占宽** ⇒ 无论字重怎么过渡，宽度都锁在粗那一档。
+   ⚠️ 副本挂在 ::after（排在真文字后面）而不是 ::before：inline-flex 的基线取自**第一个**子项，
+      放前面的话 chip 的基线会跟着副本跑，跟旁边那枚图标对不齐（图标那个 chip 会看出来）。
+   ⚠️ 图标（`.chip-ico`）必须留在 .chip-text **外面**：这层是纵向 flex，图标进去会被压到文字上面。 */
+.chip-text {
+	display: inline-flex;
+	flex-direction: column;
+}
+
+.chip-text::after {
+	content: attr(data-text);
+	height: 0;
+	visibility: hidden;
+	overflow: hidden;
+	user-select: none;
+	pointer-events: none;
+	font-weight: 700;
+}
+
 /* hover 反馈分两种：
-   · 未选中：文字色 + 描边色一起变（明显「可以点」）；
+   · 未选中：文字 + 描边一起转主色（跟顶栏按钮、卡片里那些小按钮同一个「可以点」的语言）；
    · 已选中：**只变描边色，文字色保持分类配色不变**（跟站点静态色块的气质一致）——
      那条规则写在下面选中态那几档配色**之后**（同权重靠顺序取胜）。 */
-.chip:not(.chip--on):hover { color: var(--text-main); border-color: var(--text-sub); }
+.chip:not(.chip--on):hover { color: var(--primary-blue); border-color: currentColor; }
 
 /* 选中态：底色 + 文字色 + **描边色**都用自己那套配色。这里先给兜底（没有可用分类时才走）：蓝。 */
 .chip--on {
@@ -1036,8 +1601,13 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 }
 
 .editor-toolbar button {
+	/* ⚠️ 工具条里现在**一枚文字按钮都没有**（引用/列表那几枚早换成图标了；唯一带字的「段落/标题」
+	   是那个下拉，它有自己的规则）⇒ 四边内边距一样 + min-width/min-height 28 = 正 28×28 的方块，
+	   跟顶栏那排图标按钮同一个形状。以前横向给 8px ⇒ 33×28 的横条，一排看过去宽窄不齐。 */
 	min-width: 28px;
-	padding: 3px 8px;
+	min-height: 28px;
+	/* 内边距写 0：图标 15 + 描边 2 = 17，正方形全靠上面那两个 min-* 撑着（flex 居中，图标正好在正中） */
+	padding: 0;
 	font-size: 0.78rem;
 	font-weight: 500;
 	color: var(--text-sub);
@@ -1046,13 +1616,9 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 	border-radius: 6px;
 	cursor: pointer;
 	transition: all 0.2s ease;
-	/* 按钮里既有纯文字（引用/列表…）也有纯图标（粗体/斜体/删除线）：
-	   flex 居中让两者都站中间；min-height 把高度统一 —— 文字按钮 = 行高 20 + 上下 3 + 描边 2 ≈ 28，
-	   图标按钮只有 15px 高，不统一的话一排高矮不齐。 */
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 28px;
 }
 
 /* 图标按钮里的那枚 svg：尺寸/描边统一在这儿管（stroke 走 currentColor ⇒ hover、按下态自动跟色） */
@@ -1103,7 +1669,10 @@ html[data-theme='dark'] .editor-icon-btn .icon-moon { display: inline-flex; }
 
 .editor-doc {
 	flex: 1 1 auto;
-	min-height: 0;
+	/* ⚠️ 不能只写 min-height: 0：键盘弹起时可见区很矮，表单 + 工具条就能把正文一路挤到 0 高
+	   （flex 项默认能缩到没有），用户看到的就是「只有上面的信息和工具条，正文一个字都没有」。
+	   留一个下限（矮的时候按可见区的四成算，高的时候最多 240），装不下就让面板去滚。 */
+	min-height: min(240px, 45dvh);
 	overflow: auto;
 }
 
@@ -1119,6 +1688,24 @@ body .editor-prose {
 	font-variant-ligatures: normal;
 	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
 	line-break: strict;
+}
+
+/* 开明式标点：句末点号（。！？）撤销上面刚恢复的 halt，回到全角字形 —— 与站点渲染层一致。
+   类由 PunctFullWidth 的装饰挂上（装饰不进文档，markdown 序列化拿到的还是原文）。 */
+body .editor-prose .punct-full {
+	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 0;
+}
+
+/* 行末句末号：压回半宽（量行尾那套在 inline-extensions.js 的 PunctFullWidth 里）。
+   省下的半格由 justify 摊进本行字间，所以行依然两端对齐、墨迹贴到版心右缘。
+   ⚠️ 这条必须在上面那条**之后**：两个类同优先级，靠后者生效。 */
+body .editor-prose .punct-full.punct-line-end {
+	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
+}
+
+/* 下一行开头那几项被粘成一整块：合计宽过半格就塞不进压半宽省出来的那半格 */
+body .editor-prose .punct-line-head {
+	white-space: nowrap;
 }
 
 .editor-prose {
@@ -1201,12 +1788,13 @@ body .editor-prose h6 {
 		right: auto;
 		width: max-content;
 		max-width: min(680px, calc(100vw - 12px));
-		/* ⚠️ 方向由 index.astro 的 aimPicker 在打开前算好、用 --picker-area 传进来，别在这儿写死：
+		/* ⚠️ 上下方向由 index.astro 的 aimPicker 在打开前算好、用 --picker-block 传进来（只传块轴那个关键字），
+		   内联轴的部分（span-end / span-all）写在这儿。
 		   UA 那套判定用不了 —— 它量「下方放不下」时参照的是控件所在的**滚动容器**
 		   （表格那个在 .md-table-scroll 里、卡片那个在 .md-block 里，都不是窗口），
 		   实测窗口里还剩 199px 空当，它照样把 110px 高的菜单翻到控件上方去。
 		   这里只负责掐掉 UA 的回退链 —— 不掐的话它会推翻 JS 给的方向。 */
-		position-area: var(--picker-area, end span-end);
+		position-area: var(--picker-block, end) span-end;
 		position-try-fallbacks: none;
 		/* 空当要跟着方向翻面：菜单在上时，间隙得留在它下面 */
 		margin: var(--picker-margin, 6px 0 0);
@@ -1239,6 +1827,18 @@ body .editor-prose h6 {
 		}
 	}
 
+	/* ⚠️ 窄屏不能再用「锚在控件左边 + span-end」：那样浮层的右边缘会一直顶到窗口右边（左边留着缝，
+	   右边没有，长标题还被切掉）。改用 span-all（内联轴跨满整块）+ 左右各留 6px ——
+	   它在跨满的框里是**贴着起点**摆的（justify-self 对浮层不起作用，实测），所以得靠外边距把左边推进来。 */
+	@media (max-width: 860px) {
+		.editor-select::picker(select),
+		.md-table-align select::picker(select) {
+			position-area: var(--picker-block, end) span-all;
+			margin-left: 6px;
+			margin-right: 6px;
+		}
+	}
+
 	/* 选项 */
 	/* ⚠️ 上下不对称（6 / 4）是实测出来的，别顺手「改成对称」：
 	   选项行高 32 = 内边距 10 + 行盒 22，行盒是**贴着内容盒顶部**摆的
@@ -1262,6 +1862,11 @@ body .editor-prose h6 {
 		background: var(--color-blue-bg);
 	}
 
+	/* 行首那格（序号 + 日期）是行标签不是选项：hover / 键盘聚焦都不给反馈
+	   —— 它是 disabled 的 option，照样会吃到上一条 option:hover。 */
+	.editor-select option.pick-head:hover,
+	.editor-select option.pick-head:focus-visible { background: transparent; }
+
 	/* 选中项：主色 + 加粗；默认那个勾记号太抢镜，去掉 */
 	.editor-select option:checked,
 	.md-table-align select option:checked {
@@ -1274,13 +1879,14 @@ body .editor-prose h6 {
 		display: none;
 	}
 
-	/* optgroup = 小标题 + 两列网格（同一篇的中英落在同一行）。
+	/* optgroup = 小标题 + 三列网格（行首「#xx 日期」+ 同一篇的中英标题，三格一行）。
 	   ⚠️ 网格只能写在 optgroup 上：弹层本体和 option 上的 display:grid 都被 UA 那层内部容器
 	   吃掉（实测同一行只命中 1 个 option）；optgroup 上同一行能命中 2 个。
-	   列顺序 = 源码顺序 ⇒ loadList 把中英交替塞进来，即成对。 */
+	   列顺序 = 源码顺序 ⇒ loadList 按「序号/日期、中文、英文」塞进来。
+	   首列 auto：宽度按最长的那串「#36 2026-09-25」算，所有行自然对齐。 */
 	.editor-select optgroup {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: auto 1fr 1fr;
 		padding: 6px 6px 2px;
 		font-size: 0.68rem;
 		font-weight: 700;
@@ -1298,17 +1904,44 @@ body .editor-prose h6 {
 
 	/* ⚠️ 网格的第一个格子被 UA 生成的**组标签**占着，而那个标签是 UA 内部盒子，作者 CSS 碰不到
 	   （给 optgroup::before 写 grid-column 不生效，实测它的 content 是 none）。
-	   所以塞一个零高的占位项把格子补回来，后面的选项才刚好两两成对。 */
+	   所以塞一个零高占位项把剩下两列补齐 —— 后面每「序号/中文/英文」一组才刚好三格一行。
+	   ⚠️ 光写 height: 0 不够：UA 给 option 留了 24px 的「地板」（实测还是 24px 高，
+	   于是组标题右边那块空白成了能 hover 的选项）⇒ 连 min-height 一起清掉，再加 pointer-events: none。 */
 	.editor-select option.optgroup-pad {
+		grid-column: 2 / -1;
 		height: 0;
+		min-height: 0;
 		padding: 0;
 		overflow: hidden;
+		pointer-events: none;
 	}
 
 	/* 缺另一语言时的占位项（disabled，只把列位占住） */
 	.editor-select option:disabled {
 		color: var(--text-sub);
 		opacity: 0.55;
+	}
+
+	/* 行首那一格：序号 + 日期。同样是 disabled（选不中），但**不要**那条 0.55 的淡化
+	   —— 它是行标签，淡下去整行看着像坏了。字体跟日期栏同一套：Montserrat + 等宽数字。 */
+	.editor-select option.pick-head {
+		font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+		font-weight: 500;
+		font-size: 0.76rem;
+		font-variant-numeric: tabular-nums;
+		color: var(--text-sub);
+		opacity: 1;
+	}
+
+	/* 行首那一格里的两段：序号 + 日期。日期靠外边距跟序号拉开，藏掉时那个间隙一起没掉。 */
+	.editor-select .pick-head .ph-date { margin-left: 0.45em; }
+
+	/* 弹层被压窄时只留序号：那一格自然宽 133px（`#17 2026-09-10`），而弹层自然宽 ≈ 683px
+	   （序号 133 + 中英标题各 259 + 内外边距）——小于它两个标题列就开始互相挤，日期让出的 100px 分给两列。
+	   ⚠️ 阈值 700 是这么倒出来的：弹层宽 = min(680, 视口 - 12)（≥861 时顶到上限 680，以下跟着视口走）
+	   ⇒ 视口 < 695 弹层才真被压窄。别改成 860（那是弹层改成 span-all 的阈值，不是“装不下”的阈值）。 */
+	@media (max-width: 700px) {
+		.editor-select .pick-head .ph-date { display: none; }
 	}
 
 	.editor-select optgroup option { padding-left: 14px; }
@@ -1423,6 +2056,14 @@ body .editor-prose h6 {
 	pointer-events: none;
 }
 
+/* ⚠️ 中文墨迹比 em 盒中线高约 0.5px（这枚按钮里实测 0.6px）：图标是对称图形，墨迹就落在行的正中间，
+   于是肉眼看像「图标比文字低一点点」（用户报的）。解 = 把**文字**往下推 0.6px 让两者墨迹中心重合，
+   别去动图标 —— 它已经在按钮正中，动了整组就偏了。 */
+.editor-toolbar #hd-label {
+	position: relative;
+	top: 0.6px;
+}
+
 /* 右边那枚箭头：原来由原生 select 的 ::picker-icon 画（11px、离右边缘 7px），现在自己画一个，位置尺寸照旧 */
 .editor-toolbar .hd-arrow {
 	width: 11px;
@@ -1513,9 +2154,20 @@ body .editor-prose h6 {
 
 .editor-menu .editor-menu-item > svg {
 	width: 15px;
+	/* ⚠️ 别在这里推 top —— 中文墨迹比 em 盒中线高 ~0.6px，图标是对称的、本来就在行正中，
+	   推图标会把整组推出中心（用户实测就是「都不居中了」）。要把文字往下推，见下面 .editor-menu-text。 */
 	height: 15px;
 	flex: 0 0 auto;
 	fill: none;
+}
+
+/* 弹层里那行字：跟收起态那枚按钮（.editor-toolbar #hd-label）同一条账 —— 中文墨迹比行中心高，
+   把**文字**往下推去贴已经在正中的图标（推图标会把整组推出中心，用户实测报过「都不居中了」）。
+   ⚠️ 值不一样：收起态那枚是 0.6px，这里实测要 1.5px（这行的行盒 19.97 比那枚的 22 矮，
+      墨迹相对行中心的偏移也跟着更大）。两个数都是量的，别「统一」成一个。 */
+.editor-menu .editor-menu-text {
+	position: relative;
+	top: 1.5px;
 }
 
 .editor-menu .editor-menu-item:hover,
@@ -1800,12 +2452,24 @@ body .editor-prose h6 {
 /* 用户要「少动效」就干脆不动（⚠️ 别忘了把 @starting-style 也按掉，否则还是会闪一帧） */
 @media (prefers-reduced-motion: reduce) {
 	.editor-linkpop,
+	.editor-pane--preview,
+	.editor-preview-veil,
 	.editor-toast { transition: none; }
 
 	@starting-style {
 		.editor-linkpop:not([hidden]) {
 			opacity: 1;
 			transform: none;
+		}
+
+		/* 预览浮层（≤900 才有）：同样直接给终态，别留 0.16s 的补间 */
+		.editor-pane--preview.is-open {
+			opacity: 1;
+			transform: none;
+		}
+
+		.editor-preview-veil:not([hidden]) {
+			opacity: 1;
 		}
 
 		/* ⚠️ toast 的 translateX(-50%) 是**居中**用的，不是动画 ⇒ 这里必须保留 */
@@ -1846,6 +2510,9 @@ body .editor-prose h6 {
 	outline: none;
 	border-color: var(--primary-blue);
 }
+
+/* 占位符跟表单那边一条规矩（UA 默认那色是写死的 rgb(117,117,117)，不跟主题变量） */
+.editor-linkpop-row > input::placeholder { color: var(--text-sub); opacity: 0.7; }
 
 .editor-linkpop-btns {
 	display: flex;

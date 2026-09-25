@@ -177,8 +177,47 @@ body {
     line-height: 1.6;
     line-break: strict;
     font-feature-settings: "liga" 1, "calt" 1, "halt" 1;
+    /* CJK 跟西文/数字交界处自动让出 1/8 em 的空隙（CSS Text 4 的 text-autospace）。
+       挂在 body 上是「全站所有文字都吃」：正文、标题、卡片、标签、导航、页脚，还有编辑器
+       （/admin 的 body 也是这个 body）—— 子元素继承，不用逐处写。
+       ⚠️ 这是**纯排版调整**：不插字符、不改 DOM ⇒ 复制、RSS、pagefind 索引读到的还是
+          「中文ABC中文」原文（实测 range.toString() 与 childNodes 都不变）。
+       ⚠️ 已经手打了空格的地方不再叠加（实测 delta 0），现有文章里的空格可以慢慢迁移。
+       ⚠️ 标点那头（中文，ABC）不加 —— 那是上面 halt 管的事。
+       ⚠️ 不支持的浏览器直接忽略这条声明（未知属性，解析时就丢了），退化成现状，不会更糟。 */
+    text-autospace: normal;
     transition: background-color 0.3s ease, color 0.3s ease;
     user-select: text;
+}
+
+/* 开明式标点：句末点号（。！？）撤销上面 body 的 halt，回到全角字形；
+   句内点号（，、；：）和括号书名号直角引号继续半宽。
+   必须包 span 是因为 halt 只能整块开关，无法按字符选。
+   这里是元素自身的声明，一定盖过 body 继承下来的值。 */
+.punct-full {
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 0;
+}
+
+/* 行末句末号：压回半宽（判定与挂类在 Layout.astro 的行末标点脚本里）。
+   省下的半格由 justify 摊进本行字间，所以行依然两端对齐，墨迹也贴到版心右缘。 */
+.punct-full.punct-line-end {
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 1;
+}
+
+/* 下一行开头那几项被粘成一整块：合计宽过半格就塞不进压半宽省出来的那半格，
+   于是断行点不动，下一行的第一个字不会被吸上来。 */
+.punct-line-head {
+    white-space: nowrap;
+}
+
+/* 打印是另一套版心宽度，屏幕上量出来的行尾在纸上不成立 ⇒ 一律按全角，宁可有那半格凹陷。 */
+@media print {
+    .punct-full.punct-line-end {
+        font-feature-settings: "liga" 1, "calt" 1, "halt" 0;
+    }
+    .punct-line-head {
+        white-space: normal;
+    }
 }
 
 /* --- 选中文字颜色 --- */

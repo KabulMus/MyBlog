@@ -12,8 +12,9 @@
 // ⚠️ 本文件是 .js：Vite 只对 .ts 剥离类型，.js 是原样发给浏览器的 ⇒ **不要写 TS 类型标注**（会 SyntaxError）。
 
 import { Extension, Mark, Node } from '@tiptap/core';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { SENTENCE_END, BOUNDARY, keepsFullWidth } from '../../lib/punct-width.mjs';
 
 /** 能当「真格式」用的行内 HTML 标签（markdown-io 那边也按这个名单识别成对标签）
  *  ⚠️ 加新标签前先想清楚「会不会叠在同一段文字上」：这里每个标签都用 htmlInline 这一种 mark，
@@ -195,6 +196,206 @@ export const FootnoteDefGuard = Extension.create({
 						});
 						return DecorationSet.create(state.doc, decos);
 					},
+				},
+			}),
+		];
+	},
+});
+
+/**
+ * 开明式标点（编辑器侧）：两层 —— ① 静态判「该占全角」的句末点号（连用只留最后一个，后跟闭标号
+ * 或段末/硬换行压半宽）；② 布局完再量一遍，把落在**行尾**的点号也压半宽，下一行开头窄过半格时
+ * 把它粘住。两层都用**装饰**（不进文档 ⇒ markdown 序列化、roundtrip 自检都不受影响）。
+ * 规则与站点渲染层共用 src/lib/punct-width.mjs，行尾那套与 Layout.astro 的脚本同一个思路。
+ *
+ * 撤掉站点 body 传下来的 halt 半宽 —— 对齐站点渲染层的 rehypePunctFullWidth，
+ * 判定规则两边共用 src/lib/punct-width.mjs。
+ *
+ * ⚠️ 必须用**装饰**而不是真格式：装饰不进文档、不参与序列化 ⇒ 存回 markdown 还是原文；
+ *    要是写成真格式，正文里会多出一堆 <span>，整篇文章的 diff 全红。
+ * ⚠️ 代码块和行内代码里的点号不动：站点那边 rehypePunctFullWidth 也跳过 code/pre/kbd，
+ *    两边规则得一致，否则编辑器里看到的和发布结果不一样。
+ */
+const punctKey = new PluginKey('punctFullWidth');
+
+export const PunctFullWidth = Extension.create({
+	name: 'punctFullWidth',
+	addProseMirrorPlugins() {
+		const markPositions = (doc) => {
+			const positions = [];
+			doc.descendants((block, blockPos) => {
+				// 代码块不是普通文字，不进这套判定（它里面的点号本来就不该动）
+				if (!block.isTextblock || block.type.name === 'codeBlock' || block.type.name === 'pre') return true;
+				// ⚠️ 得把一整块的文字摊平再判：`（依旧**周！深！**）` 那个感叹号在加粗里，
+				//    按单个文本节点看是「节点末尾」（看不见后面的闭标号）⇒ 会误判成全角。
+				//    硬换行和行内代码那里要插哨兵：它们后面就是行尾（或者是不该当邻居的东西），
+				//    没哨兵的话点号会跨过它们把后面的字当成邻居。
+				let text = '';
+				const cells = [];
+				block.descendants((node, pos) => {
+					if (node.type.name === 'hardBreak') {
+						text += BOUNDARY;
+						cells.push(null);
+						return true;
+					}
+					if (!node.isText) return true;
+					if (node.marks.some((m) => m.type.name === 'code')) {
+						text += BOUNDARY;
+						cells.push(null);
+						return true;
+					}
+					const start = blockPos + 1 + pos;
+					for (let i = 0; i < node.text.length; i++) {
+						text += node.text[i];
+						cells.push(start + i);
+					}
+					return true;
+				});
+				for (let k = 0; k < text.length; k++) {
+					if (cells[k] === null || !SENTENCE_END.has(text[k]) || !keepsFullWidth(text, k)) continue;
+					positions.push(cells[k]);
+				}
+				return true;
+			});
+			return positions;
+		};
+
+		// ——② 运行时：量行尾 ——
+		// 为什么只能量：CSS 选择器看不见行盒，「这个字是不是本行最后一个」只有布局完才知道。
+		// ⚠️ 量出来的位置用 posAtDOM 换算成**文档位置**再挂装饰：装饰按文档位置排，
+		//    抱着 DOM 引用的话，用户再敲一个字就跟丢了。
+		const measure = (view) => {
+			const fontSize = parseFloat(getComputedStyle(view.dom).fontSize) || 16;
+			const half = fontSize / 2;
+			// ⚠️ 判「下一项塞不塞得进那半格」的界限要比半格**宽一点**：text-autospace 会在中西交界处
+			//    插 1/8em，那截空隙会算进「下一行第一个字」的盒子里（实测数字 `1` 的推进才 6.4px，
+			//    量出来却是 8.4px）⇒ 照半格判就会漏粘，字照样被吸上来。多粘一小坨没有任何副作用。
+			const fitLimit = half * 1.3;
+			const chars = [];
+			const walker = document.createTreeWalker(view.dom, NodeFilter.SHOW_TEXT);
+			let node;
+			while ((node = walker.nextNode())) {
+				const text = node.nodeValue;
+				for (let i = 0; i < text.length; i++) {
+					const ch = text[i];
+					if (ch === ' ' || ch === '\t' || ch === '\n' || ch === BOUNDARY) continue;
+					const range = document.createRange();
+					range.setStart(node, i);
+					range.setEnd(node, i + 1);
+					const rect = range.getBoundingClientRect();
+					if (!rect.width && !rect.height) continue; // 藏起来的内容
+					chars.push({ node, i, ch, top: rect.top, width: rect.width });
+				}
+			}
+			const lines = [];
+			for (const c of chars) {
+				const line = lines[lines.length - 1];
+				if (line && Math.abs(c.top - line.top) <= fontSize * 0.5) line.items.push(c);
+				else lines.push({ top: c.top, items: [c] });
+			}
+			const lineEnd = [];
+			const glue = [];
+			for (let index = 0; index < lines.length - 1; index++) {
+				const last = lines[index].items[lines[index].items.length - 1];
+				if (!SENTENCE_END.has(last.ch)) continue;
+				const span = last.node.parentElement;
+				if (!span || !span.classList.contains('punct-full')) continue; // 静态已经压半宽的不用管
+				lineEnd.push(view.posAtDOM(last.node, last.i));
+				// 下一行第一项就窄过半格的话，得先把它跟后面几项粘成一整块，否则它会被吸上来
+				const head = lines[index + 1].items;
+				if (head[0].width > fitLimit) continue; // 整格的字本来就塞不进那半格
+				let acc = 0;
+				let count = 0;
+				while (count < head.length && acc <= fitLimit) acc += head[count++].width;
+				const tail = head[count - 1];
+				glue.push([view.posAtDOM(head[0].node, head[0].i), view.posAtDOM(tail.node, tail.i + 1)]);
+			}
+			return { lineEnd, glue };
+		};
+		return [
+			new Plugin({
+				key: punctKey,
+				state: {
+					init: () => ({ lineEnd: [], glue: [] }),
+					apply(tr, value) {
+						const next = tr.getMeta(punctKey);
+						if (next) return next;
+						if (!tr.docChanged) return value;
+						// 文档改了：位置跟着挪，不然装饰会指到别的字上
+						return {
+							lineEnd: value.lineEnd.map((pos) => tr.mapping.map(pos, -1)),
+							glue: value.glue.map(([from, to]) => [tr.mapping.map(from, -1), tr.mapping.map(to, 1)]),
+						};
+					},
+				},
+				props: {
+					decorations(state) {
+						const extra = punctKey.getState(state) || { lineEnd: [], glue: [] };
+						const atLineEnd = new Set(extra.lineEnd);
+						// ⚠️ 两个类必须合到**同一个** span 上：分成两层嵌套 span 的话，
+						//    main.css / editor.css 里 `.punct-full.punct-line-end` 这条选择器就匹不上了。
+						const decos = markPositions(state.doc).map((pos) =>
+							Decoration.inline(pos, pos + 1, {
+								class: atLineEnd.has(pos) ? 'punct-full punct-line-end' : 'punct-full',
+							})
+						);
+						extra.glue.forEach(([from, to]) => {
+							if (to > from) decos.push(Decoration.inline(from, to, { class: 'punct-line-head' }));
+						});
+						return DecorationSet.create(state.doc, decos);
+					},
+				},
+				view(editorView) {
+					let timer = 0;
+					const apply = (measured) => {
+						const current = punctKey.getState(editorView.state);
+						if (current && JSON.stringify(current) === JSON.stringify(measured)) return; // 没变就不派事务，不然自激
+						editorView.dispatch(editorView.state.tr.setMeta(punctKey, measured));
+					};
+					const run = () => {
+						let measured;
+						try {
+							measured = measure(editorView);
+						} catch {
+							return; // 视图正在被拆（换文档之类）时 posAtDOM 会抛，安静跳过
+						}
+						const current = punctKey.getState(editorView.state) || { lineEnd: [], glue: [] };
+						// ⚠️ 刚量到「一个行尾都没有」而上一轮有：多半是量在了 ProseMirror 重建 DOM 的半截上
+						//    （那时盒子是零大的，被逐字收集跳过了）。隔一帧再量一次确认，免得装饰一闪一闪。
+						if (current.lineEnd.length && !measured.lineEnd.length) {
+							requestAnimationFrame(() => {
+								let again;
+								try {
+									again = measure(editorView);
+								} catch {
+									return;
+								}
+								apply(again.lineEnd.length ? again : measured);
+							});
+							return;
+						}
+						apply(measured);
+					};
+					// ⚠️ 得等 ProseMirror 把 DOM 更新完再量，否则量到的是上一版布局
+					const schedule = () => {
+						clearTimeout(timer);
+						timer = setTimeout(run, 150);
+					};
+					run();
+					if (document.fonts && document.fonts.ready) document.fonts.ready.then(run); // 字体换了行尾也换
+					const observer = 'ResizeObserver' in window ? new ResizeObserver(schedule) : null;
+					if (observer) observer.observe(editorView.dom);
+					window.addEventListener('resize', schedule);
+					return {
+						update(view, prevState) {
+							if (view.state.doc !== prevState.doc) schedule(); // 只认文档变化，光标动一下不用重量
+						},
+						destroy() {
+							clearTimeout(timer);
+							if (observer) observer.disconnect();
+							window.removeEventListener('resize', schedule);
+						},
+					};
 				},
 			}),
 		];

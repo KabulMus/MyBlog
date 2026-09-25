@@ -5,8 +5,8 @@ date: '2026-08-28T00:48'
 draft: false
 ai: true
 category: ['essays']
-warning: opinion
 tags: ['note']
+warning: 'opinion'
 ---
 
 ## Seats
@@ -14,7 +14,7 @@ tags: ['note']
 I was sitting so comfortably in the very back, and then, team leader, you just *happened* to draw the front-row seat and shuffle me over to the edge right under the teacher's nose—what's that supposed to mean? (No complaints, just some rambling ((((()
 
 Also, seven of the eight people in our group are guys, yet my one and only deskmate just HAD to be that girl...  
-I'm not saying anything bad about girls—I'm just not great with words... and fine, if you wanna call it shyness, sure—don't tease me, jeez 👉👈
+I'm not saying anything bad about girls—I'm just not great with words... 👉👈
 
 > I have a bold guess...
 
@@ -34,7 +34,7 @@ Oh right, we were voting for class officers—and this guy went and ran for **th
 
 ## The homeroom teacher is a "legend"
 
-Omg Mr. Yang absolutely kills me lmao
+Omg Mr. <ruby>Yang<rt>Loong</rt></ruby> absolutely kills me lmao
 
 I swear he must have been on a stand-up show (jk)—everything he says is just naturally hilarious
 

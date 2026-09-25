@@ -22,8 +22,28 @@ const editorConfig = {
 
 <html lang="zh-CN" data-pagefind-ignore>
 	<head>
+		<!-- ⚠️ 主题必须在**首次绘制前**落到 <html> 上，而且得排在所有样式之前。
+		     只靠 core.js 的 initTheme（挂在 DOMContentLoaded）不够：那次绘制已经用默认的浅色
+		     画完了，切深色的人下一打开会先白一帧再翻黑（用户说的「闪白」）。
+		     逻辑跟 Layout.astro 里那段一字不错地照搬：sessionStorage 的 user-theme > 系统偏好。 -->
+		<script is:inline>
+		(function () {
+			var t;
+			try { t = sessionStorage.getItem('user-theme'); } catch (e) {}
+			if (t !== 'dark' && t !== 'light') {
+				t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+			document.documentElement.setAttribute('data-theme', t);
+		})();
+		</script>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<!-- ⚠️ interactive-widget=resizes-content：键盘弹起时让**布局视口**跟着缩。
+		     默认（resizes-visual）只缩可视视口，浏览器为了把光标露出来会把可视视口整个往上「平移」
+		     一截（visualViewport.offsetTop > 0）；而壳已经缩到可视视口那么高，平移之后就被抬到
+		     屏幕外面去了 ⇒ 用户看到的是一片空白（一个字都看不见）。
+		     声明成 resizes-content 后布局视口自己就让开键盘，不需要平移；壳跟着 innerHeight 缩，
+		     光标要露出来时浏览器滚的是面板内部那些 overflow: auto 的容器。 -->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" />
 		<meta name="robots" content="noindex, nofollow" />
 		<title>Blog Editor</title>
 		<!-- ⚠️ 必须跟 Layout.astro 一样引一遍字体：正文样式（main.css 的 .typography-body）用的是
@@ -39,8 +59,8 @@ const editorConfig = {
 	<body class="editor-body">
 		<header class="editor-bar">
 			<div class="editor-bar-left">
-				<span class="editor-brand">博客编辑器</span>
-				<button class="editor-icon-btn editor-icon-btn--plain" id="theme-btn" type="button" onclick="toggleTheme()" aria-label="切换亮暗模式">
+				<span class="editor-brand">Blog Editor</span>
+				<button class="editor-btn editor-btn--icon theme-switch" id="theme-btn" type="button" onclick="toggleTheme()" aria-label="切换亮暗模式">
 					<span class="icon-sun" aria-hidden="true">
 						<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
 							<path d="M9.15039 9.15088L11.3778 11.3783"/><path d="M3 24H6.15"/><path d="M9.15039 38.8495L11.3778 36.6221"/><path d="M38.8495 38.8495L36.6221 36.6221"/><path d="M44.9996 24H41.8496"/><path d="M38.8495 9.15088L36.6221 11.3783"/><path d="M24 3V6.15"/><path d="M24 36C30.6274 36 36 30.6274 36 24C36 17.3726 30.6274 12 24 12C17.3726 12 12 17.3726 12 24C12 30.6274 17.3726 36 24 36Z"/><path d="M24 45.0001V41.8501"/>
@@ -54,21 +74,44 @@ const editorConfig = {
 				</button>
 			</div>
 			<div class="editor-bar-center">
-				<select id="post-picker" class="editor-select" aria-label="选择文章">
-					<option value="">正在读取文章列表…</option>
-				</select>
-				<button class="editor-btn" id="new-btn" type="button">新建</button>
+				<!-- 文章下拉是**自己画的**（不是原生 select，也没有 base-select）——
+				     base-select 在手机上坑一串：弹层是 UA 内部伪元素，模态那套点触发器不切换、点外面不收、
+				     Escape 也不收、没有 hidePicker、宽度不够时位置区不生效、组标签盒子会撑着第一列……
+				     自绘之后开关/动画/摆位全归我们（跟分类标签那三个 popover、段落级别那个菜单同一套）。 -->
+				<button type="button" class="editor-post-trigger" id="post-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="选择文章">
+					<span class="editor-post-label" id="post-label">正在读取文章列表…</span>
+					<svg class="editor-post-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.75L12 15.25L17.5 9.75" /></svg>
+				</button>
+				<button class="editor-btn editor-btn--icon" id="new-btn" type="button" aria-label="新建文章">
+					<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24.0605 10L24.0239 38" /><path d="M10 24L38 24" /></svg>
+				</button>
 			</div>
 			<div class="editor-bar-right">
 				<span id="post-meta" class="editor-meta"></span>
-				<button class="editor-btn" id="source-btn" type="button">源码</button>
-				<button class="editor-btn" id="pub-btn" type="button">发布</button>
-				<button class="editor-btn editor-btn--primary" id="save-btn" type="button" disabled>保存</button>
-				<a class="editor-icon-btn" id="open-btn" href="#" target="_blank" rel="noopener" aria-label="在新标签页打开">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-8 8"/><path d="M19 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4"/></svg>
+				<!-- 顶栏这几枚一律图标按钮（viewBox 48 / 描边 4，跟工具条同一套），含义靠 aria-label 给读屏；
+				     「源码」这种开关不看文字了 ⇒ 靠 .is-on 的按下态表示（跟工具条按钮同一配色）。 -->
+				<button class="editor-btn editor-btn--icon" id="source-btn" type="button" aria-label="源码" aria-pressed="false">
+					<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 13L4 25.4322L16 37" /><path d="M32 13L44 25.4322L32 37" /><path d="M28 4L21 44" /></svg>
+				</button>
+				<button class="editor-btn editor-btn--icon" id="pub-btn" type="button" aria-label="发布到线上">
+					<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M42 27C42 33 38 43 24 43C10 43 6 33 6 27" /><path d="M24.0078 5.10059V33.0001" /><path d="M12 17L24 5L36 17" /></svg>
+				</button>
+				<!-- 删除：只删当前语言的这一份（中英是两个文件）。不可逆 ⇒ 走自绘确认框。 -->
+				<button class="editor-btn editor-btn--icon editor-btn--danger" id="del-btn" type="button" aria-label="删除这篇文章" disabled>
+					<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10V44H39V10H9Z" /><path d="M20 20V33" /><path d="M28 20V33" /><path d="M4 10H44" /><path d="M16 10L19.289 4H28.7771L32 10H16Z" /></svg>
+				</button>
+				<button class="editor-btn editor-btn--icon editor-btn--primary" id="save-btn" type="button" aria-label="保存" disabled>
+					<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9C6 7.34315 7.34315 6 9 6H34.2814L42 13.2065V39C42 40.6569 40.6569 42 39 42H9C7.34315 42 6 40.6569 6 39V9Z" /><path d="M24.0083 6L24 13.3846C24 13.7245 23.5523 14 23 14H15C14.4477 14 14 13.7245 14 13.3846L14 6H24.0083Z" /><path d="M9 6H34.2814" /><path d="M14 26H34" /><path d="M14 34H24.0083" /></svg>
+				</button>
+				<a class="editor-btn editor-btn--icon" id="open-btn" href="#" target="_blank" rel="noopener" aria-label="在新标签页打开">
+					<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 6H9C7.34315 6 6 7.34315 6 9V39C6 40.6569 7.34315 42 9 42H39C40.6569 42 42 40.6569 42 39V29" /><path d="M42 19L38 7L26 11" /><path d="M38 7C33 22 30 25 20 29" /></svg>
 				</a>
 			</div>
 		</header>
+
+		<!-- 文章下拉的菜单：故意放在 <header> **外面** —— 顶栏有 backdrop-filter，它会成为
+		     position: fixed 后代的包含块，菜单在里面就按顶栏算坐标了（摆在 header 里会整个错位）。 -->
+		<div class="editor-menu editor-post-menu" id="post-menu" role="listbox" aria-label="选择文章" hidden></div>
 
 		<main class="editor-main">
 			<section class="editor-pane editor-pane--edit" aria-label="编辑区">
@@ -81,33 +124,33 @@ const editorConfig = {
 						<label for="fm-date">日期</label>
 						<span class="fm-date-wrap">
 							<input id="fm-date" type="datetime-local" />
-							<svg class="fm-date-icon" viewBox="0 0 48 48" aria-hidden="true">
-								<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z" />
-								<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z" />
-								<path d="M16 4V12" />
-								<path d="M32 4V12" />
-								<path d="M28 34H34" />
-								<path d="M14 34H20" />
-								<path d="M28 26H34" />
-								<path d="M14 26H20" />
-							</svg>
 						</span>
 					</div>
-					<div class="fm-row">
-						<label>标记</label>
-						<div class="fm-chips" id="fm-flags"></div>
-					</div>
-					<div class="fm-row">
-						<label>分类</label>
-						<div class="fm-chips" id="fm-category"></div>
-					</div>
-					<div class="fm-row">
-						<label>标签</label>
-						<div class="fm-chips" id="fm-tags"></div>
-					</div>
-					<div class="fm-row">
-						<label>内容警告</label>
-						<div class="fm-chips" id="fm-warning"></div>
+					<!-- 「题图 / 标记 / 分类 / 标签 / 内容警告」：宽屏照旧一点没变——那盒 .fm-meta 在宽屏是
+					     display: contents，五组直接当这一行的子项排成五行（顺序也还是原来那个）；
+					     手机上并成**一个**下拉（触发器上写「更多」）—— 五行 ~160px 太占地方（用户要求）。
+					     popover + popovertarget 是 HTML 自带的开关（零 JS）。
+					     题图那组带 .fm-row：它本来就是一行表单（label + 输入框 + 上传按钮），
+					     套上这个类就白拿 `.fm-row input` / `.fm-row > label` / `.fm-row .editor-btn--icon` 那几套样式。 -->
+					<div class="fm-row fm-row--meta">
+						<button type="button" class="fm-dd" id="fm-meta-dd" popovertarget="fm-meta" aria-label="题图 / 标记 / 分类 / 标签 / 内容警告" aria-expanded="false">
+							<span class="fm-dd-text">更多</span>
+							<svg class="fm-dd-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.75L12 15.25L17.5 9.75" /></svg>
+						</button>
+						<div class="fm-meta" id="fm-meta" popover>
+							<div class="fm-meta-group fm-row">
+								<label for="fm-image">题图</label>
+								<input id="fm-image" type="text" placeholder="/images/日期-slug.webp" />
+								<button type="button" class="editor-btn editor-btn--icon" id="fm-image-upload" aria-label="上传题图">
+									<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 24.0083V42H42V24" /><path d="M33 15L24 6L15 15" /><path d="M23.9917 32V6" /></svg>
+								</button>
+								<input type="file" id="fm-image-file" accept="image/*" hidden />
+							</div>
+							<div class="fm-meta-group"><span class="fm-meta-label">标记</span><div class="fm-chips fm-chips--flags" id="fm-flags"></div></div>
+							<div class="fm-meta-group"><span class="fm-meta-label">分类</span><div class="fm-chips" id="fm-category"></div></div>
+							<div class="fm-meta-group"><span class="fm-meta-label">标签</span><div class="fm-chips" id="fm-tags"></div></div>
+							<div class="fm-meta-group"><span class="fm-meta-label">内容警告</span><div class="fm-chips" id="fm-warning"></div></div>
+						</div>
 					</div>
 				</form>
 
@@ -127,13 +170,13 @@ const editorConfig = {
 					</span>
 					<!-- 弹层 position: fixed ⇒ 不参与这行 flex 布局，放工具条里也没事（但用 .editor-menu 前缀写样式，免得被工具条那套按钮规则抢走） -->
 					<div class="editor-menu" id="heading-menu" role="listbox" aria-label="段落 / 标题级别" hidden>
-						<button type="button" class="editor-menu-item" role="option" data-value="p" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.9333V6H40V10.9333" /><path d="M24 6V42" /><path d="M16 42H32" /></svg>正文</button>
-						<button type="button" class="editor-menu-item is-dim" role="option" data-value="h1" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M25 8V40" /><path d="M6 24H25" /><path d="M34.2261 24L39.0001 19.0166V40" /></svg>标题 1</button>
-						<button type="button" class="editor-menu-item" role="option" data-value="h2" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M32 25C32 21.8334 34.6667 20 37 20C39.3334 20 42 21.8334 42 25C42 30.7 32 34.9333 32 40H42" /></svg>标题 2</button>
-						<button type="button" class="editor-menu-item" role="option" data-value="h3" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M32 20H42L35 29C39 29 42 31 42 35C42 39 39 40 37 40C34.619 40 33 39 32 37.9" /></svg>标题 3</button>
-						<button type="button" class="editor-menu-item" role="option" data-value="h4" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M39.9767 40V20L31 32.9967V35.0199H43" /></svg>标题 4</button>
-						<button type="button" class="editor-menu-item" role="option" data-value="h5" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M40 21.0093H32V28.0341C32 28 34 27 37 27C40 27 41 29.5339 41 33.5C41 37.4661 40 40 36 40C33 40 32 38 32 36.0078" /></svg>标题 5</button>
-						<button type="button" class="editor-menu-item" role="option" data-value="h6" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M36.5 40C39.5376 40 42 37.5376 42 34.5C42 31.4624 39.5376 29 36.5 29C33.4624 29 31 31.4624 31 34.5C31 37.5376 33.4624 40 36.5 40Z" /><path d="M41.5962 24.7392C40.7778 22.5461 38.8044 21 36.5 21C33.4624 21 31 23.6863 31 27V34" /></svg>标题 6</button>
+						<button type="button" class="editor-menu-item" role="option" data-value="p" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.9333V6H40V10.9333" /><path d="M24 6V42" /><path d="M16 42H32" /></svg><span class="editor-menu-text">正文</span></button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h2" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M32 25C32 21.8334 34.6667 20 37 20C39.3334 20 42 21.8334 42 25C42 30.7 32 34.9333 32 40H42" /></svg><span class="editor-menu-text">标题 2</span></button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h3" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M32 20H42L35 29C39 29 42 31 42 35C42 39 39 40 37 40C34.619 40 33 39 32 37.9" /></svg><span class="editor-menu-text">标题 3</span></button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h4" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M39.9767 40V20L31 32.9967V35.0199H43" /></svg><span class="editor-menu-text">标题 4</span></button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h5" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M40 21.0093H32V28.0341C32 28 34 27 37 27C40 27 41 29.5339 41 33.5C41 37.4661 40 40 36 40C33 40 32 38 32 36.0078" /></svg><span class="editor-menu-text">标题 5</span></button>
+						<button type="button" class="editor-menu-item" role="option" data-value="h6" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M24 8V40" /><path d="M7 24H23" /><path d="M36.5 40C39.5376 40 42 37.5376 42 34.5C42 31.4624 39.5376 29 36.5 29C33.4624 29 31 31.4624 31 34.5C31 37.5376 33.4624 40 36.5 40Z" /><path d="M41.5962 24.7392C40.7778 22.5461 38.8044 21 36.5 21C33.4624 21 31 23.6863 31 27V34" /></svg><span class="editor-menu-text">标题 6</span></button>
+						<button type="button" class="editor-menu-item is-dim" role="option" data-value="h1" aria-selected="false"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8V40" /><path d="M25 8V40" /><path d="M6 24H25" /><path d="M34.2261 24L39.0001 19.0166V40" /></svg><span class="editor-menu-text">标题 1</span></button>
 					</div>
 					<!-- 行内（图标按钮：stroke/fill 一律吃 currentColor ⇒ hover、按下态自动跟着变色。
 					     粗体那枚线加粗一档（4 → 5.5）拉开主次；没有可见文字的都补 aria-label。
@@ -184,15 +227,30 @@ const editorConfig = {
 				<pre class="editor-source" id="source-view" hidden></pre>
 			</section>
 
-			<section class="editor-pane editor-pane--preview" aria-label="预览区">
+			<section class="editor-pane editor-pane--preview" id="preview-pane" aria-label="预览区">
 				<div class="editor-pane-head">
 					<span>预览</span>
 					<span id="preview-url" class="editor-hint"></span>
-					<button class="editor-linkish" id="reload-btn" type="button">刷新</button>
+					<button class="editor-linkish" id="reload-btn" type="button" aria-label="刷新预览">
+						<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M42 8V24" /><path d="M6 24L6 40" /><path d="M42 24C42 14.0589 33.9411 6 24 6C18.9145 6 14.3216 8.10896 11.0481 11.5M6 24C6 33.9411 14.0589 42 24 42C28.8556 42 33.2622 40.0774 36.5 36.9519" /></svg>
+					</button>
+					<button class="editor-linkish preview-close" id="preview-close" type="button" aria-label="关闭预览">
+						<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 8L40 40" /><path d="M8 40L40 8" /></svg>
+					</button>
 				</div>
 				<iframe id="preview" class="editor-frame" title="预览" src="about:blank"></iframe>
 			</section>
+			<!-- 窄屏时这一栏变成浮层（CSS 的 .is-open 控），这层遮罩只在窄屏出现；点它关掉。 -->
+			<div class="editor-preview-veil" id="preview-veil" hidden></div>
 		</main>
+
+		<!-- 宽屏两栏并排时它自己隐藏（媒体查询），窄屏才靠它开关浮层 —— 触屏也够得着。 -->
+		<button class="editor-fab" id="preview-btn" type="button" aria-label="预览" aria-expanded="false">
+			<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" aria-hidden="true">
+				<path d="M24 36C35.0457 36 44 24 44 24C44 24 35.0457 12 24 12C12.9543 12 4 24 4 24C4 24 12.9543 36 24 36Z" />
+				<path d="M24 29C26.7614 29 29 26.7614 29 24C29 21.2386 26.7614 19 24 19C21.2386 19 19 21.2386 19 24C19 26.7614 21.2386 29 24 29Z" />
+			</svg>
+		</button>
 
 		<!-- 脚本输出面板（发布这类跑命令的动作）：平时藏着，跑的时候弹出来，输出原样贴进去 -->
 		<div class="editor-log" id="log-panel" hidden>
@@ -216,16 +274,6 @@ const editorConfig = {
 						<label for="np-when">日期</label>
 						<span class="fm-date-wrap">
 							<input id="np-when" type="datetime-local" />
-							<svg class="fm-date-icon" viewBox="0 0 48 48" aria-hidden="true">
-								<path d="M5 19H43V40C43 41.1046 42.1046 42 41 42H7C5.89543 42 5 41.1046 5 40V19Z" />
-								<path d="M5 9C5 7.89543 5.89543 7 7 7H41C42.1046 7 43 7.89543 43 9V19H5V9Z" />
-								<path d="M16 4V12" />
-								<path d="M32 4V12" />
-								<path d="M28 34H34" />
-								<path d="M14 34H20" />
-								<path d="M28 26H34" />
-								<path d="M14 26H20" />
-							</svg>
 						</span>
 					</div>
 				</div>
@@ -281,8 +329,10 @@ const editorConfig = {
 			import { Editor } from '@tiptap/core';
 			import { loadBody, dumpBody } from './md/markdown-io.js';
 			import { editorExtensions } from './md/extensions.js';
+			// 图片转码 + 上传（正文粘贴/拖入、题图上传、图片卡片里的按钮共用这一份）
+			import { uploadImage } from './md/upload-image.js';
 
-			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; ai: boolean; date: string; title: string; bytes: number };
+			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; ai: boolean; date: string; title: string; bytes: number; index?: number };
 			type PostDetail = { path: string; url: string; raw: string; body: string; frontmatter: Record<string, unknown> };
 			type Config = {
 				categories: Array<{ id: string; zh: string; en: string }>;
@@ -294,13 +344,20 @@ const editorConfig = {
 			// ⚠️ 必须走 unknown 中转：本仓库 TS 的 DOM lib 里 HTMLElement 与 HTMLSelectElement 等
 			//    被判定为「不充分重叠」（lib 版本差异），直接 as 会报错。
 			const el = <T,>(id: string) => document.getElementById(id) as unknown as T;
-			const picker = el<HTMLSelectElement>('post-picker');
+			// 文章下拉（自绘：触发器 + 菜单 + 当前标题），见下面「文章下拉」那一节
+			const postTrigger = el<HTMLButtonElement>('post-trigger');
+			const postLabel = el<HTMLSpanElement>('post-label');
+			const postMenu = el<HTMLDivElement>('post-menu');
 			const sourceView = el<HTMLPreElement>('source-view');
 			const frame = el<HTMLIFrameElement>('preview');
+			const previewBtn = el<HTMLButtonElement>('preview-btn');
+			const previewPane = el<HTMLElement>('preview-pane');
+			const previewVeil = el<HTMLDivElement>('preview-veil');
 			const metaEl = el<HTMLSpanElement>('post-meta');
 			const previewUrl = el<HTMLSpanElement>('preview-url');
 			const openBtn = el<HTMLAnchorElement>('open-btn');
 			const saveBtn = el<HTMLButtonElement>('save-btn');
+			const delBtn = el<HTMLButtonElement>('del-btn');
 			const sourceBtn = el<HTMLButtonElement>('source-btn');
 			const docHost = el<HTMLDivElement>('doc');
 			const toastEl = el<HTMLDivElement>('toast');
@@ -311,6 +368,9 @@ const editorConfig = {
 			const hdLabel = el<HTMLSpanElement>('hd-label');
 			const hdIcon = el<SVGSVGElement>('hd-cur');
 			const hdMenu = el<HTMLDivElement>('heading-menu');
+			// 手机上那枚合并下拉（标记 / 分类 / 标签 / 内容警告 全在里面，宽屏不显示）
+			const metaBtn = el<HTMLButtonElement>('fm-meta-dd');
+			const metaPanel = el<HTMLDivElement>('fm-meta');
 
 			const chips = {
 				category: el<HTMLDivElement>('fm-category'),
@@ -328,7 +388,22 @@ const editorConfig = {
 
 			const strArray = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : typeof v === 'string' && v ? [v] : []);
 			const esc = (s: string) => s.replace(/[&<>"']/g, (c) => (({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }) as Record<string, string>)[c]);
-			const fmtBadges = (p: Post) => [p.lang === 'en' ? 'EN' : 'ZH', p.draft ? '草稿' : '', p.ai ? 'AI 译' : ''].filter(Boolean).join(' · ');
+			// 语言徽标用的两枚图标（中 / En）：viewBox 24、描边 2（换算成 48 格就是 4，跟工具条那套一个粗细）。
+			// 原作者导出的 SVG 里写死了 #333，这里一律换成 currentColor，跟着主题/hover 变。
+			const LANG_ICON: Record<'zh' | 'en', string> = {
+				zh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6.4" width="18" height="9"/><path d="M12 2.8v18.9"/></svg>',
+				en: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.11 18.91V5.31h7.63"/><path d="M3.11 12.11h7.16"/><path d="M3.11 18.91h7.16"/><path d="M13.75 18.91v-9.28"/><path d="M13.75 18.91v-5.32c0-2.03 1.65-3.68 3.68-3.68c2.03 0 3.68 1.65 3.68 3.68v5.32"/></svg>',
+			};
+
+			/** 「源码」前面那行小字：语言（图标）+ 草稿 + AI 译（图标 + AI，跟「标记」里那枚 pill 同一套）+ 文件大小 */
+			const fmtBadges = (p: Post) =>
+				[
+					`<span class="meta-lang" aria-label="${p.lang === 'en' ? '英文' : '中文'}">${LANG_ICON[p.lang]}</span>`,
+					p.draft ? '草稿' : '',
+					p.ai ? `<span class="meta-ai">${AI_BADGE_SVG}AI</span>` : '',
+				]
+					.filter(Boolean)
+					.join(' · ');
 
 			const editor = new Editor({
 				element: docHost,
@@ -337,7 +412,9 @@ const editorConfig = {
 				content: '',
 				editorProps: { attributes: { class: 'editor-prose typography-body' } },
 				onUpdate: () => setDirty(true),
-				onSelectionUpdate: () => syncToolbar(),
+				// ⚠️ 用 onTransaction 而不是 onSelectionUpdate：快捷键（Ctrl+B 等）在光标折叠时
+				//    只改 storedMarks，文档和选区都没变 ⇒ selectionUpdate / update 都不触发，工具条会僵住。
+				onTransaction: () => syncToolbar(),
 			});
 
 			(window as unknown as { __editor: unknown }).__editor = editor; // 调试钩子：控制台里可直接 __editor.commands…
@@ -345,7 +422,7 @@ const editorConfig = {
 			function setDirty(v: boolean) {
 				dirty = v;
 				saveBtn.disabled = !current || !v;
-				saveBtn.textContent = v ? '保存 •' : '保存';
+				saveBtn.classList.toggle('is-dirty', v); // 按钮改成图标了 ⇒ 「有改动」改用右上角那枚小圆点（CSS 里的 .is-dirty::after）
 			}
 
 			/** 工具条状态回显：标题下拉跟着当前块类型走，行内按钮亮当前 marks（.is-on） */
@@ -472,6 +549,159 @@ const editorConfig = {
 			});
 			window.addEventListener('resize', () => { if (!hdMenu.hidden) closeHeadingMenu(); });
 
+			// ── 主题按钮摆在哪 ──────────────────────────────────
+			/* 「博客编辑器」那行字在 ≤560 被收起来（CSS），顶栏左上就空了 ⇒ 主题按钮跟着搬到右下角，
+			   跟预览那枚一上一下当 FAB（用户要求「和预览图标一样」）。
+			   ⚠️ 不复制一份按钮：搬的是**同一个元素**，只换类名（顶栏图标按钮 ↔ 圆形 FAB）——
+			   图标、选中态、toggleTheme 都还是那一份（图标显隐由 .theme-switch 管，跟形态无关）。 */
+			const themeBtn = el<HTMLButtonElement>('theme-btn');
+			const barLeft = document.querySelector<HTMLDivElement>('.editor-bar-left');
+			const narrowBar = window.matchMedia('(max-width: 560px)'); // 阈值跟 CSS 里藏品牌字那条对齐
+
+			function placeThemeBtn() {
+				const narrow = narrowBar.matches;
+				const host: HTMLElement = narrow || !barLeft ? document.body : barLeft;
+				if (themeBtn.parentElement !== host) host.appendChild(themeBtn);
+				themeBtn.classList.toggle('editor-fab', narrow);
+				themeBtn.classList.toggle('editor-fab--theme', narrow);
+				themeBtn.classList.toggle('editor-btn', !narrow);
+				themeBtn.classList.toggle('editor-btn--icon', !narrow);
+			}
+			narrowBar.addEventListener('change', placeThemeBtn);
+			placeThemeBtn();
+
+			// ── 壳的高度 = 手机实际看得见的那一块 ──────────────────
+			/* 手机上两个坑（用户报过：底下被吃掉 / 操作之后顶栏被顶出去还滑不回来）：
+			   1) 地址栏：100vh 是「地址栏收起时」那一档，地址栏一显示，壳的底就出屏了 ⇒ 高度改用
+			      dvh（见 editor.css 的 .editor-body）。
+			   2) 键盘：默认只有**可视视口**缩，布局视口不缩，浏览器为了露出光标会把整页往上滚
+			      ——而 body 是 overflow: hidden，被滚走了就再也滑不回来（只能长按选字往上拖）。
+			      所以把可视视口高度写进 --ed-vv-h，让壳始终不高于看得见的那块：光标要露出时，
+			      浏览器滚的是面板内部（那些 overflow: auto 的容器），不会动整个页面。
+			   ⚠️ 取「布局视口和可视视口里更矮的那个」：键盘弹起 / 地址栏伸缩，谁缩了就听谁的。
+			   ⚠️ 捏合放大时不跟（scale ≠ 1）：那时可视视口变矮是因为放大，跟了就成缩略图了。 */
+			function sizeShell() {
+				const vv = window.visualViewport;
+				const h = vv && vv.scale === 1 ? Math.min(window.innerHeight, vv.height) : window.innerHeight;
+				document.body.style.setProperty('--ed-vv-h', Math.round(h) + 'px');
+			}
+			sizeShell();
+			window.addEventListener('resize', sizeShell);
+			window.visualViewport?.addEventListener('resize', sizeShell);
+			// 兜底：万一还是被顶走了（有些版本会先把整页滚下去再露光标），拽回原位
+			window.addEventListener('scroll', () => {
+				if (window.scrollY !== 0) window.scrollTo(0, 0);
+			});
+
+			// ── 文章下拉（自绘）──────────────────────────────────────
+			/* 为什么不用原生 select / base-select：见顶栏那段注释。这里就是「触发器 + 菜单」，
+			   跟段落级别那个菜单同一套：position: fixed + JS 算坐标 + hidden + @starting-style 进出场。 */
+			let postPath = ''; // 当前文章路径（替代原来 <select> 的 value）
+
+			/** 记下当前文章，并同步触发器上那行字和菜单里的选中态 */
+			function setPostPath(path: string) {
+				postPath = path;
+				postLabel.textContent = posts.find((p) => p.path === path)?.title ?? '选择文章…';
+				for (const item of postMenu.querySelectorAll<HTMLButtonElement>('.pm-item[data-path]')) {
+					item.setAttribute('aria-selected', String(item.dataset.path === path));
+				}
+			}
+
+			function closePostMenu(focusTrigger = false) {
+				postMenu.hidden = true;
+				postTrigger.setAttribute('aria-expanded', 'false');
+				if (focusTrigger) postTrigger.focus();
+			}
+
+			/**
+			 * 摆位：宽度 min(680, 视口 - 16)，贴在触发器下面（放不下就翻上面），坐标全用 JS 算的**视口坐标**
+			 * （菜单是 position: fixed）。
+			 * ⚠️ 故意不碰 anchor() / position-area：那些在手机上实测会失灵（弹层跑到控件左边缘、右边缘顶出屏幕）；
+			 *    坐标是我们自己量的，哪台设备都一个样。
+			 */
+			function placePostMenu() {
+				const r = postTrigger.getBoundingClientRect();
+				const gutter = 8;
+				const width = Math.min(680, window.innerWidth - gutter * 2);
+				postMenu.style.width = width + 'px';
+				postMenu.style.left = Math.max(gutter, Math.min(r.left, window.innerWidth - width - gutter)) + 'px';
+				// ⚠️ 高度得在**定完宽度之后**量：宽度影响换行、换行影响高度
+				const h = postMenu.offsetHeight;
+				const below = r.bottom + 6;
+				const above = r.top - h - 6;
+				const top = below + h <= window.innerHeight - gutter || above < gutter ? Math.min(below, window.innerHeight - h - gutter) : above;
+				postMenu.style.top = Math.max(gutter, top) + 'px';
+				postMenu.style.setProperty('--menu-origin', r.width / 2 + 'px 0');
+			}
+
+			function openPostMenu() {
+				postMenu.hidden = false;
+				placePostMenu();
+				postTrigger.setAttribute('aria-expanded', 'true');
+				// 焦点直接给当前那一项：打开后 ↑↓ + Enter 就能换文章
+				postMenu.querySelector<HTMLButtonElement>('.pm-item[aria-selected="true"]')?.focus();
+			}
+
+			/** 选一篇：有未保存的改动先问一句（自己画的确认框，不用 window.confirm） */
+			async function choosePost(path: string) {
+				if (path === postPath) {
+					closePostMenu(true);
+					return;
+				}
+				closePostMenu();
+				const ok = !dirty || (await askConfirm({
+					title: '有未保存的改动',
+					text: '切到别的文章会丢掉这些改动，确认切换？',
+					ok: '切换',
+				}));
+				if (!ok) return;
+				localStorage.setItem('editor:last-post', path);
+				await loadPost(path);
+			}
+
+			postTrigger.addEventListener('click', () => {
+				if (postMenu.hidden) openPostMenu();
+				else closePostMenu();
+			});
+
+			postMenu.addEventListener('click', (e) => {
+				const item = (e.target as HTMLElement).closest<HTMLButtonElement>('.pm-item[data-path]');
+				if (item?.dataset.path) void choosePost(item.dataset.path);
+			});
+
+			// 菜单键盘：↑↓/Home/End 移焦点、Enter/Space 选中、Esc 收起（preventDefault 免得别的处理器抢）
+			postMenu.addEventListener('keydown', (e) => {
+				const items = [...postMenu.querySelectorAll<HTMLButtonElement>('.pm-item[data-path]')];
+				const index = items.indexOf(document.activeElement as HTMLButtonElement);
+				if (e.key === 'Escape') {
+					e.preventDefault();
+					closePostMenu(true);
+				} else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+					e.preventDefault();
+					const step = e.key === 'ArrowDown' ? 1 : -1;
+					items[(index + step + items.length) % items.length]?.focus();
+				} else if (e.key === 'Home' || e.key === 'End') {
+					e.preventDefault();
+					items[e.key === 'Home' ? 0 : items.length - 1]?.focus();
+				} else if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					const path = index >= 0 ? items[index].dataset.path : undefined;
+					if (path) void choosePost(path);
+				}
+			});
+
+			// 点菜单外面收起（点触发器本身除外：那次是 toggle）
+			document.addEventListener('pointerdown', (e) => {
+				if (postMenu.hidden) return;
+				const t = e.target as HTMLElement;
+				if (postMenu.contains(t) || t.closest('#post-trigger')) return;
+				closePostMenu();
+			});
+			// ⚠️ 点进预览 iframe 里，事件不会冒到父文档 ⇒ 上面那条收不到，补一条：
+			//    焦点跑进 iframe（窗口 blur）就当「点到外面了」收起。
+			window.addEventListener('blur', () => { if (!postMenu.hidden) closePostMenu(); });
+			window.addEventListener('resize', () => { if (!postMenu.hidden) closePostMenu(); });
+
 			// ── 原生下拉（select）往哪边开 ────────────────────────────
 			/* ⚠️ 方向**必须自己算**，不能甩给 UA：它判断「下方放不下就翻到上方」时参照的是
 			   控件所在的**滚动容器**，不是窗口 —— 表格那个下拉待在 .md-table-scroll（才 157px 高）
@@ -479,7 +709,8 @@ const editorConfig = {
 			   它照样把 110px 高的菜单翻到控件上方（实测）。
 			   做法：打开前按窗口量一次 ⇒ 够就钉死往下、不够就钉死往上，CSS 那边已掐掉回退链，
 			   给什么方向就照做。 */
-			const PICKER_SELECTOR = 'select.editor-select, .md-table-align select';
+			// 只剩表格里那个「列对齐」还是原生 select（文章下拉已经自绘了）
+			const PICKER_SELECTOR = '.md-table-align select';
 
 			function aimPicker(el: HTMLSelectElement) {
 				const r = el.getBoundingClientRect();
@@ -494,7 +725,7 @@ const editorConfig = {
 				const fitsAbove = r.top - h >= 0;
 				// 上下都放不下时，挑空当大的那边（总比整块糊到屏幕外强）
 				const down = fitsBelow || (!fitsAbove && window.innerHeight - r.bottom >= r.top);
-				el.style.setProperty('--picker-area', down ? 'end span-end' : 'start span-end');
+				el.style.setProperty('--picker-block', down ? 'end' : 'start');
 				el.style.setProperty('--picker-margin', down ? '6px 0 0' : '0 0 6px');
 			}
 
@@ -534,7 +765,8 @@ const editorConfig = {
 			 *  ⚠️ 那套配色类**只在选中时**才写进 class（未选中要中性灰），所以另外存一份到 data-scheme
 			 *    —— 点选时 toggleChip 得自己把它补上，否则掉进「没有配色」的兜底（品牌蓝）。 */
 			const chipBtn = (group: string, key: string, text: string, on: boolean, onClasses = '') =>
-				`<button type="button" class="chip${on ? ' chip--on ' + onClasses : ''}" data-group="${group}" data-key="${key}" data-scheme="${onClasses}" aria-pressed="${on}">${esc(text)}</button>`;
+				// 文字裹一层 .chip-text（带 data-text）：那层里有个粗体占位，选中加粗时宽度不会跳（见 editor.css）
+				`<button type="button" class="chip${on ? ' chip--on ' + onClasses : ''}" data-group="${group}" data-key="${key}" data-scheme="${onClasses}" aria-pressed="${on}"><span class="chip-text" data-text="${esc(text)}">${esc(text)}</span></button>`;
 
 			/**
 			 * 就地开关一枚 chip —— **别整排重画**。
@@ -577,6 +809,14 @@ const editorConfig = {
 				renderFlags();
 			}
 
+			/**
+			 * 触发器上的 aria-expanded 得自己维护：popovertarget 不会自动带给 invoker（实测是 null）。
+			 * 用 popover 自己的 toggle 事件（开、关都发），不要夹在 click 里 —— 点遮罩/按 Esc 关的那两次也得同步。
+			 */
+			function wireDdAria() {
+				metaPanel.addEventListener('toggle', () => metaBtn.setAttribute('aria-expanded', String(metaPanel.matches(':popover-open'))));
+			}
+
 			// 站点 AI 徽标里那枚图标（Illustrator 导的，viewBox 24）；颜色吃 currentColor，描边由 CSS 管
 			const AI_BADGE_SVG =
 				'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7.49,2.91l1.22,3.15" /><path d="M1.68,6.05h12.8" /><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81" /><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33" /><polyline points="22.06 21.1 17.31 10.28 12.56 21.1" /><line x1="14.46" y1="17.21" x2="20.17" y2="17.21" /></svg>';
@@ -597,8 +837,8 @@ const editorConfig = {
 				// ⚠️ AI 不限定英文版：谁知道作者哪天用英文写、再 AI 翻成中文（反过来也一样）⇒
 				//    中英两份都渲染这个 chip（以前只在 en 文章上出，等于把可能性写死了）。
 				chips.flags.innerHTML =
-					`<button type="button" class="chip flag-draft${isDraft ? ' chip--on' : ''}" data-flag="draft" aria-pressed="${isDraft}">草稿 · Draft</button>` +
-					`<button type="button" class="chip flag-ai${isAi ? ' chip--on' : ''}" data-flag="ai" aria-pressed="${isAi}" aria-label="AI 翻译"><span class="chip-ico">${AI_BADGE_SVG}</span>AI</button>`;
+					`<button type="button" class="chip flag-draft${isDraft ? ' chip--on' : ''}" data-flag="draft" aria-pressed="${isDraft}"><span class="chip-text" data-text="草稿 · Draft">草稿 · Draft</span></button>` +
+					`<button type="button" class="chip flag-ai${isAi ? ' chip--on' : ''}" data-flag="ai" aria-pressed="${isAi}" aria-label="AI 翻译"><span class="chip-ico">${AI_BADGE_SVG}</span><span class="chip-text" data-text="AI">AI</span></button>`;
 			}
 
 			chips.flags.addEventListener('click', (e) => {
@@ -631,6 +871,41 @@ const editorConfig = {
 
 			titleInput.addEventListener('input', () => { frontmatter.title = titleInput.value; setDirty(true); });
 			dateInput.addEventListener('input', () => { frontmatter.date = dateInput.value; setDirty(true); });
+
+			// ── 题图（frontmatter 的 `image`）──────────────────────────
+			/* 题图就是 frontmatter 里那行 `image: '/images/xxx.webp'`：站点的文章页 hero 和主页卡片都用它
+			   （素材按 16:9 准备，位置/裁剪的约定见 main.css）。这里给「路径输入 + 上传」——
+			   上传直接复用工具条那套转码（fileToUpload → POST /image，落在 public/images/、重名自动补 -1），
+			   把返回的 url 填进输入框；**不往正文里插任何东西**（跟图片块不是一回事）。
+			   清空输入 = 去掉这个字段（serializeFrontmatter 会把空值整行丢掉）。 */
+			const imageInput = el<HTMLInputElement>('fm-image');
+			const imageFile = el<HTMLInputElement>('fm-image-file');
+
+			async function uploadHeroImage(file: File) {
+				// 文件名用当前文章的 slug（`日期-slug.webp`，跟现有几张题图一个路子）
+				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
+				try {
+					toast('题图转码上传中…');
+					const out = await uploadImage(file, slug);
+					imageInput.value = out.url;
+					frontmatter.image = out.url;
+					setDirty(true);
+					toast(`题图已设为 ${out.url}`);
+				} catch (err) {
+					toast('题图上传失败：' + String((err as Error)?.message ?? err), 'err');
+				}
+			}
+
+			imageInput.addEventListener('input', () => {
+				frontmatter.image = imageInput.value.trim();
+				setDirty(true);
+			});
+			imageFile.addEventListener('change', () => {
+				const file = imageFile.files?.[0];
+				imageFile.value = ''; // 清掉才能「同一个文件再选一次也触发 change」
+				if (file) void uploadHeroImage(file);
+			});
+			el<HTMLButtonElement>('fm-image-upload').addEventListener('click', () => imageFile.click());
 
 			// ── 工具条 ────────────────────────────────────────────────
 			// 「插入块」的模板：一律以 rawBlock 形式落地（kind + 原文）⇒ 保存时原样写进 markdown。
@@ -688,7 +963,7 @@ const editorConfig = {
 				editor.chain().insertContentAt(topEnd, def).run();
 				// 新段落的正文从 topEnd+1 开始：引用（nodeSize 1）+「: 」两个字符 ⇒ 光标落在 topEnd+4
 				editor.chain().focus().setTextSelection(topEnd + 4).run();
-				toast('已插入脚注（定义就在下面一行，光标已过去；序号会自动重排）');
+				toast('已插入脚注');
 			}
 
 			/**
@@ -712,7 +987,7 @@ const editorConfig = {
 				const end = sel.from + base.length + RUBY_READING.length;
 				editor.chain().focus().setTextSelection({ from: end - RUBY_READING.length, to: end }).run();
 				setDirty(true);
-				toast('已插入 ruby 注音（注音占位已选中，直接打拼音）；正文汉字可再改');
+				toast('已插入 ruby 注音');
 			}
 
 			/**
@@ -728,7 +1003,7 @@ const editorConfig = {
 					const placeholder = 'x';
 					editor.chain().focus().insertContentAt(sel.from, '$' + placeholder + '$').run();
 					editor.chain().focus().setTextSelection({ from: sel.from + 1, to: sel.from + 1 + placeholder.length }).run();
-					toast('已插入行内公式 $x$（占位 x 已选中，直接打公式内容）');
+					toast('已插入行内公式 $x$');
 				} else {
 					const raw = editor.state.doc.textBetween(sel.from, sel.to);
 					const from = sel.from + (raw.length - raw.trimStart().length);
@@ -876,47 +1151,16 @@ const editorConfig = {
 			});
 
 			/**
-			 * 图片粘贴 / 拖入上传（M3）。
-			 * 浏览器这边先转成 webp：`canvas.toBlob('image/webp')` 零依赖，不用装 sharp；
-			 * ⚠️ 唯独 GIF 不转 —— canvas 只能画第一帧，转完动图就成静图了。
-			 * 二进制直接 POST 给中间件（`/__editor/api/image`），落到 `public/images/`，
-			 * 然后就地插一个图片卡片 —— 跟工具条那枚「图片」按钮同一条路（rawBlock，原文 = `![alt](url)`）。
+			 * 图片粘贴 / 拖入上传。
+			 * 转码与落盘都在 `./md/upload-image.js`（图片卡片里那枚「上传」按钮用的也是它）；
+			 * 这里只负责「插一个图片卡片」——跟工具条那枚「图片」按钮同一条路（rawBlock，原文 = `![alt](url)`）。
 			 */
-			async function fileToUpload(file: File): Promise<{ blob: Blob; ext: string }> {
-				if (file.type === 'image/gif') return { blob: file, ext: 'gif' };
-				try {
-					const bitmap = await createImageBitmap(file);
-					const scale = Math.min(1, 1600 / bitmap.width);
-					const canvas = document.createElement('canvas');
-					canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-					canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-					const ctx = canvas.getContext('2d');
-					if (!ctx) throw new Error('拿不到 2d context');
-					ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-					bitmap.close();
-					const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/webp', 0.9));
-					if (!blob || blob.type !== 'image/webp') throw new Error('这个浏览器不会编 webp');
-					return { blob, ext: 'webp' };
-				} catch {
-					// 转不了就原样传，中间件按扩展名放行常见的图片格式
-					const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
-					return { blob: file, ext };
-				}
-			}
-
 			async function uploadAndInsertImage(file: File) {
 				// 文件名用当前文章的 slug（跟现有 `2026-08-26-police-laughing.webp` 一个路子），重名中间件会补 -1、-2
 				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
 				try {
 					toast('图片转码上传中…');
-					const { blob, ext } = await fileToUpload(file);
-					const res = await fetch(api('/image?name=' + encodeURIComponent(`${slug}.${ext}`)), {
-						method: 'POST',
-						headers: { 'content-type': 'application/octet-stream' },
-						body: blob,
-					});
-					const out = (await res.json()) as { url?: string; file?: string; bytes?: number; error?: string };
-					if (!res.ok || !out.url) throw new Error(out.error ?? 'HTTP ' + res.status);
+					const out = await uploadImage(file, slug);
 					const sel = editor.state.selection;
 					const pos = sel.empty ? sel.from : sel.to;
 					editor.chain().focus().insertContentAt(pos, { type: 'rawBlock', attrs: { source: `![](${out.url})`, kind: 'image' } }).run();
@@ -1002,12 +1246,13 @@ const editorConfig = {
 			let npFlags = { draft: false, aiZh: false, aiEn: true };
 
 			function renderNewFlags() {
-				const chip = (flag: 'draft' | 'aiZh' | 'aiEn', cls: string, on: boolean, inner: string, label: string) =>
-					`<button type="button" class="chip ${cls}${on ? ' chip--on' : ''}" data-flag="${flag}" aria-pressed="${on}" aria-label="${label}">${inner}</button>`;
+				// text 跟 icon 分开给：文字要裹进 .chip-text（粗体占位用），图标得留在这层外面（那是纵向 flex）
+				const chip = (flag: 'draft' | 'aiZh' | 'aiEn', cls: string, on: boolean, text: string, icon: string, label: string) =>
+					`<button type="button" class="chip ${cls}${on ? ' chip--on' : ''}" data-flag="${flag}" aria-pressed="${on}" aria-label="${label}">${icon}<span class="chip-text" data-text="${text}">${text}</span></button>`;
 				npFlagsBox.innerHTML =
-					chip('draft', 'flag-draft', npFlags.draft, '草稿 · Draft', '存成草稿（放 drafts/）') +
-					chip('aiZh', 'flag-ai', npFlags.aiZh, `<span class="chip-ico">${AI_BADGE_SVG}</span>AI (ZH)`, '中文版标「AI 翻译」') +
-					chip('aiEn', 'flag-ai', npFlags.aiEn, `<span class="chip-ico">${AI_BADGE_SVG}</span>AI (EN)`, '英文版标「AI 翻译」');
+					chip('draft', 'flag-draft', npFlags.draft, '草稿 · Draft', '', '存成草稿（放 drafts/）') +
+					chip('aiZh', 'flag-ai', npFlags.aiZh, 'AI (ZH)', `<span class="chip-ico">${AI_BADGE_SVG}</span>`, '中文版标「AI 翻译」') +
+					chip('aiEn', 'flag-ai', npFlags.aiEn, 'AI (EN)', `<span class="chip-ico">${AI_BADGE_SVG}</span>`, '英文版标「AI 翻译」');
 			}
 
 			npFlagsBox.addEventListener('click', (e) => {
@@ -1119,7 +1364,6 @@ const editorConfig = {
 					closeNewModal();
 					await loadList();
 					const zh = out.files.find((f) => f.lang === 'zh') ?? out.files[0];
-					picker.value = zh.path;
 					localStorage.setItem('editor:last-post', zh.path);
 					await loadPost(zh.path);
 					toast(`已新建 ${out.files.map((f) => f.path.split('/').pop()).join(' 和 ')}（中文那份已经打开，正文填完点保存）`);
@@ -1245,21 +1489,30 @@ const editorConfig = {
 			});
 
 			// ── 列表 ──────────────────────────────────────────────────
+			/**
+			 * 把文章列表画进菜单（grid：行首「序号 + 日期」一格、中英标题各一格）。
+			 * 列顺序 = 源码顺序 ⇒ 中英成对塞进同一行；两个分组（正式 / 草稿）共用**同一个 grid**，
+			 * 于是三列在两组之间也是对齐的（以前用 optgroup，两组各是一个 grid，标题列起点会差一截）。
+			 * 组标题不写，草稿靠行首那格的「草稿」认（用户嫌组标题占宽度）。
+			 */
 			async function loadList() {
 				const res = await fetch(api('/posts'));
 				if (!res.ok) throw new Error('读取文章列表失败（HTTP ' + res.status + '）');
 				posts = (await res.json()) as Post[];
-				// ⚠️ 只按「草稿 / 正式」分两类：中英要**成对排在同一行**（CSS 给 optgroup 上了两列网格，
-				//    列顺序 = 源码顺序 ⇒ 中英交替塞进去，同一篇就在一行）。以前按语言分四组，
-				//    想找同一篇的另一语言得上下翻半天。
-				const groups: Array<{ label: string; draft: boolean }> = [
-					{ label: '已发布 · Published', draft: false },
-					{ label: '草稿 · Drafts', draft: true },
-				];
-				picker.innerHTML = '';
+				const groups: Array<{ draft: boolean }> = [{ draft: false }, { draft: true }];
+				postMenu.innerHTML = '';
+				let firstGroup = true;
 				for (const g of groups) {
 					const items = posts.filter((p) => p.draft === g.draft);
 					if (!items.length) continue;
+					// 分组之间拉一条分隔线（跨满三列）—— 不写组标题，但得看得出这是另一组
+					if (!firstGroup) {
+						const sep = document.createElement('div');
+						sep.className = 'pm-sep';
+						sep.setAttribute('role', 'presentation');
+						postMenu.appendChild(sep);
+					}
+					firstGroup = false;
 					// 配对键 = 文件名：中英同一篇共用 `日期-slug.md`（目录不同而已）
 					const rows: Array<{ zh?: Post; en?: Post }> = [];
 					const at = new Map<string, number>();
@@ -1272,35 +1525,43 @@ const editorConfig = {
 						}
 						rows[i][p.lang] = p;
 					}
-					const og = document.createElement('optgroup');
-					og.label = g.label;
-					// ⚠️ 零高占位项：两列网格里第一格被 UA 生成的组标签占了（那个盒子作者 CSS 碰不到，
-					//    给 optgroup::before 写 grid-column 也没用）——不补这一格，每对都会错开一格。
-					const pad = document.createElement('option');
-					pad.className = 'optgroup-pad';
-					pad.disabled = true;
-					og.appendChild(pad);
 					for (const row of rows) {
+						// 行首：正式文章写序号（同语言、非草稿、按日期正序，见 post-io 的 listPosts），
+						// 跟站点文章页标题下那个 `#17` 完全一致；草稿在站点上本来就没序号 ⇒ 写「草稿」当行首标记。
+						const nums = [...new Set([row.zh?.index, row.en?.index].filter((n): n is number => typeof n === 'number'))];
+						const date = String((row.zh ?? row.en)?.date ?? '').slice(0, 10);
+						const head = document.createElement('div');
+						head.className = 'pm-head';
+						head.setAttribute('role', 'presentation');
+						// 日期分开放一个 span：窄屏靠 CSS 藏掉它、只留行首（自己画的菜单里这就是一行 CSS 的事）
+						head.innerHTML = `<span class="pm-num">${nums.length ? '#' + nums.join(' / #') : '草稿'}</span><span class="pm-date">${esc(date)}</span>`;
+						postMenu.appendChild(head);
 						for (const side of ['zh', 'en'] as const) {
 							const p = row[side];
-							const opt = document.createElement('option');
+							const item = document.createElement('button');
+							item.type = 'button';
+							item.className = 'pm-item';
+							item.setAttribute('role', 'option');
+							item.setAttribute('aria-selected', 'false');
 							if (p) {
-								opt.value = p.path;
-								// 不带 [ZH]/[EN · AI 译] 那种尾巴：两列已经把语言摆明白了（左中右英），
-								// 草稿与否也在组标题里 —— 标题旁边再挂一串方括号只是噪音。
-								opt.textContent = `${p.date.slice(0, 10)} · ${p.title}`;
+								item.dataset.path = p.path;
+								// 只写标题：语言由列位摆明（左中右英），序号和日期在行首那一格；
+								// 读屏听不出列位 ⇒ aria-label 里补上语言
+								item.textContent = p.title;
+								item.setAttribute('aria-label', `${side === 'zh' ? '中文' : '英文'}：${p.title}`);
 							} else {
-								// 缺一侧就补一个占位项：不补的话后面所有行都会错位（换行的代价）
-								opt.value = '';
-								opt.disabled = true;
-								opt.textContent = side === 'zh' ? '（没有中文版）' : '（no English version）';
+								// 缺一侧就补个占位：不补的话后面所有行都会错位（这就是网格的代价）
+								item.classList.add('is-missing');
+								item.disabled = true;
+								item.textContent = side === 'zh' ? '（无中文版本）' : '(no English version)';
 							}
-							og.appendChild(opt);
+							postMenu.appendChild(item);
 						}
 					}
-					picker.appendChild(og);
 				}
-				if (!posts.length) picker.innerHTML = '<option value="">（没有找到任何文章）</option>';
+				if (!posts.length) postMenu.innerHTML = '<div class="pm-empty" role="presentation">（没有找到任何文章）</div>';
+				setPostPath(postPath);
+				if (!postMenu.hidden) placePostMenu(); // 菜单开着的时候列表变了（比如刚删了一篇）⇒ 重新摆一次
 			}
 
 			// ── 载入 / 保存 ──────────────────────────────────────────
@@ -1315,15 +1576,18 @@ const editorConfig = {
 				// 正文样式（.typography-body）有 html[lang] 分支（中/英字体、中文斜体）⇒ 跟着文章语言切
 				document.documentElement.lang = lang === 'en' ? 'en-US' : 'zh-CN';
 				const p = posts.find((x) => x.path === path);
-				metaEl.textContent = p ? `${fmtBadges(p)} · ${(p.bytes / 1024).toFixed(1)} KB` : '';
+				metaEl.innerHTML = p ? `${fmtBadges(p)} · <span class="meta-size">${(p.bytes / 1024).toFixed(1)} KB</span>` : '';
+				setPostPath(path); // 下拉触发器上那行字 + 菜单里的选中态
 
 				titleInput.value = String(frontmatter.title ?? '');
 				dateInput.value = String(frontmatter.date ?? '').slice(0, 16);
+				imageInput.value = String(frontmatter.image ?? '');
 				renderChips(); // 含「标记」那一行（草稿 / AI）
 
 				loadBody(editor, detail.body);
 				sourceView.textContent = detail.raw;
 				setDirty(false);
+				delBtn.disabled = false;
 				syncToolbar();
 
 				previewUrl.textContent = detail.url;
@@ -1331,10 +1595,32 @@ const editorConfig = {
 				reloadPreview();
 			}
 
+			// 宽屏预览栏常驻（两栏并排）⇒ 照常刷新；窄屏它是浮层，没开就不拉 iframe（省得每次保存都在后台跑一遍热更新），
+			// 开的时候把欠的那次补上。用 getClientRects 判「现在到底显示了没」，不重复写一份断点。
+			const previewVisible = () => previewPane.getClientRects().length > 0;
+			let previewStale = true;
 			const reloadPreview = () => {
 				if (!current) return;
+				if (!previewVisible()) { previewStale = true; return; }
 				frame.src = current.url + (current.url.includes('?') ? '&' : '?') + 't=' + Date.now();
+				previewStale = false;
 			};
+
+			/** 窄屏那枚「眼睛」：把预览栏变成浮层（宽屏两栏并排，这个按钮是隐藏的） */
+			function openPreview() {
+				if (!current) return;
+				previewPane.classList.add('is-open');
+				previewVeil.hidden = false;
+				previewBtn.setAttribute('aria-expanded', 'true');
+				if (previewStale) reloadPreview(); // ⚠️ 得在加上 .is-open 之后（此时才量得到尺寸）
+				el<HTMLButtonElement>('preview-close').focus();
+			}
+
+			function closePreview() {
+				previewPane.classList.remove('is-open');
+				previewVeil.hidden = true;
+				previewBtn.setAttribute('aria-expanded', 'false');
+			}
 
 			async function save() {
 				if (!current) return;
@@ -1363,35 +1649,101 @@ const editorConfig = {
 				window.setTimeout(reloadPreview, 800); // Astro 热更新后再刷一次更稳
 			}
 
-			// ── 事件 ─────────────────────────────────────────────────
-			picker.addEventListener('change', async () => {
-				// 自己画的确认框，不用 window.confirm（Chromium 那个没法跟编辑器一个长相）
-				const ok = !dirty || (await askConfirm({
-					title: '有未保存的改动',
-					text: '切到别的文章会丢掉这些改动，确认切换？',
-					ok: '切换',
-				}));
-				if (!ok) {
-					picker.value = current?.path ?? '';
+			/**
+			 * 删除当前文章（只删当前语言那一份）。
+			 * ⚠️ 删完不能停在原地：文件已经不在磁盘上了，得重读列表再换一篇接着编辑。
+			 *    优先换「同一篇的另一种语言」（想清掉一篇时多半是中英一起删），没有才退回原位置那篇。
+			 */
+			async function deleteCurrent() {
+				if (!current) return;
+				const target = current.path;
+				const file = target.split('/').pop() ?? target;
+				const index = Math.max(0, posts.findIndex((p) => p.path === target));
+				const ok = await askConfirm({
+					title: '删除这篇文章？',
+					text: `将删除${lang === 'en' ? '英文版' : '中文版'} ${file}。该操作会从磁盘移除文件，未保存的改动将丢失。`,
+					ok: '删除',
+				});
+				if (!ok) return;
+
+				delBtn.disabled = true;
+				const res = await fetch(api('/post'), {
+					method: 'DELETE',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ path: target }),
+				});
+				const out = (await res.json()) as { error?: string };
+				if (!res.ok) {
+					toast('删除失败：' + (out.error ?? res.status), 'err');
+					delBtn.disabled = false;
 					return;
 				}
-				if (picker.value) localStorage.setItem('editor:last-post', picker.value);
-				void loadPost(picker.value);
+				toast(`已删除 ${file}`);
+
+				await loadList().catch((err) => { toast(String((err as Error)?.message ?? err), 'err'); });
+				const counterpart = posts.find((p) => (p.path.split('/').pop() ?? p.path) === file);
+				const next = counterpart ?? posts[Math.min(index, posts.length - 1)];
+				if (next) {
+					localStorage.setItem('editor:last-post', next.path);
+					void loadPost(next.path);
+					return;
+				}
+				// 一篇不剩：把编辑区清空，否则界面上还留着刚删掉那篇的内容
+				localStorage.removeItem('editor:last-post');
+				current = null;
+				frontmatter = {};
+				titleInput.value = '';
+				dateInput.value = '';
+				metaEl.textContent = '';
+				previewUrl.textContent = '';
+				openBtn.href = '#';
+				frame.src = 'about:blank';
+				renderChips();
+				editor.commands.clearContent();
+				sourceView.textContent = '';
+				setDirty(false);
+				syncToolbar();
+			}
+
+			// 卡片里的上传（block-views.js）没有 toast，用事件把它叫出来
+			document.addEventListener('editor-toast', (e) => {
+				const detail = (e as CustomEvent<{ msg?: string; kind?: 'ok' | 'err' }>).detail;
+				if (detail?.msg) toast(detail.msg, detail.kind ?? 'ok');
 			});
 
+			// ── 事件 ─────────────────────────────────────────────────
+			wireDdAria(); // 合并下拉触发器的 aria-expanded（popover 不会自动同步，自己挂 toggle）
 			saveBtn.addEventListener('click', () => void save());
+			delBtn.addEventListener('click', () => void deleteCurrent());
 			el<HTMLButtonElement>('reload-btn').addEventListener('click', reloadPreview);
+			previewBtn.addEventListener('click', () => (previewPane.classList.contains('is-open') ? closePreview() : openPreview()));
+			el<HTMLButtonElement>('preview-close').addEventListener('click', closePreview);
+			previewVeil.addEventListener('click', closePreview);
 			sourceBtn.addEventListener('click', () => {
-				const showSource = sourceView.hidden;
+				// ⚠️ hidden 在这个 DOM lib 里的类型是 `boolean | 'until-found'` ⇒ 先收成真布尔，
+				//    否则下面 classList.toggle 的第二个参数过不了类型检查（也顺便让意图更明确）。
+				const showSource: boolean = sourceView.hidden === true;
 				sourceView.hidden = !showSource;
 				docHost.hidden = showSource;
 				el<HTMLDivElement>('toolbar').hidden = showSource;
 				el<HTMLFormElement>('fm-form').hidden = showSource;
-				sourceBtn.textContent = showSource ? '正文' : '源码';
+				// 按钮是图标了：不明说状态 ⇒ 亮底色的按下态表示「正在看源码」，读屏走 aria
+				sourceBtn.classList.toggle('is-on', showSource);
+				sourceBtn.setAttribute('aria-pressed', String(showSource));
+				sourceBtn.setAttribute('aria-label', showSource ? '回到正文' : '源码');
 				if (showSource) sourceView.textContent = current?.raw ?? '';
 			});
 
 			document.addEventListener('keydown', (e) => {
+				// 预览浮层：Esc 关掉（焦点在浮层自己的按钮上时走这条路；焦点落进 iframe 里就只能点「关闭」）
+				if (e.key === 'Escape' && previewPane.classList.contains('is-open')) { closePreview(); return; }
+				// 文章下拉：Esc 收起（焦点回触发器）
+				if (e.key === 'Escape' && !postMenu.hidden) { closePostMenu(true); return; }
+				// 窄屏那三个 chip 下拉：Esc 也收起来。
+				// ⚠️ popover 自带的那套 light-dismiss 在这里对 Esc 不生效（实测点外面能关、Esc 不行），自己补一条。
+				if (e.key === 'Escape') {
+					for (const pop of document.querySelectorAll<HTMLElement>('.fm-chips[popover]:popover-open')) pop.hidePopover();
+				}
 				if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
 					e.preventDefault();
 					if (!saveBtn.disabled) void save();
@@ -1403,7 +1755,7 @@ const editorConfig = {
 				.then(() => {
 					const remember = localStorage.getItem('editor:last-post');
 					const target = posts.some((p) => p.path === remember) ? String(remember) : posts[0]?.path;
-					if (target) { picker.value = target; return loadPost(target); }
+					if (target) return loadPost(target);
 				})
 				.catch((err) => { toast(String((err as Error)?.message ?? err), 'err'); });
 		</script>

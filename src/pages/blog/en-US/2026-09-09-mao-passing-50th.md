@@ -8,4 +8,4 @@ tags: ['note']
 warning: ['politics']
 ---
 
-Marking the 50th anniversary of Comrade Mao Zedong's passing.
+Marking the 50th anniversary of Chairman Mao Zedong's passing.

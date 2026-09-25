@@ -9,6 +9,11 @@
 // 乐谱头部（abc 的 X/T/C/M/L/Q/K、简谱的 title/key/beat/time/…）不让人手写：
 // 摆成小表单，空着就是不写这一行（"用不着的参数就留空"）。
 
+import { UPLOAD_ICON, uploadImage } from './upload-image.js';
+
+/** 卡片里没有 toast（那是编辑器外壳的），用事件把它叫出来（index.astro 接了这条） */
+const tellEditor = (msg, kind = 'ok') => document.dispatchEvent(new CustomEvent('editor-toast', { detail: { msg, kind } }));
+
 const h = (tag, cls, text) => {
 	const el = document.createElement(tag);
 	if (cls) el.className = cls;
@@ -297,10 +302,17 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 		head.append(badge);
 	};
 
+	/**
+	 * 卡片头的「删除」：图标按钮（跟顶栏那枚同一个垃圾桶图形，viewBox 48 / 描边 4）。
+	 * 没有可见文字 ⇒ 含义靠 aria-label 给读屏（站点不用 title 悬浮提示）；颜色/描边走 CSS，
+	 * 所以 .md-block-mini:hover 那套「hover 转红」照旧生效。
+	 */
 	const makeDeleteBtn = () => {
-		const del = h('button', 'md-block-mini', '删除');
+		const del = h('button', 'md-block-mini md-block-mini--icon');
 		del.type = 'button';
 		del.setAttribute('aria-label', '删掉整块（可 Ctrl+Z 撤销）');
+		del.innerHTML =
+			'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 10V44H39V10H9Z"/><path d="M20 20V33"/><path d="M28 20V33"/><path d="M4 10H44"/><path d="M16 10L19.289 4H28.7771L32 10H16Z"/></svg>';
 		del.addEventListener('click', () => {
 			const pos = getPos();
 			if (typeof pos === 'number') editor.view.dispatch(editor.state.tr.delete(pos, pos + node.nodeSize));
@@ -465,7 +477,43 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 		};
 		// ⚠️ 只有「路径 / 尺寸 / 图注」三栏：「说明」（alt）那栏删了 —— 插入时默认就是 Placeholder
 		// 那种，留着也没人填（alt 依旧原样保留在源里，改别的字段不会弄丢它）。
-		put('src', '路径', '/images/2026-01-01-slug-name.webp');
+		// 路径那行右侧挂个上传按钮：选图 → 转 webp 存进 public/images/ → 路径自动填好（不用手拄）。
+		const srcLine = h('div', 'md-field');
+		srcLine.append(h('label', 'md-field-label', '路径'));
+		const srcInput = makeField(info.src ?? '', '/images/2026-01-01-slug-name.webp', (v) => {
+			info.src = v;
+			thumb.dataset.state = 'loading';
+			img.src = v;
+			write(buildImageLine(info));
+		}, 'md-field-val');
+		const uploadFile = h('input', 'md-upload-file');
+		uploadFile.type = 'file';
+		uploadFile.accept = 'image/*';
+		uploadFile.hidden = true;
+		const uploadBtn = h('button', 'md-field-btn');
+		uploadBtn.type = 'button';
+		uploadBtn.setAttribute('aria-label', '上传图片');
+		uploadBtn.innerHTML = UPLOAD_ICON;
+		uploadBtn.addEventListener('click', () => uploadFile.click());
+		uploadFile.addEventListener('change', async () => {
+			const picked = uploadFile.files?.[0];
+			uploadFile.value = ''; // 清掉才能「同一个文件再选一次也触发 change」
+			if (!picked) return;
+			thumb.dataset.state = 'loading';
+			tellEditor('图片转码上传中…');
+			try {
+				const out = await uploadImage(picked);
+				srcInput.value = out.url;
+				// 走一遍输入框自己的回调：info.src / 缩略图 / 源码 都在那一处更新，别在这兒再抄一遍
+				srcInput.dispatchEvent(new Event('input', { bubbles: true }));
+				tellEditor(`已上传 ${out.url}（${Math.max(1, Math.round(Number(out.bytes ?? 0) / 1024))} KB）`);
+			} catch (err) {
+				thumb.dataset.state = 'missing';
+				tellEditor('图片上传失败：' + String(err?.message ?? err), 'err');
+			}
+		});
+		srcLine.append(srcInput, uploadBtn, uploadFile);
+		fields.append(srcLine);
 		// 图注写的是**纯文字**，两侧的星号由 buildImageLine 自己套（空着就不写这一行）
 		put('cap', '图注', '配图说明，留空就不写');
 
@@ -476,7 +524,7 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 		// 复用工具条/顶栏那套 select（.editor-select 在 @supports (appearance: base-select) 里统一定制了
 		// 弹层卡片样式与描边箭头）—— 别再自己写一套原生样式的下拉
 		sizeSel.className = 'editor-select md-card-select';
-		const SIZES = [['{.img-sm}', '小'], ['{.img-md}', '中'], ['', '大（不写类，默认）']];
+		const SIZES = [['{.img-sm}', '小'], ['{.img-md}', '中'], ['', '大']];
 		for (const [value, label] of SIZES) {
 			const o = document.createElement('option');
 			o.value = value;
