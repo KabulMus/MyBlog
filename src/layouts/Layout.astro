@@ -2818,8 +2818,8 @@ function getLangSwitchHref(pathname: string) {
 				const half = fontSize / 2;
 				// ⚠️ 判「下一项塞不塞得进那半格」的界限要比半格**宽一点**：text-autospace 会在中西交界处
 				//    插 1/8em，那截空隙会算进「下一行第一个字」的盒子里（实测数字 `1` 的推进才 6.4px，
-				//    量出来却是 8.4px）⇒ 照半格判就会漏粘，字照样被吸上来。多粘一小坨没有任何副作用。
-				const fitLimit = half * 1.3;
+				//    量出来却是 8.4px）⇒ 照半格判会漏粘；更要紧的是行里本来就留着 justify 摊开的零点几格空，所以判据得宽到「粘住的那一截绝不可能塞得进去」。
+				const glueLimit = fontSize * 2;
 				body.querySelectorAll('p, li, figcaption').forEach((block) => {
 					if (!/[\u3002\uff01\uff1f]/.test(block.textContent)) return;
 					const lines = collectLines(block, fontSize);
@@ -2832,10 +2832,10 @@ function getLangSwitchHref(pathname: string) {
 						if (!span || !span.classList.contains('punct-full')) return; // 已经是半宽的（后面跟了闭标号那种）不用管
 						// 下一行第一项就窄过半格的话，得先把它跟后面几项粘成一整块，否则它会被吸上来
 						const first = next.items[0];
-						if (first.width <= fitLimit) {
+						if (first.width <= glueLimit) {
 							let acc = 0;
 							let count = 0;
-							while (count < next.items.length && acc <= fitLimit) acc += next.items[count++].width;
+							while (count < next.items.length && acc <= glueLimit) acc += next.items[count++].width;
 							const tail = next.items[count - 1];
 							const range = document.createRange();
 							range.setStart(first.node, first.i);

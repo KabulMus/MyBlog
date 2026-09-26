@@ -269,8 +269,8 @@ export const PunctFullWidth = Extension.create({
 			const half = fontSize / 2;
 			// ⚠️ 判「下一项塞不塞得进那半格」的界限要比半格**宽一点**：text-autospace 会在中西交界处
 			//    插 1/8em，那截空隙会算进「下一行第一个字」的盒子里（实测数字 `1` 的推进才 6.4px，
-			//    量出来却是 8.4px）⇒ 照半格判就会漏粘，字照样被吸上来。多粘一小坨没有任何副作用。
-			const fitLimit = half * 1.3;
+			//    量出来却是 8.4px）⇒ 照半格判会漏粘；更要紧的是行里本来就留着 justify 摊开的零点几格空，所以判据得宽到「粘住的那一截绝不可能塞得进去」。
+			const glueLimit = fontSize * 2;
 			const chars = [];
 			const walker = document.createTreeWalker(view.dom, NodeFilter.SHOW_TEXT);
 			let node;
@@ -295,21 +295,32 @@ export const PunctFullWidth = Extension.create({
 			}
 			const lineEnd = [];
 			const glue = [];
-			for (let index = 0; index < lines.length - 1; index++) {
-				const last = lines[index].items[lines[index].items.length - 1];
-				if (!SENTENCE_END.has(last.ch)) continue;
-				const span = last.node.parentElement;
-				if (!span || !span.classList.contains('punct-full')) continue; // 静态已经压半宽的不用管
-				lineEnd.push(view.posAtDOM(last.node, last.i));
-				// 下一行第一项就窄过半格的话，得先把它跟后面几项粘成一整块，否则它会被吸上来
-				const head = lines[index + 1].items;
-				if (head[0].width > fitLimit) continue; // 整格的字本来就塞不进那半格
+			// 把 chars[start] 开始那几项粘成一整块（合计宽过 glueLimit 为止），范围记进 glue
+			const glueFrom = (start) => {
 				let acc = 0;
 				let count = 0;
-				while (count < head.length && acc <= fitLimit) acc += head[count++].width;
-				const tail = head[count - 1];
-				glue.push([view.posAtDOM(head[0].node, head[0].i), view.posAtDOM(tail.node, tail.i + 1)]);
-			}
+				while (start + count < chars.length && acc <= glueLimit) acc += chars[start + count++].width;
+				if (!count) return;
+				const first = chars[start];
+				const tail = chars[start + count - 1];
+				glue.push([view.posAtDOM(first.node, first.i), view.posAtDOM(tail.node, tail.i + 1)]);
+			};
+			chars.forEach((c, i) => {
+				if (!SENTENCE_END.has(c.ch)) return;
+				const span = c.node.parentElement;
+				if (!span || !span.classList.contains('punct-full')) return; // 静态已经压半宽的不用管
+				const after = chars[i + 1];
+				if (!after) return;
+				// ① 落在行尾：压半宽，并把下一行开头粘住
+				if (Math.abs(after.top - c.top) >= fontSize * 0.5) {
+					lineEnd.push(view.posAtDOM(c.node, c.i));
+					glueFrom(i + 1);
+					return;
+				}
+				// ② 上一轮压过、后面那个字现在跑到同一行了 ⇒ 压缩把它吸上来了（行里本来就有 justify 留下的空）。
+				//    这时必须粘住它，否则下一轮复验会以为这处不该压，装饰会来回闪。
+				if (span.classList.contains('punct-line-end')) glueFrom(i + 1);
+			});
 			return { lineEnd, glue };
 		};
 		return [
