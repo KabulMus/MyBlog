@@ -2767,6 +2767,110 @@ function getLangSwitchHref(pathname: string) {
 		initJianpuScores();
 	</script>
 	<script>
+		// 中西之间的那点空隙：文章按约定不手打空格，全交给内核让（CSS 的 text-autospace，1/8em）。
+		// ⚠️ 光问 CSS.supports 不够：Safari 18.4+ 声称支持 text-autospace，可正文里跨 <a> 的那处
+		//   （「你但凡知道[B站网址]呢」）它照样贴着 ⇒ 改成量：切到 no-autospace 再量一遍，
+		//   距离没变就是内核在这儿不补，那就自己插一个空元素（宽度对齐 1/8em）。
+		// ⚠️ 为什么用元素而不是改文字：不改文本内容 ⇒ 复制、RSS、搜索索引读到的还是原文，只是多了一层空元素。
+		// ⚠️ 必须排在下面那段行尾标点脚本**之前**：插空隙会改变每个字的横向位置，行尾得在它之后重新量。
+		// ⚠️ 编辑器里的 contenteditable 也带 .typography-body，但那个 DOM 归 ProseMirror 管 ⇒ 见到 .editor-prose 就退。
+		const bodyForGap = document.querySelector('.typography-body');
+		// 量一次内核在这处交界上会不会自己让空：同一个文本节点里的、跟跨行内元素的，各量一次。
+		const nativeGapAt = (crossElement: boolean): boolean => {
+			if (!bodyForGap) return false;
+			const probe = document.createElement('span');
+			probe.setAttribute('aria-hidden', 'true');
+			const bodyStyle = getComputedStyle(bodyForGap);
+			probe.style.cssText = 'position:absolute;left:-9999px;top:0;white-space:pre;';
+			probe.style.fontFamily = bodyStyle.fontFamily;
+			probe.style.fontSize = bodyStyle.fontSize;
+			probe.style.fontWeight = bodyStyle.fontWeight;
+			probe.style.fontStyle = bodyStyle.fontStyle;
+			probe.style.setProperty('text-autospace', 'normal'); // 基准：这个内核在 normal 下该不该让空
+			if (crossElement) {
+				probe.appendChild(document.createTextNode('道'));
+				const inner = document.createElement('span');
+				inner.textContent = 'B';
+				probe.appendChild(inner);
+			} else {
+				probe.textContent = '道B';
+			}
+			document.body.appendChild(probe);
+			// ⚠️ 量整串宽度，别量两个字矩形之间的距离：内核把那点空隙算进前一个字的宽度里了（量出来永远是 0）。
+			const withAutospace = probe.getBoundingClientRect().width;
+			probe.style.setProperty('text-autospace', 'no-autospace');
+			const withoutAutospace = probe.getBoundingClientRect().width;
+			probe.remove();
+			return withAutospace - withoutAutospace > 0.5;
+		};
+		const nativeGapInSameNode = nativeGapAt(false);
+		const nativeGapAcrossElements = nativeGapAt(true);
+		if (bodyForGap && !document.querySelector('.editor-prose') && !(nativeGapInSameNode && nativeGapAcrossElements)) {
+			const GAP_CLASS = 'cjk-latin-gap';
+			// 代码段、代码块不动（跟行尾标点那套一样），<br> 和块级元素都算「边界」（跨过去就不该补）
+			const SKIP = new Set(['PRE', 'CODE', 'KBD', 'SAMP', 'SCRIPT', 'STYLE', 'SVG', 'TEXTAREA', 'BR']);
+			const BLOCK = new Set([
+				'P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'FIGCAPTION', 'DIV', 'SECTION',
+				'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER', 'TD', 'TH', 'DT', 'DD', 'DETAILS', 'SUMMARY', 'UL', 'OL', 'TABLE',
+			]);
+			// ⚠️ 只算表意文字和字母数字：中文标点不参与（Chromium 的 text-autospace 也是这么定的）
+			const CJK = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+			const LATIN = /[A-Za-z0-9]/;
+
+			type GapChar = { node: Text; i: number; ch: string };
+			type GapRun = { chars: GapChar[] };
+
+			bodyForGap.querySelectorAll('.' + GAP_CLASS).forEach((el) => el.remove()); // 幂等：先拆掉上一轮插的
+			const runs: GapRun[] = [];
+			let current: GapRun | null = null;
+			const walk = (node: Element) => {
+				for (const child of node.childNodes) {
+					if (child.nodeType === 3) {
+						const text = child.nodeValue;
+						if (!text) continue;
+						if (!current) {
+							current = { chars: [] };
+							runs.push(current);
+						}
+						for (let i = 0; i < text.length; i++) current.chars.push({ node: child as Text, i, ch: text[i] });
+						continue;
+					}
+					if (!(child instanceof Element)) continue;
+					if (SKIP.has(child.tagName)) {
+						// 代码段那类：既断开 run，里面的字也压根不看
+						current = null;
+						continue;
+					}
+					if (BLOCK.has(child.tagName)) {
+						// 块级：断开 run，但里面的内容照样走（各自算各自的 run）
+						current = null;
+						walk(child);
+						continue;
+					}
+					walk(child);
+				}
+			};
+			walk(bodyForGap);
+
+			// 从后往前处理：插元素会切文本节点，倒着走才不会把前面的下标弄错
+			for (const run of runs) {
+				for (let k = run.chars.length - 1; k >= 1; k--) {
+					const prev = run.chars[k - 1];
+					const next = run.chars[k];
+					const pair = (CJK.test(prev.ch) && LATIN.test(next.ch)) || (LATIN.test(prev.ch) && CJK.test(next.ch));
+					if (!pair) continue;
+					// 内核在这处自己就让空 ⇒ 不用我们插（跨元素的和同节点的分开判）
+					const native = prev.node === next.node ? nativeGapInSameNode : nativeGapAcrossElements;
+					if (native) continue;
+					const gap = document.createElement('span');
+					gap.className = GAP_CLASS;
+					const tail = next.i > 0 ? next.node.splitText(next.i) : next.node;
+					if (tail.parentNode) tail.parentNode.insertBefore(gap, tail);
+				}
+			}
+		}
+	</script>
+	<script>
 		// 行末句末号压半宽（开明式的补充）：句末号落在行尾时，全角那半格空白会把版心右缘顶出一个凹陷。
 		// 为什么只能运行时做：CSS 选择器看不见行盒，「这个字是不是本行最后一个」只有布局完才知道。
 		// 为什么压了还能两端对齐：省下的半格由 justify 摊进本行字间（实测每字间约 0.15px，看不出），

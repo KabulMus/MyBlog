@@ -190,6 +190,13 @@ body {
     user-select: text;
 }
 
+/* 中西之间的空隙：Chromium 靠 text-autospace 自己补，Safari / Firefox 靠 Layout.astro 里那段脚本
+   在交界处插这个零宽元素补上（宽度按 Chromium 的 1/8em）。文本内容不变，只是多一层空元素。 */
+.cjk-latin-gap {
+    display: inline-block;
+    width: 0.125em;
+}
+
 /* 开明式标点：句末点号（。！？）撤销上面 body 的 halt，回到全角字形；
    句内点号（，、；：）和括号书名号直角引号继续半宽。
    必须包 span 是因为 halt 只能整块开关，无法按字符选。
