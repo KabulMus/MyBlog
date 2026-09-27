@@ -864,6 +864,20 @@ body:not(.is-article-page) .page-hero h1 {
    （不然每个 span 都成了 flex item，被容器 gap 撑出缝）。 */
 .date-cjk {
     font-variation-settings: 'wght' 450;
+    /* 中西之间的那 1/8em 空隙由这里自己让（左右各一半，合计一格）：
+       数字 → 汉字的那半格在 margin-left，汉字 → 数字的那半格在 margin-right。
+       末尾（最后一个汉字之后）不再让，免得把日期右缘撑宽、把组间距挤大。 */
+    margin-left: 0.125em;
+}
+.date-cjk:not(:last-child) {
+    margin-right: 0.125em;
+}
+
+/* 日期整块不参与 text-autospace：内核各自对被 span 切开的「年月日」处理不一致
+   （Safari 只在汉字前让空、数字前那半格不让 ⇒ 渲染成「2026 年9 月9 日」），
+   上面的 .date-cjk 已经把那几格空隙变成定值，这儿把自动的关掉，三种内核才能一致。 */
+.date-text {
+    text-autospace: no-autospace;
 }
 
 /* 日期行分组：序号 / 日期 / 时间 三组，组内 4px、组间 12px，换行时整组移动不拆散 */

@@ -2867,6 +2867,11 @@ function getLangSwitchHref(pathname: string) {
 						continue;
 					}
 					if (!(child instanceof Element)) continue;
+					if (child.classList.contains('date-text')) {
+						// 日期自己把中西空隙画成定值了（见 main.css 的 .date-cjk）⇒ 这儿别再叠一层
+						current = null;
+						continue;
+					}
 					if (SKIP.has(child.tagName)) {
 						// 代码段那类：既断开 run，里面的字也压根不看
 						current = null;
