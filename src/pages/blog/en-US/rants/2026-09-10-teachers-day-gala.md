@@ -7,7 +7,7 @@ ai: true
 
 There's a gala for Teachers' Day.
 
-All of Senior 1 went.
+All of 10th grade went.
 
 What gives you the right to keep the Honors Program out. What gives you the right.
 
