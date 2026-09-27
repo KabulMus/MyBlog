@@ -1,11 +1,8 @@
 ---
-layout: '../../../layouts/Layout.astro'
-title: 'Imagine heading to school under the scorching July sun... /s'
+layout: '../../../../layouts/Layout.astro'
 date: '2026-07-22T23:03'
 draft: false
 ai: true
-category: ['essays']
-tags: ['rant']
 ---
 
 our No.1 High School is SOOOO amazing!!!

@@ -143,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // 2. 纯正文标题锚点生成与平滑跳转（精准排除首页卡片标题）
 function initHeadingAnchors() {
     // ⚡️ 核心修复：添加 :not(.post-title-link h3)，让 JS 彻底忽略首页卡片里的 h3
+    // 吐槽信息流（/rants）：正文直接排在卡片里 ⇒ 标题不要锚点、也不要可点光标
+    if (document.querySelector('.rants-wrapper')) return;
     const headings = document.querySelectorAll('.typography-body:not(.editor-prose) h1:not(.post-title-link h1), .typography-body:not(.editor-prose) h2:not(.post-title-link h2), .typography-body:not(.editor-prose) h3:not(.post-title-link h3), .typography-body:not(.editor-prose) h4:not(.post-title-link h4), .typography-body:not(.editor-prose) h5:not(.post-title-link h5), .typography-body:not(.editor-prose) h6:not(.post-title-link h6)');
     
     headings.forEach((heading) => {

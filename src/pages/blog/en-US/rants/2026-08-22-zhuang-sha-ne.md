@@ -1,11 +1,8 @@
 ---
-layout: '../../../layouts/Layout.astro'
-title: 'An empty vessel makes the loudest sound'
+layout: '../../../../layouts/Layout.astro'
 date: '2026-08-22T22:43'
 draft: false
 ai: true
-category: ['essays']
-tags: ['rant']
 ---
 
 It was evening self-study, and the class was about to watch a movie. The teacher fiddled with the computer for ages without any luck—it was running Internet Explorer, way too old a version. The moment she opened Bilibili, it flashed a "browser too old" warning and suggested downloading Chrome, Edge, or Firefox.

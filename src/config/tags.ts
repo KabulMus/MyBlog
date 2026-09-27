@@ -11,7 +11,6 @@ export const tagDefs: Record<string, { zh: string; en: string; cats?: string[] }
     resource: { zh: '资源', en: 'Resource', cats: ['studio'] },
     video: { zh: '视频', en: 'Video', cats: ['studio'] },
     code: { zh: '代码', en: 'Code', cats: ['studio'] },
-    rant: { zh: '吐槽', en: 'Rant', cats: ['essays'] },
     article: { zh: '长文', en: 'Article', cats: ['essays'] },
     note: { zh: '短记', en: 'Note', cats: ['essays'] },
     quote: { zh: '摘抄', en: 'Quote', cats: ['essays'] },
@@ -30,10 +29,13 @@ export const tagOrder: string[] = [
     // studio
     'channel', 'tutorial', 'resource', 'video', 'code',
     // essays
-    'rant', 'article', 'note', 'quote',
+    'article', 'note', 'quote',
     // achievements
     'recap', 'academic', 'skill', 'award', 'habit',
 ];
+
+// 吐槽（rant）的体裁标记：正文放 src/pages/blog/rants/ 下，草稿靠这个 tag 决定发布去向
+export const RANT_TAG = 'rant';
 
 // —— 派生导出（保持向后兼容）——
 

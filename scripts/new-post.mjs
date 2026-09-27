@@ -22,10 +22,11 @@ const CATS = [
 ];
 
 // 分类 → 可选 tag key（与 src/config/tags.ts 保持一致，改 tag 后请同步这里）
+// ⚠️ 吐槽不在这张表里：它不再是 tag，体裁由 rants/ 目录表达（编辑器「标记」里那枚 chip 管）
 const CAT_TAGS = {
   music: ['insync', 'review', 'musictheory'],
   studio: ['channel', 'tutorial', 'resource', 'video', 'code'],
-  essays: ['rant', 'article', 'note', 'quote'],
+  essays: ['article', 'note', 'quote'],
   achievements: ['recap', 'academic', 'skill', 'award', 'habit'],
 };
 
@@ -33,13 +34,13 @@ const CAT_TAGS = {
 const TAG_ZH = {
   insync: '同频', review: '乐评', musictheory: '乐理',
   channel: '频道', tutorial: '教程', resource: '资源', video: '视频', code: '代码',
-  rant: '吐槽', article: '长文', note: '短记', quote: '摘抄',
+  article: '长文', note: '短记', quote: '摘抄',
   recap: '回顾', academic: '学业', skill: '技能', award: '获奖', habit: '习惯',
 };
 const TAG_EN = {
   insync: 'In-sync', review: 'Review', musictheory: 'Music Theory',
   channel: 'Channel', tutorial: 'Tutorial', resource: 'Resource', video: 'Video', code: 'Code',
-  rant: 'Rant', article: 'Article', note: 'Note', quote: 'Quote',
+  article: 'Article', note: 'Note', quote: 'Quote',
   recap: 'Recap', academic: 'Academic', skill: 'Skill', award: 'Award', habit: 'Habit',
 };
 // tag 双语显示名（与分类的「中文 / English」格式一致）

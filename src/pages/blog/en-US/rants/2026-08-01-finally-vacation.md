@@ -1,11 +1,8 @@
 ---
-layout: '../../../layouts/Layout.astro'
-title: 'Yeah—I''m finally on vacation!!!'
+layout: '../../../../layouts/Layout.astro'
 date: '2026-08-01T01:30'
 draft: false
 ai: true
-category: ['essays']
-tags: ['rant']
 ---
 
 D\*mn, finally on vacation. This freaking class has worn me out.

@@ -2,87 +2,19 @@
 import Layout from '../layouts/Layout.astro';
 import { tagNamesZh, tagCats, groupTagsByCat, tagOrder } from '../config/tags';
 import { categories, categoryNamesZh as categoryNames, catOrder, toCatArray } from '../config/categories';
+import { formatDate, formatTime, smartQuotes, getPostUrl, type Lang } from '../lib/posts';
 
+const LANG: Lang = 'zh';
 const postsPerPage = 8;
 const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
-const allPosts: any[] = Object.values(markdownFiles).filter((p: any) => !p.frontmatter?.draft);
-
-function formatDate(dateStr: string) {
-    if (!dateStr) return '';
-    // 中文日期：2020.8.2（月日不补零）
-    const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (!m) return dateStr.replace(/-/g, '.');
-    const [, y, mo, d] = m;
-    return `${+y}.${+mo}.${+d}`;
-}
-
-function formatTime(dateStr: string) {
-    if (!dateStr) return '';
-    // 中文时间：24 小时制 14:32
-    const m = dateStr.match(/[T ](\d{1,2}):(\d{2})/);
-    if (!m) return '';
-    return `<span class="time-value">${+m[1]}<span class="time-colon">:</span>${m[2]}</span>`;
-}
+const rantFiles = import.meta.glob('./blog/rants/*.md', { eager: true });
+const rantModules = new Set<any>(Object.values(rantFiles));
+// 序号和日期排序都算上吐槽（站点文章页的 #N 也是这么算的），只是主页卡片不列他们
+const allPosts: any[] = [...Object.values(markdownFiles), ...Object.values(rantFiles)].filter((p: any) => !p.frontmatter?.draft);
 
 function buildPageHref(page: number, basePath = '/') {
     const path = basePath === '/' ? '/' : basePath;
     return `${path}?page=${page}`;
-}
-
-function smartQuotes(text: string): string {
-    // 双引号对：标准处理
-    text = text.replace(/"([^"\n]*)"/g, '\u201C$1\u201D');
-    const chars = text.split('');
-    const positions: number[] = [];
-    for (let i = 0; i < chars.length; i++) {
-        if (chars[i] === "'") positions.push(i);
-    }
-    if (positions.length === 0) return text;
-    const isAlnum = (ch: string) => /[A-Za-z0-9]/.test(ch);
-    // 状态机：inQuote 表示当前是否处于开引号内部。
-    // 规则：
-    //   不在引号内：前是字母 → 撇号（it's）；否则 → 开引号 ‘
-    //   在引号内：后是字母 → 撇号；后是空白/结尾 → 闭引号 ’
-    //   在引号内后跟标点：若后面还有 ' → 是撇号（如 somethin'.' 中间那个），否则是闭引号
-    let inQuote = false;
-    for (let i = 0; i < chars.length; i++) {
-        if (chars[i] !== "'") continue;
-        const prev = i > 0 ? chars[i - 1] : '';
-        const next = i < chars.length - 1 ? chars[i + 1] : '';
-        if (inQuote) {
-            if (isAlnum(next)) {
-                chars[i] = '\u2019'; // 后是字母 → 撇号（it's）
-            } else if (next === '' || /\s/.test(next)) {
-                chars[i] = '\u2019'; // 后是空白/结尾 → 闭引号
-                inQuote = false;
-            } else {
-                // 后是标点：若后面还有 ' → 当前是撇号（最后那个才是闭引号）
-                if (positions.some((p) => p > i)) {
-                    chars[i] = '\u2019';
-                } else {
-                    chars[i] = '\u2019'; // 闭引号
-                    inQuote = false;
-                }
-            }
-        } else {
-            if (isAlnum(prev)) {
-                chars[i] = '\u2019'; // 前是字母 → 撇号（it's）
-            } else {
-                // 候选开引号：只有后面存在“闭引号候选”（某个 ' 后是非字母/结尾）才当开引号，
-                // 否则是开头撇号缩写（'cause / 'Twas / 'em / 'til）
-                const hasClosing = positions.some(
-                    (j) => j > i && (j === chars.length - 1 || !isAlnum(chars[j + 1]))
-                );
-                if (hasClosing) {
-                    chars[i] = '\u2018'; // 开引号
-                    inQuote = true;
-                } else {
-                    chars[i] = '\u2019'; // 开头撇号（'cause 等）
-                }
-            }
-        }
-    }
-    return chars.join('');
 }
 
 const tagNames = tagNamesZh;
@@ -103,11 +35,18 @@ const sortedPosts = allPosts.sort((a, b) => {
     return dateB - dateA;
 });
 
+// 目录就是体裁：blog/*.md 是成篇的，blog/rants/*.md 是吐槽（另走 /rants 那条线）
+const homePosts = sortedPosts.filter((p: any) => !rantModules.has(p));
+const rantPosts = sortedPosts.filter((p: any) => rantModules.has(p));
+// 卡片上的 #N 是「成篇的」那串里的顺序号（吐槽不参与序号编排，跟文章页头部一致）
+const rankByUrl: Record<string, number> = {};
+homePosts.forEach((p: any, i: number) => { rankByUrl[getPostUrl(p, LANG)] = homePosts.length - i; });
+
 // tag → 归属分类：优先用词典显式配置的 cats；未配置的 tag 再从文章动态提取
 //（文章可属于多个分类，动态提取时其 tag 归属到文章的所有分类）
 const tagToCats: Record<string, string[]> = {};
 Object.entries(tagCats).forEach(([tag, cats]) => { tagToCats[tag] = [...cats]; });
-sortedPosts.forEach((post: any) => {
+homePosts.forEach((post: any) => {
     const cats = toCatArray(post.frontmatter?.category);
     if (cats.length === 0) return;
     (post.frontmatter?.tags || []).forEach((tag: string) => {
@@ -128,7 +67,7 @@ const allTags: string[] = Object.keys(tagToCats).sort((a: string, b: string) => 
     return String(tagNames[a] || a).localeCompare(String(tagNames[b] || b));
 });
 
-const totalPages = Math.max(1, Math.ceil(sortedPosts.length / postsPerPage));
+const totalPages = Math.max(1, Math.ceil(homePosts.length / postsPerPage));
 const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 const requestedPage = Number(Astro.url.searchParams.get('page') || '1');
 const currentPage = Math.min(Math.max(requestedPage, 1), totalPages);
@@ -141,8 +80,30 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     brandUrl="https://www.ethan929.com/" 
     brandText='<img src="/images/avatar.webp" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
 >
+    <Fragment slot="head">
+        {/* ⚠️ 这两行原来放在页面最末尾（`</Layout>` 之后）：那张样式表会卡住首屏绘制，
+            脚本还会阻塞解析 ⇒ build 后搜索框总要等一拍才冒出来。提到 <head> 里就没这回事了。 */}
+        <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+        <script src="/pagefind/pagefind-ui.js" defer is:inline></script>
+    </Fragment>
+
     <div class="blog-list-wrapper" data-pagefind-ignore>
+        {rantPosts.length > 0 && (
+            <div class="rant-preview" data-pagefind-ignore>
+                <span class="rant-preview-title">一些碎碎念</span>
+                <a class="rant-preview-more" href="/rants">进入<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12L31 24L19 36"/></svg></a>
+                {/* 整块一个入口：鼠标点哪都进瀑布流（键盘走上面那枚「进入」链接） */}
+                <a class="rant-preview-enter" href="/rants" aria-hidden="true" tabindex="-1"></a>
+            </div>
+        )}
+
         <div class="search-container">
+            {/* 占位壳：PagefindUI 挂上来之前先画一个一模一样的框，
+                免得先空一块、过一拍才冒出来（样式见 .search-skeleton） */}
+            <div class="search-skeleton" aria-hidden="true">
+                <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>搜索博文……</span>
+            </div>
             <div id="search"></div>
         </div>
 
@@ -166,9 +127,9 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 
         <div class="post-list-wrap">
         <ul class="post-list">
-            {sortedPosts.map((post, index) => {
+            {homePosts.map((post, index) => {
                 const postPage = Math.floor(index / postsPerPage) + 1;
-                const postUrl = post.url || `/blog/${post.file?.split('/').pop()?.replace('.md', '')}`;
+                const postUrl = getPostUrl(post, LANG);
                 const postCats = toCatArray(post.frontmatter?.category);
                 const postWarnings = Array.isArray(post.frontmatter?.warning)
                     ? post.frontmatter.warning
@@ -180,7 +141,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                 <img src={post.frontmatter.image} alt="" loading="lazy" decoding="async" />
                             </div>
                         )}
-                        <span class="post-index">{sortedPosts.length - index}</span>
+                        <span class="post-index">{rankByUrl[postUrl]}</span>
                         {(() => {
                             const grouped = postCats.length > 0
                                 ? groupTagsByCat(postCats, post.frontmatter?.tags || [], tagCats)
@@ -226,14 +187,14 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                         <path d="M14 34H20"/>
                                         <path d="M28 26H34"/>
                                         <path d="M14 26H20"/>
-                                    </svg> {formatDate(post.frontmatter.date)}
+                                    </svg> {formatDate(post.frontmatter.date, LANG)}
                                 </span>
-                                {formatTime(post.frontmatter.date) && (
+                                {formatTime(post.frontmatter.date, LANG) && (
                                     <span class="post-meta-item">
                                         <svg class="date-icon time-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
                                             <path d="M24 44C35.0457 44 44 35.0457 44 24C44 12.9543 35.0457 4 24 4C12.9543 4 4 12.9543 4 24C4 35.0457 12.9543 44 24 44Z" fill="none" stroke-linejoin="round"/>
                                             <path d="M24.0084 12.0001L24.0072 24.0089L32.4866 32.4883" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg> <Fragment set:html={formatTime(post.frontmatter.date)} />
+                                        </svg> <Fragment set:html={formatTime(post.frontmatter.date, LANG)} />
                                     </span>
                                 )}
                                 <span class="post-meta-item post-like-meta" data-like-meta={postUrl.split('/').pop()}>
@@ -258,7 +219,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
         <div id="post-list-empty" data-pagefind-ignore><p>暂无匹配文章</p></div>
         </div>
 
-        {sortedPosts.length === 0 && (
+        {homePosts.length === 0 && (
             <p style="color: var(--text-sub); text-align: center; margin-top: 4rem;">暂无发布文章</p>
         )}
 
@@ -308,9 +269,6 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     </div>
 
 </Layout>
-
-<link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
-<script src="/pagefind/pagefind-ui.js" is:inline></script>
 
 <script is:inline>
     var activeCategory = '';

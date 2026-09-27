@@ -5,10 +5,15 @@ import { dirname, join, resolve, sep } from 'node:path';
 
 const BLOG_ROOT = join('src', 'pages', 'blog');
 
-/** 四个内容目录（中文/英文 × 正式/草稿），顺序 = 编辑器下拉里的展示顺序 */
+/** 吐槽（rant）的体裁标记：跟 src/config/tags.ts 的 RANT_TAG 是同一个词 */
+export const RANT_TAG = 'rant';
+
+/** 六个内容目录（中文/英文 × 成篇/吐槽 + 草稿），顺序 = 编辑器下拉里的展示顺序 */
 export const POST_DIRS = [
   { dir: BLOG_ROOT, lang: 'zh', draft: false },
+  { dir: join(BLOG_ROOT, 'rants'), lang: 'zh', draft: false, rant: true },
   { dir: join(BLOG_ROOT, 'en-US'), lang: 'en', draft: false },
+  { dir: join(BLOG_ROOT, 'en-US', 'rants'), lang: 'en', draft: false, rant: true },
   { dir: join(BLOG_ROOT, 'drafts'), lang: 'zh', draft: true },
   { dir: join(BLOG_ROOT, 'en-US', 'drafts'), lang: 'en', draft: true },
 ];
@@ -102,12 +107,18 @@ export function serializeFrontmatter(data) {
 
 function readMeta(relPath) {
   const raw = readFileSync(relPath, 'utf8');
-  const { data } = parseFrontmatter(raw);
+  const { data, body } = parseFrontmatter(raw);
   const st = statSync(relPath);
+  // 吐槽没有 title（信息流里不用标题）⇒ 拿正文首行当编辑器下拉里的行名
+  const firstLine =
+    String(body || '')
+      .split('\n')
+      .map((line) => line.replace(/^[\s#>*-]+/, '').trim())
+      .find(Boolean) || '';
   return {
     path: toPosix(relPath),
     url: postUrl(relPath),
-    title: String(data.title || '（无标题）'),
+    title: String(data.title || firstLine.slice(0, 40) || '（无标题）'),
     date: String(data.date || ''),
     category: Array.isArray(data.category) ? data.category : data.category ? [data.category] : [],
     tags: Array.isArray(data.tags) ? data.tags : data.tags ? [data.tags] : [],
@@ -124,14 +135,16 @@ function readMeta(relPath) {
 /** 列出全部文章（按日期倒序）；每个目录单独容错，缺目录不算错 */
 export function listPosts() {
   const posts = [];
-  for (const { dir, lang, draft } of POST_DIRS) {
+  for (const { dir, lang, draft, rant } of POST_DIRS) {
     if (!existsSync(dir)) continue;
     for (const file of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
       const rel = join(dir, file);
       try {
-        posts.push(Object.assign(readMeta(rel), { lang, draft, file }));
+        const meta = readMeta(rel);
+        // 草稿在草稿池里（目录不区分体裁），所以还看 frontmatter 的 tag
+        posts.push(Object.assign(meta, { lang, draft, file, rant: !!rant || meta.tags.includes(RANT_TAG) }));
       } catch (err) {
-        posts.push({ path: toPosix(rel), url: postUrl(rel), lang, draft, file, title: '（解析失败）', date: '', category: [], tags: [], warning: [], ai: false, bytes: 0, mtime: 0, error: String(err.message) });
+        posts.push({ path: toPosix(rel), url: postUrl(rel), lang, draft, rant: !!rant, file, title: '（解析失败）', date: '', category: [], tags: [], warning: [], ai: false, bytes: 0, mtime: 0, error: String(err.message) });
       }
     }
   }
@@ -142,7 +155,7 @@ export function listPosts() {
    */
   const rank = { zh: 0, en: 0 };
   const numbered = posts
-    .filter((p) => !p.draft && !p.isDraft)
+    .filter((p) => !p.draft && !p.isDraft && !p.rant)
     .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime() || a.file.localeCompare(b.file));
   for (const p of numbered) p.index = ++rank[p.lang];
 
@@ -241,28 +254,39 @@ export function nowStamp(d = new Date()) {
  * · 「AI 翻译」标记分中英两份各自开关（aiZh / aiEn）—— 不限定英文版：
  *   中文写的、AI 翻成英文是一种情况，英文写的、AI 翻成中文是另一种，两边都可能。
  */
-export function newPostBlueprint({ titleZh, titleEn, slug, date, draft = false, category, tags, warning, aiZh = false, aiEn = false } = {}) {
+export function newPostBlueprint({ titleZh, titleEn, slug, date, draft = false, rant = false, category, tags, warning, aiZh = false, aiEn = false } = {}) {
   // ⚠️ 标题不能是空串：serializeFrontmatter 会把空值整行丢掉，写出去就是一篇没有 title 的文章。
   //    某一侧没填就拿另一侧顶上（编辑器那边两侧都必填，这是兜底）。
+  //    吐槽是例外：它压根不写 title（信息流靠日期和正文），所以也不必填标题。
+  const isRant = rant === true || (Array.isArray(tags) && tags.includes(RANT_TAG));
   const zhTitle = String(titleZh ?? '').trim();
   const enTitle = String(titleEn ?? '').trim();
-  if (!zhTitle && !enTitle) throw new Error('中文标题和英文标题至少要有一个');
+  if (!isRant && !zhTitle && !enTitle) throw new Error('中文标题和英文标题至少要有一个');
   const title = { zh: zhTitle || enTitle, en: enTitle || zhTitle };
   const clean = slugify(slug) || slugify(enTitle) || slugify(zhTitle) || 'post';
+  const inRants = isRant && !draft;
   const stamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(date || '')) ? String(date).slice(0, 16) : nowStamp();
   const file = `${stamp.slice(0, 10)}-${clean}.md`;
   const base = {
     date: stamp,
     draft: draft === true,
-    category: Array.isArray(category) && category.length ? category : ['essays'],
-    tags: Array.isArray(tags) ? tags : [],
-    warning: Array.isArray(warning) ? warning : [],
   };
+  if (inRants) {
+    // 正式吐槽：体裁由目录表达 ⇒ 分类 / 标签 / 警告一概不写
+  } else if (isRant) {
+    // 吐槽草稿：草稿池不分体裁，还得靠这枚 tag 认，发布时 publish-draft 负责摘掉
+    base.tags = [RANT_TAG];
+  } else {
+    const tagsOut = (Array.isArray(tags) ? tags : []).filter((t) => t !== RANT_TAG);
+    if (tagsOut.length) base.tags = tagsOut;
+    base.category = Array.isArray(category) && category.length ? category : ['essays'];
+    base.warning = Array.isArray(warning) ? warning : [];
+  }
   const make = (lang) => {
-    const dir = join(BLOG_ROOT, ...(lang === 'en' ? ['en-US'] : []), ...(draft ? ['drafts'] : []));
-    // blog/ 起算两级，en-US 与 drafts 各再加一级
-    const depth = 2 + (lang === 'en' ? 1 : 0) + (draft ? 1 : 0);
-    const data = { layout: '../'.repeat(depth) + 'layouts/Layout.astro', title: title[lang], ...base };
+    const dir = join(BLOG_ROOT, ...(lang === 'en' ? ['en-US'] : []), ...(inRants ? ['rants'] : []), ...(draft ? ['drafts'] : []));
+    // blog/ 起算两级，en-US / rants / drafts 各再加一级
+    const depth = 2 + (lang === 'en' ? 1 : 0) + (inRants ? 1 : 0) + (draft ? 1 : 0);
+    const data = { layout: '../'.repeat(depth) + 'layouts/Layout.astro', ...(isRant ? {} : { title: title[lang] }), ...base };
     if (lang === 'en' ? aiEn : aiZh) data.ai = true;
     return { path: toPosix(join(dir, file)), lang, content: serializeFrontmatter(data) };
   };

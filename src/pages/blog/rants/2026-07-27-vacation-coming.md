@@ -1,10 +1,7 @@
 ---
-layout: '../../layouts/Layout.astro'
-title: '终于快熬出头了...'
+layout: '../../../layouts/Layout.astro'
 date: '2026-07-27T22:58'
 draft: false
-category: ['essays']
-tags: ['rant']
 ---
 
 终于！

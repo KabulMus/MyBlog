@@ -5,6 +5,7 @@ import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { readdirSync, readFileSync, writeFileSync, rmSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseFrontmatter, RANT_TAG } from './lib/post-io.mjs';
 
 const rl = createInterface({ input: stdin, output: stdout });
 
@@ -55,16 +56,36 @@ for (const d of toPublish) {
   const isEn = d.dir.includes('en-US');
   const src = join(d.dir, d.file);
   const content = readFileSync(src, 'utf8');
+  // 带「吐槽」tag 的草稿发到 rants/ 下；那边和 drafts/ 一样深一级，所以 layout 只改「草稿级 → 正式级」
+  const tags = parseFrontmatter(content).data.tags;
+  const isRant = Array.isArray(tags) ? tags.includes(RANT_TAG) : tags === RANT_TAG;
   // 草稿目录的 layout 相对路径比正式目录多一级，发布时改回正式级
   const layoutFix = isEn
     ? /\.\.\/\.\.\/\.\.\/\.\.\/layouts\/Layout\.astro/
     : /\.\.\/\.\.\/\.\.\/layouts\/Layout\.astro/;
-  const layoutTo = isEn ? '../../../layouts/Layout.astro' : '../../layouts/Layout.astro';
-  const cleaned = content
+  const layoutTo = isEn
+    ? (isRant ? '../../../../layouts/Layout.astro' : '../../../layouts/Layout.astro')
+    : (isRant ? '../../../layouts/Layout.astro' : '../../layouts/Layout.astro');
+  let cleaned = content
     .replace(layoutFix, layoutTo)
-    .replace(/\ndraft:\s*true\s*\n/, '\n')
-    .replace(/\n{3,}/g, '\n\n');
-  const destDir = isEn ? join('src', 'pages', 'blog', 'en-US') : join('src', 'pages', 'blog');
+    .replace(/\ndraft:\s*true\s*\n/, '\n');
+  if (isRant) {
+    // 吐槽的体裁由 rants/ 目录表达 ⇒ 发布时把草稿池里用来分流的那枚 tag、category/warning，
+    // 以及 title（信息流用日期和正文，不写标题）一并摘掉
+    cleaned = cleaned
+      .replace(/\ncategory:\s*\[[^\]]*\]/g, '')
+      .replace(/\nwarning:\s*\[[^\]]*\]/g, '')
+      .replace(/\ntitle:\s*(?:'[^']*'|"[^"]*"|[^\n]*)/, '')
+      .replace(/\ntags:\s*\[([^\]]*)\]/, (m, inner) => {
+        const left = String(inner)
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s && s !== RANT_TAG && s !== `'${RANT_TAG}'`);
+        return left.length ? `\ntags: [${left.join(', ')}]` : '';
+      });
+  }
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  const destDir = join('src', 'pages', 'blog', ...(isEn ? ['en-US'] : []), ...(isRant ? ['rants'] : []));
   mkdirSync(destDir, { recursive: true });
   const dest = join(destDir, d.file);
   writeFileSync(dest, cleaned);

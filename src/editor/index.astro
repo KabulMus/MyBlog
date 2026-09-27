@@ -5,12 +5,13 @@
 import '../styles/main.css';
 import './editor.css';
 import { categories } from '../config/categories';
-import { tagDefs, tagOrder } from '../config/tags';
+import { tagDefs, tagOrder, RANT_TAG } from '../config/tags';
 
 // 分类 / 标签直接取配置真源（CLI 脚本里那份拷贝以后也可以换成这个）
 const editorConfig = {
 	categories: categories.map((c) => ({ id: c.id, zh: c.zh, en: c.en })),
 	tags: tagOrder.map((key) => ({ key, zh: tagDefs[key].zh, en: tagDefs[key].en, cats: tagDefs[key].cats ?? [] })),
+	rantTag: RANT_TAG,
 	warnings: [
 		{ key: 'opinion', zh: '主观', en: 'Opinion' },
 		{ key: 'spoilers', zh: '剧透', en: 'Spoilers' },
@@ -116,7 +117,7 @@ const editorConfig = {
 		<main class="editor-main">
 			<section class="editor-pane editor-pane--edit" aria-label="编辑区">
 				<form class="editor-form" id="fm-form" autocomplete="off">
-					<div class="fm-row fm-row--title">
+					<div class="fm-row fm-row--title is-post-meta">
 						<label for="fm-title">标题</label>
 						<input id="fm-title" class="fm-title" type="text" />
 					</div>
@@ -138,7 +139,7 @@ const editorConfig = {
 							<svg class="fm-dd-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.75L12 15.25L17.5 9.75" /></svg>
 						</button>
 						<div class="fm-meta" id="fm-meta" popover>
-							<div class="fm-meta-group fm-row">
+							<div class="fm-meta-group fm-row is-post-meta">
 								<label for="fm-image">题图</label>
 								<input id="fm-image" type="text" placeholder="/images/日期-slug.webp" />
 								<button type="button" class="editor-btn editor-btn--icon" id="fm-image-upload" aria-label="上传题图">
@@ -147,9 +148,9 @@ const editorConfig = {
 								<input type="file" id="fm-image-file" accept="image/*" hidden />
 							</div>
 							<div class="fm-meta-group"><span class="fm-meta-label">标记</span><div class="fm-chips fm-chips--flags" id="fm-flags"></div></div>
-							<div class="fm-meta-group"><span class="fm-meta-label">分类</span><div class="fm-chips" id="fm-category"></div></div>
-							<div class="fm-meta-group"><span class="fm-meta-label">标签</span><div class="fm-chips" id="fm-tags"></div></div>
-							<div class="fm-meta-group"><span class="fm-meta-label">内容警告</span><div class="fm-chips" id="fm-warning"></div></div>
+							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">分类</span><div class="fm-chips" id="fm-category"></div></div>
+							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">标签</span><div class="fm-chips" id="fm-tags"></div></div>
+							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">内容警告</span><div class="fm-chips" id="fm-warning"></div></div>
 						</div>
 					</div>
 				</form>
@@ -267,8 +268,8 @@ const editorConfig = {
 			<div class="editor-modal-card editor-modal-card--form" role="dialog" aria-modal="true" aria-labelledby="new-modal-title">
 				<h3 class="editor-modal-title" id="new-modal-title">新建文章</h3>
 				<div class="np-grid">
-					<div class="fm-row"><label for="np-title-zh">中文标题</label><input id="np-title-zh" class="fm-title" type="text" /></div>
-					<div class="fm-row"><label for="np-title-en">English title</label><input id="np-title-en" class="fm-title" type="text" /></div>
+					<div class="fm-row is-post-meta"><label for="np-title-zh">中文标题</label><input id="np-title-zh" class="fm-title" type="text" /></div>
+					<div class="fm-row is-post-meta"><label for="np-title-en">English title</label><input id="np-title-en" class="fm-title" type="text" /></div>
 					<div class="fm-row"><label for="np-slug">URL 后缀</label><input id="np-slug" type="text" placeholder="留空按英文标题" /></div>
 					<div class="fm-row">
 						<label for="np-when">日期</label>
@@ -277,9 +278,9 @@ const editorConfig = {
 						</span>
 					</div>
 				</div>
-				<div class="np-block"><span class="np-key">分类</span><div class="fm-chips" id="np-category"></div></div>
-				<div class="np-block"><span class="np-key">标签</span><div class="fm-chips" id="np-tags"></div></div>
-				<div class="np-block"><span class="np-key">警告</span><div class="fm-chips" id="np-warning"></div></div>
+				<div class="np-block is-post-meta"><span class="np-key">分类</span><div class="fm-chips" id="np-category"></div></div>
+				<div class="np-block is-post-meta"><span class="np-key">标签</span><div class="fm-chips" id="np-tags"></div></div>
+				<div class="np-block is-post-meta"><span class="np-key">警告</span><div class="fm-chips" id="np-warning"></div></div>
 				<div class="np-block"><span class="np-key">标记</span><div class="fm-chips" id="np-flags"></div></div>
 				<p class="editor-modal-text np-error" id="np-error"></p>
 				<div class="editor-modal-btns">
@@ -332,12 +333,13 @@ const editorConfig = {
 			// 图片转码 + 上传（正文粘贴/拖入、题图上传、图片卡片里的按钮共用这一份）
 			import { uploadImage } from './md/upload-image.js';
 
-			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; ai: boolean; date: string; title: string; bytes: number; index?: number };
+			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; rant: boolean; ai: boolean; date: string; title: string; bytes: number; index?: number };
 			type PostDetail = { path: string; url: string; raw: string; body: string; frontmatter: Record<string, unknown> };
 			type Config = {
 				categories: Array<{ id: string; zh: string; en: string }>;
 				tags: Array<{ key: string; zh: string; en: string; cats: string[] }>;
 				warnings: Array<{ key: string; zh: string; en: string }>;
+				rantTag: string;
 			};
 
 			const api = (p: string) => `/__editor/api${p}`;
@@ -364,6 +366,8 @@ const editorConfig = {
 			const titleInput = el<HTMLInputElement>('fm-title');
 			const dateInput = el<HTMLInputElement>('fm-date');
 			const config = JSON.parse(el<HTMLScriptElement>('editor-config').textContent || '{}') as Config;
+			// 吐槽那枚 tag：正式文章不写它（体裁由 rants/ 目录表达），只在草稿池里当路标用（发布时 publish-draft 摘掉）
+			const RANT = config.rantTag ?? 'rant';
 			const hdBtn = el<HTMLButtonElement>('heading-btn');
 			const hdLabel = el<HTMLSpanElement>('hd-label');
 			const hdIcon = el<SVGSVGElement>('hd-cur');
@@ -371,6 +375,7 @@ const editorConfig = {
 			// 手机上那枚合并下拉（标记 / 分类 / 标签 / 内容警告 全在里面，宽屏不显示）
 			const metaBtn = el<HTMLButtonElement>('fm-meta-dd');
 			const metaPanel = el<HTMLDivElement>('fm-meta');
+			const formEl = el<HTMLFormElement>('fm-form');
 
 			const chips = {
 				category: el<HTMLDivElement>('fm-category'),
@@ -399,6 +404,7 @@ const editorConfig = {
 			const fmtBadges = (p: Post) =>
 				[
 					`<span class="meta-lang" aria-label="${p.lang === 'en' ? '英文' : '中文'}">${LANG_ICON[p.lang]}</span>`,
+					p.rant ? '吐槽' : '',
 					p.draft ? '草稿' : '',
 					p.ai ? `<span class="meta-ai">${AI_BADGE_SVG}AI</span>` : '',
 				]
@@ -832,19 +838,26 @@ const editorConfig = {
 				const on = (v: unknown) => v === true || v === 'true';
 				const isDraft = on(frontmatter.draft);
 				const isAi = on(frontmatter.ai);
+				// 吐槽的体裁由目录说了算（blog/rants/、blog/en-US/rants/）；草稿池里文件不分体裁，看 tags 里的 rant
+				const isRant = !!current?.path.includes('/rants/') || strArray(frontmatter.tags).includes(RANT);
+				// 吐槽在的时候，标题 / 题图 / 分类 / 标签 / 内容警告这几组直接收掉（吐槽不写这些）
+				formEl.classList.toggle('is-rant', isRant);
 				// 「草稿 · Draft」中英都写着（跟站点的双语文案一个路子）；AI 那枚跟站点 .ai-badge 一样
 				// 只有图标 + AI，含义靠 aria-label 给读屏（不弹悬浮提示）。
 				// ⚠️ AI 不限定英文版：谁知道作者哪天用英文写、再 AI 翻成中文（反过来也一样）⇒
 				//    中英两份都渲染这个 chip（以前只在 en 文章上出，等于把可能性写死了）。
 				chips.flags.innerHTML =
 					`<button type="button" class="chip flag-draft${isDraft ? ' chip--on' : ''}" data-flag="draft" aria-pressed="${isDraft}"><span class="chip-text" data-text="草稿 · Draft">草稿 · Draft</span></button>` +
+					`<button type="button" class="chip flag-rant${isRant ? ' chip--on' : ''}" data-flag="rant" aria-pressed="${isRant}" aria-label="吐槽（文件摆到 rants/ 目录，不写标题、题图、分类、标签、警告）"><span class="chip-text" data-text="吐槽 · Rant">吐槽 · Rant</span></button>` +
 					`<button type="button" class="chip flag-ai${isAi ? ' chip--on' : ''}" data-flag="ai" aria-pressed="${isAi}" aria-label="AI 翻译"><span class="chip-ico">${AI_BADGE_SVG}</span><span class="chip-text" data-text="AI">AI</span></button>`;
 			}
 
 			chips.flags.addEventListener('click', (e) => {
 				const btn = (e.target as HTMLElement).closest('button[data-flag]') as HTMLButtonElement | null;
 				if (!btn) return;
-				const flag = String(btn.dataset.flag) as 'draft' | 'ai';
+				const flag = String(btn.dataset.flag) as 'draft' | 'ai' | 'rant';
+				// 吐槽不是字段而是目录（草稿池里是那枚 tag）⇒ 点它得先跟磁盘打交道，能不能按下去得看结果
+				if (flag === 'rant') { toggleRant(btn); return; }
 				const now = !(frontmatter[flag] === true || frontmatter[flag] === 'true');
 				// ai 关掉时写 undefined（老 checkbox 就是这么干的：让字段整个从 frontmatter 里消失，而不是写 false）
 				frontmatter[flag] = flag === 'ai' && !now ? undefined : now;
@@ -1243,24 +1256,28 @@ const editorConfig = {
 			// 哪一份是 AI 翻的由作者说了算（中文写+AI 翻英文，或反过来，都行）。
 			// 默认：草稿关、中文版 AI 关、英文版 AI 开。
 			const npFlagsBox = el<HTMLDivElement>('np-flags');
-			let npFlags = { draft: false, aiZh: false, aiEn: true };
+			let npFlags = { rant: false, draft: false, aiZh: false, aiEn: true };
 
 			function renderNewFlags() {
 				// text 跟 icon 分开给：文字要裹进 .chip-text（粗体占位用），图标得留在这层外面（那是纵向 flex）
-				const chip = (flag: 'draft' | 'aiZh' | 'aiEn', cls: string, on: boolean, text: string, icon: string, label: string) =>
+				const chip = (flag: 'rant' | 'draft' | 'aiZh' | 'aiEn', cls: string, on: boolean, text: string, icon: string, label: string) =>
 					`<button type="button" class="chip ${cls}${on ? ' chip--on' : ''}" data-flag="${flag}" aria-pressed="${on}" aria-label="${label}">${icon}<span class="chip-text" data-text="${text}">${text}</span></button>`;
 				npFlagsBox.innerHTML =
+					chip('rant', 'flag-rant', npFlags.rant, '吐槽 · Rant', '', '吐槽（放 rants/，不写标题、题图、分类、标签、警告）') +
 					chip('draft', 'flag-draft', npFlags.draft, '草稿 · Draft', '', '存成草稿（放 drafts/）') +
 					chip('aiZh', 'flag-ai', npFlags.aiZh, 'AI (ZH)', `<span class="chip-ico">${AI_BADGE_SVG}</span>`, '中文版标「AI 翻译」') +
 					chip('aiEn', 'flag-ai', npFlags.aiEn, 'AI (EN)', `<span class="chip-ico">${AI_BADGE_SVG}</span>`, '英文版标「AI 翻译」');
+				// 勾了吐槽：分类 / 标签 / 警告这三组收掉（跟编辑区同一个规矩）
+				newModal.classList.toggle('is-rant', npFlags.rant);
 			}
 
 			npFlagsBox.addEventListener('click', (e) => {
 				const btn = (e.target as HTMLElement).closest('button[data-flag]') as HTMLButtonElement | null;
 				if (!btn) return;
-				const flag = btn.dataset.flag as 'draft' | 'aiZh' | 'aiEn';
+				const flag = btn.dataset.flag as 'rant' | 'draft' | 'aiZh' | 'aiEn';
 				npFlags[flag] = !npFlags[flag];
 				toggleChip(btn, npFlags[flag]); // 就地改（理由见 toggleChip）
+				if (flag === 'rant') newModal.classList.toggle('is-rant', npFlags.rant);
 			});
 			const npError = el<HTMLParagraphElement>('np-error');
 			const npCreateBtn = el<HTMLButtonElement>('np-create');
@@ -1320,7 +1337,7 @@ const editorConfig = {
 				npTitleEn.value = '';
 				npSlug.value = '';
 				npWhen.value = nowLocal();
-				npFlags = { draft: false, aiZh: false, aiEn: true };
+				npFlags = { rant: false, draft: false, aiZh: false, aiEn: true };
 				npError.textContent = '';
 				renderNewChips();
 				renderNewFlags();
@@ -1335,8 +1352,11 @@ const editorConfig = {
 				const titleEn = npTitleEn.value.trim();
 				const when = npWhen.value.trim();
 				const slug = slugify(npSlug.value || titleEn || titleZh);
-				if (!titleZh) { npError.textContent = '中文标题得填'; npTitleZh.focus(); return; }
-				if (!titleEn) { npError.textContent = '英文标题也得填（en-US 那份要用）'; npTitleEn.focus(); return; }
+				// 吐槽不写 title（信息流靠日期和正文）⇒ 勾了就只问后者一个 URL 后缀
+				if (!npFlags.rant) {
+					if (!titleZh) { npError.textContent = '中文标题得填'; npTitleZh.focus(); return; }
+					if (!titleEn) { npError.textContent = '英文标题也得填（en-US 那份要用）'; npTitleEn.focus(); return; }
+				}
 				if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) { npError.textContent = '日期时间格式不对（用右边那个日历选的）'; npWhen.focus(); return; }
 				if (!slug) { npError.textContent = 'URL 后缀生成不出来，手填一个（小写字母/数字/短横）'; npSlug.focus(); return; }
 				// 同名先拦一道：服务端也会拦，但先说清楚比白跑一趟强
@@ -1351,6 +1371,7 @@ const editorConfig = {
 						headers: { 'content-type': 'application/json' },
 						body: JSON.stringify({
 							titleZh, titleEn, slug, date: when,
+							rant: npFlags.rant,
 							draft: npFlags.draft,
 							category: npPick.category,
 							tags: npPick.tags,
@@ -1528,13 +1549,17 @@ const editorConfig = {
 					for (const row of rows) {
 						// 行首：正式文章写序号（同语言、非草稿、按日期正序，见 post-io 的 listPosts），
 						// 跟站点文章页标题下那个 `#17` 完全一致；草稿在站点上本来就没序号 ⇒ 写「草稿」当行首标记。
+						// 吐槽（rants/）也没序号 ⇒ 跟草稿一个写法：「吐槽」后头接日期。
 						const nums = [...new Set([row.zh?.index, row.en?.index].filter((n): n is number => typeof n === 'number'))];
 						const date = String((row.zh ?? row.en)?.date ?? '').slice(0, 10);
 						const head = document.createElement('div');
 						head.className = 'pm-head';
 						head.setAttribute('role', 'presentation');
 						// 日期分开放一个 span：窄屏靠 CSS 藏掉它、只留行首（自己画的菜单里这就是一行 CSS 的事）
-						head.innerHTML = `<span class="pm-num">${nums.length ? '#' + nums.join(' / #') : '草稿'}</span><span class="pm-date">${esc(date)}</span>`;
+						// 还在草稿池里的吐槽不算：那边不分体裁，按「草稿」标
+						const isRant = !row.zh?.draft && !row.en?.draft && !!(row.zh?.rant || row.en?.rant);
+						const label = isRant ? '吐槽' : nums.length ? '#' + nums.join(' / #') : '草稿';
+						head.innerHTML = `<span class="pm-num">${label}</span><span class="pm-date">${esc(date)}</span>`;
 						postMenu.appendChild(head);
 						for (const side of ['zh', 'en'] as const) {
 							const p = row[side];
@@ -1647,6 +1672,80 @@ const editorConfig = {
 				setDirty(false);
 				reloadPreview();
 				window.setTimeout(reloadPreview, 800); // Astro 热更新后再刷一次更稳
+			}
+
+			/**
+			 * 「吐槽」标记：体裁由目录表达（blog/rants/ 和 blog/en-US/rants/）⇒ 切换就是把这一个文件
+			 * 在平级目录和 rants/ 之间挪一层，顺带改掉 layout 的相对层级（rants 深一级）。
+			 * ⚠️ 必须「先建新、后删旧」：中途出错最多多一个文件，绝不会把文章弄丢。
+			 */
+			async function setRantFlag(next: boolean) {
+				if (!current) return;
+				const path = current.path;
+				if (path.includes('/rants/') === next) return;
+				const file = path.split('/').pop() ?? path;
+				const dir = path.slice(0, path.lastIndexOf('/'));
+				const newPath = (next ? dir + '/rants' : dir.replace(/\/rants$/, '')) + '/' + file;
+				if (dirty) await save(); // 先落盘：底下移动的是磁盘上的原文，没保存的改动不能丢
+				const freshRes = await fetch(api('/post?path=' + encodeURIComponent(path)));
+				if (!freshRes.ok) { toast('移动失败：读不到原文件', 'err'); return; }
+				const fresh = (await freshRes.json()) as PostDetail;
+				const raw = String(fresh.raw).replace(/layout: '((?:\.\.\/)+)layouts\/Layout\.astro'/, (_m, ups: string) =>
+					`layout: '${next ? ups + '../' : ups.replace(/\.\.\/$/, '')}layouts/Layout.astro'`);
+				const created = await fetch(api('/post'), {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ path: newPath, content: raw, overwrite: true }),
+				});
+				const createdOut = (await created.json()) as { error?: string };
+				if (!created.ok) { toast('移动失败：' + (createdOut.error ?? created.status), 'err'); return; }
+				const removed = await fetch(api('/post'), {
+					method: 'DELETE',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ path }),
+				});
+				if (!removed.ok) toast('新文件已写好，旧文件没删掉，手动删一下：' + path, 'err');
+				await loadList();
+				localStorage.setItem('editor:last-post', newPath);
+				await loadPost(newPath);
+				toast(next ? `已标为吐槽：${newPath}` : `已取消吐槽：${newPath}`);
+			}
+
+			/**
+			 * 点「吐槽」这枚标记。体裁的落点有两种 ⇒ 分三种情况：
+			 *   文件已经在 rants/ 里（正式吐槽）⇒ 挪回平级目录；
+			 *   在草稿池里 ⇒ 只动 tags 那枚路标（文件不动，草稿池不分体裁，发布时 publish-draft 摘掉它）；
+			 *   其余（正式文章）⇒ 挪进 rants/。
+			 * 点亮时顺便把分类 / 标签 / 警告清掉：吐槽不写这三样，留着就是脏数据。
+			 */
+			function toggleRant(btn: HTMLButtonElement) {
+				if (!current) return;
+				if (current.path.includes('/rants/')) { void setRantFlag(false); return; }
+				const tags = strArray(frontmatter.tags);
+				const inTags = tags.includes(RANT);
+				if (inTags) {
+					// 取消：只把草稿池里那枚 tag 摘掉（文件留在 drafts/ 不动）
+					const rest = tags.filter((t) => t !== RANT);
+					frontmatter.tags = rest.length ? rest : undefined;
+					toggleChip(btn, false);
+					formEl.classList.remove('is-rant');
+					setDirty(true);
+					return;
+				}
+				delete frontmatter.category;
+				delete frontmatter.warning;
+				if (/\/drafts\//.test(current.path)) {
+					// 草稿：文件不动，只补上那枚路标 tag
+					frontmatter.tags = [RANT];
+					toggleChip(btn, true);
+					formEl.classList.add('is-rant');
+					setDirty(true);
+					return;
+				}
+				// 正式文章：清空后存盘（setRantFlag 里的 save 会落盘）再挪进 rants/
+				frontmatter.tags = undefined;
+				setDirty(true);
+				void setRantFlag(true);
 			}
 
 			/**

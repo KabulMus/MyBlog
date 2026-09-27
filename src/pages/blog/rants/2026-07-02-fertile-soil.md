@@ -1,10 +1,7 @@
 ---
-layout: '../../layouts/Layout.astro'
-title: '沃土计划'
+layout: '../../../layouts/Layout.astro'
 date: '2026-07-02T11:21'
 draft: false
-category: ['achievements', 'essays']
-tags: ['academic', 'rant']
 ---
 
 Hmm... 有意思。

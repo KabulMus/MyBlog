@@ -1,10 +1,7 @@
 ---
-layout: '../../layouts/Layout.astro'
-title: '一瓶子不满半瓶子晃荡'
+layout: '../../../layouts/Layout.astro'
 date: '2026-08-22T22:43'
 draft: false
-category: ['essays']
-tags: ['rant']
 ---
 
 晚自习放电影，老师捣鼓半天没弄好，因为用的IE，版本太老了，一上B站就提示版本过低，让下载Chrome、Edge或者Firefox。

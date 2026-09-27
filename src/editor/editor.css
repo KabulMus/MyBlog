@@ -212,6 +212,8 @@
 	.editor-post-menu .pm-date { display: none; }
 }
 
+
+
 .editor-post-menu .pm-item {
 	display: block;
 	width: 100%;
@@ -1357,6 +1359,12 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 	color: var(--text-sub);
 }
 
+/* 「标记」里点亮吐槽 ⇒ 标题 / 题图 / 分类 / 标签 / 内容警告 这几组整组收掉
+   （吐槽：体裁由目录表达，标题在源文件里本来就没有、题图也不用，那三样一概不写）。
+   ⚠️ 作用域得是整个表单：标题那一行在 .fm-meta 外面（分类等几组在里面，但被包含）。 */
+.editor-form.is-rant .is-post-meta,
+.editor-modal.is-rant .is-post-meta { display: none; }
+
 /* 宽屏：容器不参与布局（它只是手机弹层的外壳），四组直接排在下面的 .fm-row--meta 里 */
 .fm-meta { display: contents; }
 
@@ -1557,6 +1565,7 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 
 /* 「草稿」「AI」两枚开关的描边（底色/字色在下面那条里）：草稿=琥珀、AI=紫，跟站点那两处一致 */
 .chip--on.flag-draft { border-color: var(--color-amber-border); }
+.chip--on.flag-rant { border-color: var(--color-blue-border); }
 .chip--on.flag-ai { border-color: var(--color-purple-border); }
 
 /* 选中态 hover：描边压到实色（currentColor 就是那套主色）⇒ 30% → 100% 的加深手感 */
@@ -1568,6 +1577,7 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
    ⚠️ 选择器必须写三个类：上面那条兜底 `.chip--on:not(.cat-tag):not(.cw-pill)` 里两个 `:not()` 也算
       各自的权重 ⇒ 它其实是 (0,3,0)，只写 `.chip--on.flag-draft` 只有 (0,2,0)，会被它抢成蓝色（踩过）。 */
 .chip.chip--on.flag-draft { background: var(--color-amber-bg); color: var(--color-amber); }
+.chip.chip--on.flag-rant { background: var(--color-blue-bg); color: var(--color-blue); }
 .chip.chip--on.flag-ai { background: var(--color-purple-bg); color: var(--color-purple); }
 
 /* AI 那枚带图标：得用 inline-flex 把图标和文字对齐（inline-block + 行内 span 会歪、基线也不对） */

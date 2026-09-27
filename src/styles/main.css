@@ -508,12 +508,14 @@ body {
 }
 
 /* --- 7. 页脚 --- */
+/* ⚠️ 上外边距不能是 auto：块级元素里 auto 的上下外边距算 0，那条 border-top 分割线
+   就会紧贴着上方内容（padding 只在线下方）。给一个明确的上边距，分割线上下都有呼吸。 */
 footer {
     font-size: 0.85rem;
     width: 90%;
     max-width: 1100px;
-    margin: auto;
-    padding: 60px 0 30px; border-top: 1px solid var(--item-border);
+    margin: 2rem auto 0;
+    padding: 60px 0 90px; border-top: 1px solid var(--item-border);
     text-align: center;
     user-select: none;
 }
@@ -799,6 +801,12 @@ footer a:hover {
     :root:not([data-theme='light']) .page-index.is-draft {
         color: #e9c15c;
     }
+}
+
+/* 吐槽文章标记：跟草稿同一套写法（原本显示序号的位置），颜色用品牌蓝 */
+.page-index.is-rant {
+    color: var(--primary-blue);
+    font-weight: 700;
 }
 
 /* ✨ 完美的文字渐变色保持不变 */
@@ -1587,6 +1595,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     font-variant-numeric: tabular-nums;
     color: var(--text-sub);
     line-height: 1;
+    user-select: none;
 }
 
 .pagination-start {
@@ -1745,7 +1754,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     justify-content: space-between;
     gap: 1rem;
     max-width: 800px;
-    margin: 3rem auto 0;
+    margin: auto auto 0;
     padding: 1.5rem 2rem;
     user-select: none;             /* 上下篇导航不可选中 */
 }
@@ -1991,6 +2000,250 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     text-align: center;
 }
 
+/* --------------------------------------------------------------------------
+   吐槽（rants）：主页只放成篇的，吐槽另走走一条时间线
+   -------------------------------------------------------------------------- */
+
+/* 主页顶部的吐槽入口：一行 —— 左边「吐槽碎碎念」、右边「进入 →」（卡片式条带，
+   跟正文引用块同一套视觉语言：左侧一条品牌蓝粗线）。
+   整块是一个入口 ⇒ 靠下面的 .rant-preview-enter 铺满点击层，鼠标点哪里都进瀑布流；
+   右边那枚不是唯一的入口，键盘走它。
+   ⚠️ 上方留白得自己带：上面那条筛选栏收起时高度和 margin 都是 0，不写就跟上面贴上了。 */
+.rant-preview {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1rem 0;
+    padding: 0.9rem 1.1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--item-border);
+    border-left: 4px solid var(--primary-blue);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    transition: box-shadow 0.2s ease;   /* 跟 .post-item 一个时长，悬停抬起来时两边手感一致 */
+}
+
+.rant-preview-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+    transition: color 0.2s ease;
+}
+
+/* 「进入 →」：就是另一个可点的热区，长得跟其他文字一模一样，不给它单独的 hover 效果。
+   ⚠️ 权重得压过 `.typography-body a:not(.post-title-link)`（那条把正文里的链接染成品牌蓝、
+      还塞了 1.5px 透明下边框，hover 时会变蓝 ⇒ 这里两样都得拔掉）。 */
+.typography-body .rant-preview .rant-preview-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    font-size: 0.8rem;
+    color: var(--text-sub);
+    text-decoration: none;
+    border-bottom: none;
+    /* 站在这层点击层上面，否则点击被它抢走（hover 效果倒不需要，整块本来就一样） */
+    position: relative;
+    z-index: 2;
+}
+
+/* 「进入」右侧那枚箭头（尺寸与描边跟站内其他小箭头一致） */
+.rant-preview-more svg {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* 悬停整块：阴影抬成别张卡片 hover 时的那档，标题变品牌蓝。
+   用 .rant-preview:hover（不是 :has(进入层)）：鼠标经过「进入」那枚链接时也得算悬停。 */
+@media (hover: hover) and (pointer: fine) {
+    .rant-preview:hover {
+        box-shadow: var(--card-hover-shadow);
+    }
+    .rant-preview:hover .rant-preview-title {
+        color: var(--primary-blue);
+    }
+}
+
+/* 整块的点击层（鼠标热区）：键盘用户走上面那枚「进入」链接。
+   ⚠️ 权重得压过 `.typography-body a:not(.post-title-link)` 那条透明下边框（它是 (0,2,1)）。 */
+.typography-body .rant-preview .rant-preview-enter {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border: none;
+}
+
+/* 吐槽页：卡片式信息流 —— 两列网格（不写 JS 时的退化形态：卡片按行对齐，下面会留白）。
+   瀑布式的紧密摆放由 public/js/rants-feed.js 接管（它会改写 grid-template-columns + 每张卡的 span）。 */
+.rants-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.rants-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 1.1rem;
+    align-items: start;   /* 卡片高度随内容，不被同行拉齐 */
+    position: relative;   /* 瀑布布局接管后，卡片改成绝对定位，基准就是这里 */
+}
+
+/* 宽屏：标题区收到 800（跟卡片同一列），标题文字左缘正好落在卡片左缘。
+   ⚠️ 得写 body.is-rants-index 提高一段权重：文章那套 1100 宽的标题区规则
+   （.is-article-page .page-hero section.hero-content）排在本文件更后面，同级会被它抢走。 */
+@media (min-width: 1250px) {
+    body.is-rants-index .page-hero section.hero-content {
+        align-self: auto;
+        margin-left: 0;
+        max-width: 800px;
+    }
+}
+
+/* 页脚跟版心（main 那个 800 的盒子）同宽：宽屏下比卡片左右各宽 32，分割线正好齐版心边缘。
+   首页跟 /rants 都是这种「内容列 736、版心 800」的页面；文章页不动 —— 那边页脚跟标题区、
+   上下篇导航本来就是同一带宽（1100）。 */
+body.is-rants-index footer,
+body.is-home footer {
+    width: 100%;
+    max-width: 800px;
+}
+
+.rant-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.1rem 1.2rem;
+    background: var(--card-bg);
+    border: 1px solid var(--item-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    position: relative;   /* 右上角「原文」按钮的定位基准 */
+}
+
+/* 卡片头部：日期 + 时间 + AI 标，跟文章页头部同一套写法
+   （图标尺寸/描边靠 .date svg.date-icon 那组全局规则，这里只管排列和字色） */
+.rant-card .date.rant-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 10px;
+    padding-right: 40px;   /* 给右上角那枚「原文」按钮腾位 */
+    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-sub);
+    user-select: none;
+}
+
+.rant-card .date-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 钟表图标不再额外左偏移（组间距由 .rant-card-meta 的 gap 提供） */
+.rant-card .date .date-group .time-icon {
+    margin-left: 0;
+}
+
+/* AI 标紧跟在时间后面，不推到行尾 */
+.rant-card .date .ai-badge {
+    margin-left: 0;
+}
+
+/* 原文入口：完全照记谱法切换器那条工具栏的形式 ——
+   外层是右上角一条半透明底窄条（左/下各一条边、只圆左下角），里面一枚透明图标按钮。
+   ⚠️ 图标必须包在里面的 .rant-card-source-btn 上：这是个 <a>，而正文里的链接有一条
+   `.typography-body a:hover:not(.post-title-link)` 会把 hover 颜色染成品牌蓝。 */
+/* ⚠️ 外层必须是 <div>：正文里 `.typography-body a` 会给链接塞一条 1.5px 的透明下边框
+   （hover 时染成品牌蓝），套在外层正好把这条窄条的下描边冲掉。能点的只有里面那枚图标。 */
+.rant-card-source {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    min-height: 29px;                      /* 跟 .score-toolbar 一致 */
+    background-color: rgba(127, 127, 127, 0.07);
+    border-left: 1px solid var(--item-border);
+    border-bottom: 1px solid var(--item-border);
+    border-bottom-left-radius: var(--card-radius);
+}
+
+/* 图标按钮：⚠️ 选择器要压过 `.typography-body a`（它带 1.5px 下边框）和它的 hover */
+.rants-grid .rant-card .rant-card-source-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 28px;
+    color: var(--text-sub);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.rants-grid .rant-card .rant-card-source-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .rants-grid .rant-card .rant-card-source-btn:hover {
+        color: var(--text-main);
+    }
+}
+
+
+/* 卡片里的正文标题不要「井号 hover」、也不要悬停变蓝 —— 那一套是给单篇正文的
+   （⚠️ 选择器要用四段才压得住 .typography-body h2:not(...):hover 那条） */
+.rants-grid .rant-card .rant-card-body :is(h1, h2, h3, h4, h5, h6)::before {
+    content: none;
+}
+
+.rants-grid .rant-card .rant-card-body :is(h1, h2, h3, h4, h5, h6):hover {
+    color: var(--text-main);
+}
+
+/* 卡片里的点赞：贴着卡片底，间距比文章末尾那套（2.5rem）收紧 */
+.rant-card .like-section {
+    margin: 0.9rem 0 0;
+}
+
+/* 正文吃文章那套排版（.typography-body 的规则本来就在 main 上），只把卡片两端的多余间距收掉 */
+.rant-card-body > :first-child {
+    margin-top: 0;
+}
+
+.rant-card-body > :last-child {
+    margin-bottom: 0;
+}
+
+.rants-empty {
+    color: var(--text-sub);
+}
+
+@media (max-width: 700px) {
+    .rant-preview {
+        padding: 0.8rem 0.9rem;
+    }
+}
+
+@media print {
+    .rant-preview {
+        display: none;
+    }
+}
+
 /* 2. 撑满整张卡片的绝对定位点击层 */
 .post-title-link::before {
     content: "";
@@ -2115,6 +2368,52 @@ html[lang='en-US'] .typography-body,
 html[lang='en-US'] .page-hero,
 html[lang='en-US'] .post-title-link {
     text-align: left;
+}
+
+/* ==========================================================================
+   🔍 搜索框的占位壳
+   PagefindUI 的 DOM 是 JS 挂上去的（build 后才有），在那之前这块地方一直是空的 ⇒
+   首屏先画一个跟真输入框一模一样的框（尺寸/描边/圆角/留白全部照抄下面
+   `#search .pagefind-ui .pagefind-ui__search-input` 那套：高 51.2、圆角 16、左边 40 留给放大镜），
+   真的 UI 一到位就把它收掉（同一位置同样大小 ⇒ 不闪不跳）。
+   ========================================================================== */
+.search-skeleton {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 51.2px;
+    padding: 0 40px;
+    border: 2px solid var(--item-border);
+    border-radius: 16px;
+    background-color: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    color: var(--text-sub);
+    font-size: 1.05rem;   /* 跟 Pagefind 真输入框的 16.8px 对齐 */
+    font-weight: 500;
+    user-select: none;
+}
+
+.search-skeleton span {
+    opacity: 0.8;
+}
+
+/* 放大镜：跟真 UI 的 ::before 那颗同位同尺寸。
+   ⚠️ left/top 各减掉 2px 边框：绝对定位是相对**padding box**，而真 UI 那颗挂在没有边线的 form 上
+   （它量的是相对边框外缘的 20px / 25px）—— 不减这 2px，图标会各偏右、偏下 2px。 */
+.search-skeleton-icon {
+    position: absolute;
+    left: 18px;
+    top: 23px;
+    transform: translateY(-50%);
+    width: 1.2rem;
+    height: 1.2rem;
+    color: var(--text-sub);
+    opacity: 0.8;
+}
+
+/* 真搜索框到齐 ⇒ 占位壳退场 */
+.search-container:has(.pagefind-ui) .search-skeleton {
+    display: none;
 }
 
 /* ==========================================================================

@@ -1,11 +1,8 @@
 ---
-layout: '../../../layouts/Layout.astro'
-title: 'The Fertile Soil Program'
+layout: '../../../../layouts/Layout.astro'
 date: '2026-07-02T11:21'
 draft: false
 ai: true
-category: ['achievements', 'essays']
-tags: ['academic', 'rant']
 ---
 
 Hmm... interesting.
