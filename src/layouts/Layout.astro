@@ -111,7 +111,7 @@ const ogDescription = description || (isEnglishRoute
     ? "Ethan's blog—music, creation, essays & achievements."
     : 'Ethan 的博客—音乐、创作、随笔与成就。');
 const ogImage = 'https://blog.ethan929.com/favicon.webp';
-const pageDate = formatDate(frontmatter?.date || "");
+const pageDate = formatDateHtml(frontmatter?.date || "");
 const pageTime = formatTime(frontmatter?.date || "");
 
 // 计算文章序号（时间正序）
@@ -163,7 +163,7 @@ const backHref = isRantArticle
 
 function formatDate(dateStr: string) {
     if (!dateStr) return '';
-    // 日期部分：英文 Aug 2, 2020；中文 2020.8.2（月日不补零）
+    // 日期部分：英文 Aug 2, 2020；中文 2020年8月2日（月日不补零）
     // 英文月份按规范：May/June/July 不缩写，其余缩写
     const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (!m) return dateStr.replace(/-/g, '.');
@@ -172,7 +172,14 @@ function formatDate(dateStr: string) {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
         return `${months[+mo - 1]} ${+d}, ${+y}`;
     }
-    return `${+y}.${+mo}.${+d}`;
+    return `${+y}年${+mo}月${+d}日`;
+}
+
+// 跟上面同格式，但把「年月日」包进 .date-cjk（那个类单独压一档字重，见 main.css）——
+// hero 上显示的日期用这份；pageTitle（<title> / og:title）必须用纯文本那份。
+function formatDateHtml(dateStr: string) {
+    const html = formatDate(dateStr).replace(/([年月日])/g, '<span class="date-cjk">$1</span>');
+    return html.includes('date-cjk') ? `<span class="date-text">${html}</span>` : html;
 }
 
 function formatTime(dateStr: string) {
@@ -241,10 +248,13 @@ function getLangSwitchHref(pathname: string) {
 			href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" 
 			crossorigin="anonymous"
 		/>
-		<!-- Google Fonts（替代原 CSS @import：link 并行加载 + preconnect 提前握手） -->
+		<!-- Google Fonts（替代原 CSS @import：link 并行加载 + preconnect 提前握手）
+		     ⚠️ media="print" + onload 是非阻塞加载：这 60+ KB 的目录 CSS 不再卡首屏，字体没到就先用后备字体
+		     （display=swap 本来就是这个行为）；关了 JS 由 <noscript> 里那份兜底。 -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wght@6..144,1..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&family=Playfair+Display+SC:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
+		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
 		<!-- Inter 官方可变字体（全字形 + optical size，替代 gfonts 的 Inter） -->
 		<link rel="preconnect" href="https://rsms.me/" />
 		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
@@ -350,7 +360,7 @@ function getLangSwitchHref(pathname: string) {
 												<path d="M14 34H20"/>
 												<path d="M28 26H34"/>
 												<path d="M14 26H20"/>
-											</svg> {pageDate}
+												</svg> <Fragment set:html={pageDate} />
 										</span>
 										{pageTime && (
 											<span class="date-group">
@@ -425,7 +435,7 @@ function getLangSwitchHref(pathname: string) {
 										<path d="M14 34H20"/>
 										<path d="M28 26H34"/>
 										<path d="M14 26H20"/>
-									</svg> {pageDate}
+									</svg> <Fragment set:html={pageDate} />
 								</span>
 								{pageTime && (
 									<span class="date-group">

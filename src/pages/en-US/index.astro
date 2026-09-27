@@ -186,7 +186,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                                         <path d="M14 34H20"/>
                                         <path d="M28 26H34"/>
                                         <path d="M14 26H20"/>
-                                    </svg> {formatDate(post.frontmatter.date, LANG)}
+                                    </svg> <Fragment set:html={formatDate(post.frontmatter.date, LANG)} />
                                 </span>
                                 {formatTime(post.frontmatter.date, LANG) && (
                                     <span class="post-meta-item">

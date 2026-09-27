@@ -17,8 +17,7 @@ const cards = await Promise.all(
                 url,
                 // slug 就是 URL 最后一段：跟单篇页传给点赞组件的那个一致，两边共用一个计数
                 slug: url.split('/').pop() || '',
-                date: formatDate(post.frontmatter?.date, LANG),
-                time: formatTime(post.frontmatter?.date, LANG),
+                date: formatDate(post.frontmatter?.date, LANG),                time: formatTime(post.frontmatter?.date, LANG),
                 ai: post.frontmatter?.ai === true,
                 html: typeof post.compiledContent === 'function' ? await post.compiledContent() : '',
             };
@@ -47,7 +46,7 @@ const cards = await Promise.all(
                                 <path d="M14 34H20"/>
                                 <path d="M28 26H34"/>
                                 <path d="M14 26H20"/>
-                            </svg> {card.date}
+                            </svg> <Fragment set:html={card.date} />
                         </span>
                         {card.time && (
                             <span class="date-group">

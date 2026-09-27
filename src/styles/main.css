@@ -857,6 +857,15 @@ body:not(.is-article-page) .page-hero h1 {
     user-select: none;          /* 日期/时间不可选中 */
 }
 
+/* 日期里的「年月日」：汉字字形本来就比 Montserrat 的数字压得满，同一个字重下看着更粗
+   ⇒ 这三个字单独压一档（Noto Sans SC 是可变字体，可以直接给 wght；数字不能受影响，
+   所以只能包一层，不能整块调）。嫌粗就调小、嫌细就调大。
+   ⚠️ 这个 span 由 formatDate 生成，外面永远跟着一层 .date-text 把整个日期裹成一个整体
+   （不然每个 span 都成了 flex item，被容器 gap 撑出缝）。 */
+.date-cjk {
+    font-variation-settings: 'wght' 450;
+}
+
 /* 日期行分组：序号 / 日期 / 时间 三组，组内 4px、组间 12px，换行时整组移动不拆散 */
 .page-hero .date .date-group {
     display: inline-flex;

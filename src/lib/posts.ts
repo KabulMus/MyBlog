@@ -13,8 +13,12 @@ export function formatDate(dateStr: string, lang: Lang): string {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
         return `${months[+mo - 1]} ${+d}, ${+y}`;
     }
-    // 中文日期：2020.8.2（月日不补零）
-    return `${+y}.${+mo}.${+d}`;
+    // 中文日期：2020年8月2日（月日不补零）。
+    // ⚠️ 这里返回的是 HTML，调用处请用 <Fragment set:html={formatDate(...)} />。
+    // ⚠️ 外面那层 .date-text 不能省：日期容器（.post-meta-item / .date-group）是 inline-flex + gap，
+    //    里头的元素全会被当成 flex item 而撑出 4px 缝；包成一个整体才只剩图标与日期之间那一处 4px。
+    // ⚠️ 里头的 .date-cjk 给「年月日」单独压一档字重（汉字字形比 Montserrat 的数字压得满）。
+    return `<span class="date-text">${+y}<span class="date-cjk">年</span>${+mo}<span class="date-cjk">月</span>${+d}<span class="date-cjk">日</span></span>`;
 }
 
 export function formatTime(dateStr: string, lang: Lang): string {
