@@ -301,3 +301,61 @@ export function createNewPost(opts, overwrite = false) {
   }
   return files.map((f) => Object.assign(createPost(f.path, f.content, overwrite), { lang: f.lang }));
 }
+
+// ── AI 翻译：中文原文 → 英文对应文件 ─────────────────────────
+// 编辑器顶栏那枚「AI 翻译」用（文案与提示词在 scripts/lib/translate.mjs）。
+
+/** layout 的相对层级：从 blog/ 起算两级，blog 下面每多一层目录再加一级 */
+function layoutDepth(relPath) {
+  const dir = toPosix(dirname(relPath)).replace(/^src\/pages\/blog\/?/, '');
+  return 2 + dir.split('/').filter(Boolean).length;
+}
+
+/**
+ * 这篇文章属于哪种语言：看目录（`blog/en-US/...` 就是英文）。
+ * 只认 POST_DIRS 里那几层，别拿文件名猜。
+ */
+export function langOfPath(relPath) {
+  const posix = toPosix(String(relPath || '').trim()).replace(/^\.\//, '');
+  const rest = posix.replace(/^src\/pages\/blog\//, '');
+  if (rest === posix) throw new Error('不是 blog 下的文章：' + relPath);
+  return rest.startsWith('en-US/') ? 'en' : 'zh';
+}
+
+/**
+ * 这篇文章的「另一种语言」对应路径：文件名、体裁目录（rants/）、草稿池（drafts/）全部原样带过去，
+ * 只在 `blog/` 下面插入或摘掉那一级 `en-US`。
+ */
+export function counterpartPath(relPath) {
+  const posix = toPosix(String(relPath || '').trim()).replace(/^\.\//, '');
+  const rest = posix.replace(/^src\/pages\/blog\//, '');
+  if (rest === posix) throw new Error('不是 blog 下的文章：' + relPath);
+  return rest.startsWith('en-US/')
+    ? 'src/pages/blog/' + rest.slice('en-US/'.length)
+    : 'src/pages/blog/en-US/' + rest;
+}
+
+/**
+ * 把「原文 + 译文」拼成对应语言那份文件的完整内容并落盘（已存在则覆盖）。
+ * 方向不限：中文原文就写到英文那份，英文原文就写到中文那份（目标路径自己推）。
+ * ⚠️ frontmatter 一律不采用模型输出：除了 title，其余字段全部照抄原文那份 ——
+ *    让模型改 YAML 会把字段顺序弄乱、引号写坏，还可能把 tags 翻成别的语言。
+ * · layout 层级按目标文件自己的位置算（en-US/ 多一层）
+ * · ai: true —— 这份是 AI 翻的，站点卡片上的「AI」标就是这个意思
+ * · 吐槽没有 title，就不写 title 那一行
+ */
+export function writeTranslation(sourcePath, { title, body }) {
+  const source = readPost(sourcePath);
+  const target = counterpartPath(source.path);
+  const data = { ...source.frontmatter };
+  const cleanTitle = String(title ?? '').trim();
+  if (cleanTitle) data.title = cleanTitle;
+  else delete data.title;
+  data.layout = '../'.repeat(layoutDepth(target)) + 'layouts/Layout.astro';
+  data.ai = true;
+
+  const content = serializeFrontmatter(data) + '\n' + String(body ?? '').trim() + '\n';
+  const existed = existsSync(resolvePostPath(target));
+  createPost(target, content, true);
+  return { path: target, bytes: Buffer.byteLength(content, 'utf8'), overwritten: existed };
+}

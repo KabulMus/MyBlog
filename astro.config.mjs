@@ -654,8 +654,65 @@ function blogEditorApi() {
             const body = await readBody(req);
             return send(200, await runTask(String(body.task || '')));
           }
+          // AI 翻译：中文原文 → 英文。流式吐纯文本（前端边收边显示），目标路径放在 x-target-path 头里。
+          // ⚠️ key 不落进代码：读项目根目录的 .env（DEEPSEEK_API_KEY，可选 DEEPSEEK_MODEL / DEEPSEEK_BASE_URL）。
+          if (req.method === 'POST' && route === '/translate') {
+            const body = await readBody(req);
+            const tr = await import('./scripts/lib/translate.mjs');
+            const detail = io.readPost(body.path);
+            // 方向由源文件语言定：中文原文 → 英文那份，英文原文 → 中文那份
+            const direction = io.langOfPath(detail.path) === 'en' ? 'en2zh' : 'zh2en';
+            const target = io.counterpartPath(detail.path);
+            const { loadEnv } = await import('vite');
+            const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
+            const apiKey = env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY || '';
+            if (!apiKey) {
+              return send(400, { error: '没找到 DEEPSEEK_API_KEY：在项目根目录的 .env 里加一行 DEEPSEEK_API_KEY=sk-…' });
+            }
+            const hasTitle = typeof detail.frontmatter.title === 'string' && detail.frontmatter.title.trim() !== '';
+            // 客户端断开（关弹层）就掐掉上游，别白烧 token
+            const ac = new AbortController();
+            res.on('close', () => {
+              if (!res.writableEnded) ac.abort();
+            });
+
+            res.statusCode = 200;
+            res.setHeader('content-type', 'text/plain; charset=utf-8');
+            res.setHeader('cache-control', 'no-store');
+            res.setHeader('x-target-path', encodeURIComponent(target));
+            res.setHeader('x-has-title', hasTitle ? '1' : '0');
+            await tr.streamTranslation({
+              apiKey,
+              baseUrl: env.DEEPSEEK_BASE_URL || undefined,
+              model: env.DEEPSEEK_MODEL || undefined,
+              messages: tr.buildMessages({
+                style: tr.readStyleGuide(),
+                title: detail.frontmatter.title,
+                hasFrontmatterTitle: hasTitle,
+                body: detail.body,
+                direction,
+              }),
+              onDelta: (delta) => res.write(delta),
+              signal: ac.signal,
+            });
+            res.write(tr.DONE_MARK); // 收尾哨兵：少了它前端按「翻译被截断」处理
+            return res.end();
+          }
+          // 把译文写成英文文件（frontmatter 由 Node 侧拼，见 post-io 的 writeTranslation）
+          if (req.method === 'POST' && route === '/translate/write') {
+            const body = await readBody(req);
+            if (!body.path) return send(400, { error: '缺少 path 参数' });
+            return send(200, io.writeTranslation(body.path, { title: body.title, body: body.body }));
+          }
           return send(404, { error: '未知接口：' + req.method + ' ' + route });
         } catch (err) {
+          // 已经开始流式吐字的场合，响应头早发出去了 ⇒ 这里不能再补 JSON，直接掐断
+          if (res.headersSent) {
+            try {
+              res.end();
+            } catch {}
+            return;
+          }
           send(500, { error: String((err && err.message) || err) });
         }
       });

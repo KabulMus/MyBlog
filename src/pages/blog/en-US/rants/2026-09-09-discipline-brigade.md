@@ -5,6 +5,6 @@ draft: false
 ai: true
 ---
 
-What the f\*ck—the discipline committee blindly writing down f\*cking names. Now looking up at my homework ticks you off too?
+F\*cking student discipline committee, writing down names for no f\*cking reason. I just looked up at the homework—did that somehow offend you?
 
-Psycho. Take my name down again and I'll tear you into eight pieces.
+Psycho. Write down my name again and I'll tear you into eight pieces.

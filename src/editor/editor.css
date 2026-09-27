@@ -2292,6 +2292,40 @@ body .editor-prose h6 {
 /* ── 新建文章表单（同一个弹窗壳子）────────────────────────
    字段直接复用 frontmatter 那套（.fm-row / .fm-chips / .fm-check），
    只多一个两列网格 + 标签加宽（那边的 56px 只够「标题」「日期」这种两字标签）。 */
+/* ── AI 翻译（同一个弹窗壳子）────────────────────────────
+   译文是流式吐进来的 ⇒ 给一个能滚的等宽块；目标路径那行用极小字并允许折行，长路径不会把弹层撑宽。 */
+.editor-modal-card--tr {
+	display: flex;
+	flex-direction: column;
+	width: min(720px, 100%);
+	max-height: min(80vh, 700px);
+}
+
+.tr-target {
+	margin: 0;
+	font-size: 0.72rem;
+	line-height: 1.5;
+	color: var(--text-sub);
+	word-break: break-all;
+}
+
+.tr-out {
+	flex: 1;
+	min-height: 180px;
+	margin: 10px 0 0;
+	padding: 10px 12px;
+	overflow: auto;
+	font-family: var(--ed-font-mono);
+	font-size: 0.78rem;
+	line-height: 1.62;
+	white-space: pre-wrap;
+	word-break: break-word;
+	color: var(--text-main);
+	background: var(--bg-light);
+	border: 1px solid var(--item-border);
+	border-radius: 10px;
+}
+
 .editor-modal-card--form {
 	width: min(560px, 100%);
 }

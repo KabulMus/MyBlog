@@ -90,6 +90,11 @@ const editorConfig = {
 			</div>
 			<div class="editor-bar-right">
 				<span id="post-meta" class="editor-meta"></span>
+				<!-- AI 翻译：中文原文 ⇄ 英文对应文件。图标是四角星，viewBox 15 / 描边 1.25，
+				     跟旁边那套 48 / 4 同比例 ⇒ 粗细自动一致。含义靠 aria-label 给读屏。 -->
+				<button class="editor-btn editor-btn--icon" id="tr-btn" type="button" aria-label="AI 翻译成英文" disabled>
+					<svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.25" stroke-miterlimit="10" aria-hidden="true"><path d="M7.5,1.41c.13,0,.24.09.27.21.1.38.22.75.38,1.11.4.94.96,1.76,1.66,2.46.7.7,1.52,1.26,2.46,1.66.36.15.73.28,1.11.38.12.03.21.14.21.27s-.09.24-.21.27c-.38.1-.75.22-1.11.38-.94.4-1.76.96-2.46,1.66-.7.7-1.26,1.52-1.66,2.46-.15.36-.28.73-.38,1.11-.03.12-.14.21-.27.21-.13,0-.24-.09-.27-.21-.1-.38-.22-.75-.38-1.11-.4-.94-.96-1.76-1.66-2.46-.7-.7-1.52-1.26-2.46-1.66-.36-.15-.73-.28-1.11-.38-.12-.03-.21-.14-.21-.27,0-.13.09-.24.21-.27.38-.1.75-.22,1.11-.38.94-.4,1.76-.96,2.46-1.66.7-.7,1.26-1.52,1.66-2.46.15-.36.28-.73.38-1.11.03-.12.14-.21.27-.21Z" /></svg>
+				</button>
 				<!-- 顶栏这几枚一律图标按钮（viewBox 48 / 描边 4，跟工具条同一套），含义靠 aria-label 给读屏；
 				     「源码」这种开关不看文字了 ⇒ 靠 .is-on 的按下态表示（跟工具条按钮同一配色）。 -->
 				<button class="editor-btn editor-btn--icon" id="source-btn" type="button" aria-label="源码" aria-pressed="false">
@@ -287,6 +292,19 @@ const editorConfig = {
 				<div class="editor-modal-btns">
 					<button type="button" id="new-cancel">取消</button>
 					<button type="button" id="np-create" class="is-primary">创建</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- AI 翻译：译文流式吐进来，看完了再落盘（英文文件已存在就是覆盖） -->
+		<div class="editor-modal" id="tr-modal" hidden>
+			<div class="editor-modal-card editor-modal-card--tr" role="dialog" aria-modal="true" aria-labelledby="tr-modal-title">
+				<h3 class="editor-modal-title" id="tr-modal-title">AI 翻译</h3>
+				<p class="tr-target" id="tr-target"></p>
+				<pre class="tr-out" id="tr-out"></pre>
+				<div class="editor-modal-btns">
+					<button type="button" id="tr-cancel">取消</button>
+					<button type="button" id="tr-write" class="is-primary" disabled>写入英文文件</button>
 				</div>
 			</div>
 		</div>
@@ -1590,6 +1608,142 @@ const editorConfig = {
 				if (!postMenu.hidden) placePostMenu(); // 菜单开着的时候列表变了（比如刚删了一篇）⇒ 重新摆一次
 			}
 
+			// ── AI 翻译（中文 → 英文）────────────────────────────────
+			// 提示词与 DeepSeek 调用全在服务端（scripts/lib/translate.mjs），这里只做三件事：
+			// 开弹层 → 边收边显示 → 确认后让服务端拼好 frontmatter 落盘（post-io 的 writeTranslation）。
+			const trBtn = el<HTMLButtonElement>('tr-btn');
+			const trModal = el<HTMLDivElement>('tr-modal');
+			const trTarget = el<HTMLParagraphElement>('tr-target');
+			const trOut = el<HTMLPreElement>('tr-out');
+			const trWrite = el<HTMLButtonElement>('tr-write');
+			const trCancel = el<HTMLButtonElement>('tr-cancel');
+			const TR_DONE = '<<<TRANSLATE_DONE>>>';
+			let trAbort: AbortController | null = null;
+			let trRunning = false;
+			let trTargetPath = '';
+			// 拆好的译文（标题 + 正文）：「写入」按钮只认它，还在流的时候是禁用的
+			let trParts: { title: string; body: string } | null = null;
+
+			/** 当前这篇是哪种语言（翻的时候方向由它定）：中文原文 → 英文，英文原文 → 中文 */
+			const currentLang = () => (posts.find((p) => p.path === current?.path)?.lang ?? 'zh') as 'zh' | 'en';
+			/** 译文将要变成的语言，只用于按钮/提示文案 */
+			const targetLabel = () => (currentLang() === 'en' ? '中文' : '英文');
+			const syncTrBtn = () => {
+				trBtn.disabled = !current || trRunning;
+				trBtn.setAttribute('aria-label', 'AI 翻译成' + targetLabel());
+			};
+
+			function closeTrModal() {
+				trAbort?.abort(); // 关掉就斷上游，别白烧 token（服务端见连接关闭也会断）
+				trAbort = null;
+				trRunning = false;
+				trModal.hidden = true;
+				syncTrBtn();
+			}
+
+			/** 把流出来的整份译文切成标题和正文：原文没有 title（吐槽）时整份都是正文 */
+			function splitTr(text: string, hasTitle: boolean) {
+				const clean = text.replace(/\r\n/g, '\n').trim();
+				if (!hasTitle) return { title: '', body: clean };
+				const nl = clean.indexOf('\n');
+				if (nl < 0) return { title: clean, body: '' };
+				return { title: clean.slice(0, nl).trim(), body: clean.slice(nl + 1).trim() };
+			}
+
+			async function runTranslation() {
+				if (!current || trRunning) return;
+				const path = current.path;
+				if (dirty) await save(); // 翻的是磁盘上的原文，没保存的改动不能丢
+				const ac = new AbortController();
+				trAbort = ac;
+				trRunning = true;
+				trParts = null;
+				trTargetPath = '';
+				trOut.textContent = '';
+				trTarget.textContent = '';
+				trWrite.disabled = true;
+				trWrite.textContent = '写入' + targetLabel() + '文件';
+				trModal.hidden = false;
+				syncTrBtn();
+
+				try {
+					const res = await fetch(api('/translate'), {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ path }),
+						signal: ac.signal,
+					});
+					if (!res.ok) {
+						const out = (await res.json().catch(() => ({}))) as { error?: string };
+						trOut.textContent = out.error ?? 'HTTP ' + res.status;
+						toast('翻译失败', 'err');
+						return;
+					}
+					trTargetPath = decodeURIComponent(res.headers.get('x-target-path') ?? '');
+					const hasTitle = res.headers.get('x-has-title') === '1';
+					trTarget.textContent = trTargetPath;
+
+					const reader = res.body?.getReader();
+					if (!reader) throw new Error('读不到响应流');
+					const decoder = new TextDecoder();
+					let text = '';
+					for (;;) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						text += decoder.decode(value, { stream: true });
+						// 哨兵只用于判「有没有收完整」，不进显示
+						trOut.textContent = text.split(TR_DONE)[0];
+						trOut.scrollTop = trOut.scrollHeight;
+					}
+					text += decoder.decode(); // 收尾：把最后那个可能被截断的多字节字符冲出来
+
+					if (!text.includes(TR_DONE)) {
+						trOut.textContent += '\n\n（没收到收尾标记：连接断了，重新点一次）';
+						toast('翻译中断', 'err');
+						return;
+					}
+					const full = text.split(TR_DONE)[0];
+					trParts = splitTr(full, hasTitle);
+					trOut.textContent = full;
+					trWrite.disabled = !trParts.body;
+					// 目标语言以服务端给的路径为准（英文那份路径里带 en-US）
+					const outLang = trTargetPath.includes('/en-US/') ? '英文' : '中文';
+					trWrite.textContent = (posts.some((p) => p.path === trTargetPath) ? '覆盖' : '写入') + outLang + '文件';
+				} catch (err) {
+					if ((err as Error)?.name === 'AbortError') return;
+					trOut.textContent = String((err as Error)?.message ?? err);
+					toast('翻译失败', 'err');
+				} finally {
+					trRunning = false;
+					trAbort = null;
+					syncTrBtn();
+				}
+			}
+
+			async function writeTranslation() {
+				if (!current || !trParts || !trTargetPath) return;
+				trWrite.disabled = true;
+				try {
+					const res = await fetch(api('/translate/write'), {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ path: current.path, title: trParts.title, body: trParts.body }),
+					});
+					const out = (await res.json()) as { path?: string; error?: string; overwritten?: boolean };
+					if (!res.ok) {
+						toast('写入失败：' + (out.error ?? res.status), 'err');
+						trWrite.disabled = false;
+						return;
+					}
+					toast(`${out.overwritten ? '已覆盖' : '已写入'} ${String(out.path ?? '').split('/').pop()} · 已标 AI`);
+					trModal.hidden = true;
+					await loadList(); // 下拉里立刻能看到那份英文
+				} catch (err) {
+					toast('写入失败：' + String((err as Error)?.message ?? err), 'err');
+					trWrite.disabled = false;
+				}
+			}
+
 			// ── 载入 / 保存 ──────────────────────────────────────────
 			async function loadPost(path: string) {
 				if (!path) return;
@@ -1615,6 +1769,7 @@ const editorConfig = {
 				setDirty(false);
 				delBtn.disabled = false;
 				syncToolbar();
+				syncTrBtn();
 
 				previewUrl.textContent = detail.url;
 				openBtn.href = detail.url;
@@ -1803,6 +1958,7 @@ const editorConfig = {
 				sourceView.textContent = '';
 				setDirty(false);
 				syncToolbar();
+				syncTrBtn();
 			}
 
 			// 卡片里的上传（block-views.js）没有 toast，用事件把它叫出来
@@ -1815,6 +1971,10 @@ const editorConfig = {
 			wireDdAria(); // 合并下拉触发器的 aria-expanded（popover 不会自动同步，自己挂 toggle）
 			saveBtn.addEventListener('click', () => void save());
 			delBtn.addEventListener('click', () => void deleteCurrent());
+			trBtn.addEventListener('click', () => void runTranslation());
+			trWrite.addEventListener('click', () => void writeTranslation());
+			trCancel.addEventListener('click', closeTrModal);
+			trModal.addEventListener('click', (e) => { if (e.target === trModal) closeTrModal(); }); // 点遮罩关
 			el<HTMLButtonElement>('reload-btn').addEventListener('click', reloadPreview);
 			previewBtn.addEventListener('click', () => (previewPane.classList.contains('is-open') ? closePreview() : openPreview()));
 			el<HTMLButtonElement>('preview-close').addEventListener('click', closePreview);
@@ -1837,6 +1997,8 @@ const editorConfig = {
 			document.addEventListener('keydown', (e) => {
 				// 预览浮层：Esc 关掉（焦点在浮层自己的按钮上时走这条路；焦点落进 iframe 里就只能点「关闭」）
 				if (e.key === 'Escape' && previewPane.classList.contains('is-open')) { closePreview(); return; }
+				// AI 翻译弹层：Esc 关掉（等同取消，会断上游）
+				if (e.key === 'Escape' && !trModal.hidden) { closeTrModal(); return; }
 				// 文章下拉：Esc 收起（焦点回触发器）
 				if (e.key === 'Escape' && !postMenu.hidden) { closePostMenu(true); return; }
 				// 窄屏那三个 chip 下拉：Esc 也收起来。
