@@ -1,6 +1,9 @@
 # build output
 dist/
 
+# pagefind 构建中间产物（scripts/prepare-pagefind.mjs 临时拷一份 dist 来插零宽空格，正常跑完会自己删）
+.pagefind-src/
+
 # generated types
 .astro/
 
