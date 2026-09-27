@@ -2197,6 +2197,10 @@ body.is-home footer {
     border-left: 1px solid var(--item-border);
     border-bottom: 1px solid var(--item-border);
     border-bottom-left-radius: var(--card-radius);
+    /* 右上角跟着卡片的圆角走：卡片没写 overflow: hidden（卡里还有简谱/代码块那种自带工具栏的东西，
+       剪了会出事），所以这条窄条的直角会戳到卡片圆角外面去 ⇒ 给它自己一个内圆角（-1px 是卡片的描边）。
+       ⚠️ 绝对定位的基准是内边距盒，所以这里本来就已经比卡片外缘缩进了 1px。 */
+    border-top-right-radius: calc(var(--card-radius) - 1px);
 }
 
 /* 图标按钮：⚠️ 选择器要压过 `.typography-body a`（它带 1.5px 下边框）和它的 hover */
