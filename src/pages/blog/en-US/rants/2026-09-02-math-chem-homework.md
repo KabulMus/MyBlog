@@ -1,6 +1,6 @@
 ---
 layout: '../../../../layouts/Layout.astro'
-date: '2026-09-02T22:15'
+date: '2026-09-02T21:15'
 draft: false
 ai: true
 ---
