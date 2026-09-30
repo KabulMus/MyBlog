@@ -669,31 +669,33 @@ function blogEditorApi() {
             if (!apiKey) {
               return send(400, { error: '没找到 DEEPSEEK_API_KEY：在项目根目录的 .env 里加一行 DEEPSEEK_API_KEY=sk-…' });
             }
-            const hasTitle = typeof detail.frontmatter.title === 'string' && detail.frontmatter.title.trim() !== '';
-            // 客户端断开（关弹层）就掐掉上游，别白烧 token
+            const srcTitle = typeof detail.frontmatter.title === 'string' ? detail.frontmatter.title.trim() : '';
+            // 客户端断开（关弹层）就掐掉上游，别白烧 token；标题那一小段也用它
             const ac = new AbortController();
             res.on('close', () => {
               if (!res.writableEnded) ac.abort();
             });
+            const common = {
+              apiKey,
+              baseUrl: env.DEEPSEEK_BASE_URL || undefined,
+              model: env.DEEPSEEK_MODEL || undefined,
+              signal: ac.signal,
+            };
+            // ⚠️ 标题先单独翻（另发一个小请求）：流一开始吐字，响应头就再也改不了了，所以必须在设头之前拿到。
+            //    这样正文那一流里只有正文，模型就算「忘了写标题」也吃不掉第一句话；
+            //    反过来，这一步失败就当整体失败——宁可不出译文，也不能悄悄把标题写错。
+            const style = tr.readStyleGuide();
+            const outTitle = srcTitle ? await tr.translateTitle({ ...common, title: srcTitle, direction, style }) : '';
 
             res.statusCode = 200;
             res.setHeader('content-type', 'text/plain; charset=utf-8');
             res.setHeader('cache-control', 'no-store');
             res.setHeader('x-target-path', encodeURIComponent(target));
-            res.setHeader('x-has-title', hasTitle ? '1' : '0');
+            res.setHeader('x-title', encodeURIComponent(outTitle));
             await tr.streamTranslation({
-              apiKey,
-              baseUrl: env.DEEPSEEK_BASE_URL || undefined,
-              model: env.DEEPSEEK_MODEL || undefined,
-              messages: tr.buildMessages({
-                style: tr.readStyleGuide(),
-                title: detail.frontmatter.title,
-                hasFrontmatterTitle: hasTitle,
-                body: detail.body,
-                direction,
-              }),
+              ...common,
+              messages: tr.buildMessages({ style, body: detail.body, direction }),
               onDelta: (delta) => res.write(delta),
-              signal: ac.signal,
             });
             res.write(tr.DONE_MARK); // 收尾哨兵：少了它前端按「翻译被截断」处理
             return res.end();

@@ -20,56 +20,92 @@ export function readStyleGuide(cwd = process.cwd()) {
   }
 }
 
-/** 任务说明的尾巴：有没有标题决定输出格式（吐槽没有标题，不能凭空编一个） */
-function taskBlock(hasTitle, toZh) {
-  const lines = [
+/**
+ * 任务说明。
+ * ⚠️ 正文这一路**只要正文**：标题不在这里出（历史教训：以前要求「第一行是标题」，
+ *    模型一旦没给，服务端就会把正文第一行当标题吃掉，标题也跟着丢了）。
+ *    标题走单独的 translateTitle 小请求。
+ */
+function taskBlock(toZh) {
+  return [
     '## 你的任务',
     '',
-    toZh ? '把用户给你的这篇**英文**文章翻译成中文。' : '把用户给你的这篇**中文**文章翻译成英文。',
+    toZh ? '把用户给你的这篇**英文**文章正文翻译成中文。' : '把用户给你的这篇**中文**文章正文翻译成英文。',
     '',
-    '- 输出**只有**译文本身，不要任何前言、说明、致辞、结束语。',
+    '- 输出**只有**译文正文本身：不要标题行、不要 frontmatter（`---` 那段）、不要 `title:`、不要任何前言/说明/致辞/结束语。',
     '- 不要用 ``` 代码块把整篇包起来。',
-    '- 不要输出 frontmatter（不要 `---` 那一段），也不要输出 `title:` 之类的字样。',
     '- ⚠️ **保留原文的换行**：原文段落里行尾两个空格的硬换行，要在译文对应位置同样保留（别把两句并成一行），也不要自己另加换行或重新折行。',
-  ];
-  if (hasTitle) {
-    lines.push(
-      '- 第一行：翻译后的**标题**（纯文本一行，不带引号、不带任何前缀）。',
-      '- 第二行：空行。',
-      '- 第三行起：正文 Markdown。',
-    );
-  } else {
-    lines.push('- 原文没有标题（吐槽体）⇒ 直接从正文第一行开始，不要自己编一个标题行。');
-  }
-  return lines.join('\n');
+  ].join('\n');
 }
 
 /**
- * 组提示词。`hasFrontmatterTitle` 由服务端按原文 frontmatter 判定后传进来：
- * 吐槽没有 title，这时模型不该编标题，服务端也要按「整份都是正文」来切。
+ * 组正文提示词。只靠正文，不需要原文标题参与（不把标题放进来，免得模型又把它写回正文里）。
  * `direction`：'zh2en' 或 'en2zh' —— 用词偏好文件是照中译英写的，反向时得说清楚哪些条款照旧、
  * 哪些不适用，不然模型会拿英文拼写规则去套中文输出。
  */
-export function buildMessages({ style, title, hasFrontmatterTitle, body, direction = 'zh2en' }) {
+export function buildMessages({ style, body, direction = 'zh2en' }) {
   const toZh = direction === 'en2zh';
   const system = [
-    toZh
-      ? '你是一位把英文博客翻回中文的译者。严格遵守下面这份偏好——它原本是照中译英写的：术语表反过来用，语气那几条照旧；英文拼写/标点那几条只当参考，输出的中文按中文排版习惯来（全角标点、直角引号「」、破折号用 ——、中文之间不手打空格）：'
-      : '你是一位把中文博客翻成英文的译者。严格遵守下面这份「用词偏好」，它是硬性要求：',
+    directionIntro(toZh),
     '',
     style.trim() || '（没有额外偏好文件，按自然、口语的目标语言翻译。）',
     '',
-    taskBlock(hasFrontmatterTitle, toZh),
+    taskBlock(toZh),
   ].join('\n');
-
-  const user = hasFrontmatterTitle
-    ? `${toZh ? '英文标题' : '中文标题'}：${title}\n\n${toZh ? '英文正文' : '中文正文'}：\n${body}`
-    : `${toZh ? '英文正文（没有标题）' : '中文正文（没有标题）'}：\n${body}`;
 
   return [
     { role: 'system', content: system },
-    { role: 'user', content: user },
+    { role: 'user', content: (toZh ? '英文正文：' : '中文正文：') + '\n' + body },
   ];
+}
+
+/** 标题：去掉模型可能加上的引号/书名号/换行，只留一行纯文本 */
+export function cleanTitleText(raw) {
+  return String(raw || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .find(Boolean)
+    ?.replace(/^["'“”「『《]+/, '')
+    .replace(/["'“”」』》]+$/, '')
+    .trim() ?? '';
+}
+
+/** 正文和标题两路共用的开场白（方向决定措辞） */
+function directionIntro(toZh) {
+  return toZh
+    ? '你是一位把英文博客翻回中文的译者。严格遵守下面这份偏好——它原本是照中译英写的：术语表反过来用，语气那几条照旧；英文拼写/标点那几条只当参考，输出的中文按中文排版习惯来（全角标点、直角引号「」、破折号用 ——、中文之间不手打空格）：'
+    : '你是一位把中文博客翻成英文的译者。严格遵守下面这份「用词偏好」，它是硬性要求：';
+}
+
+/**
+ * 单独翻标题。
+ * ⚠️ 这一步失败就当整体失败：宁可不出译文，也不能悄悄把标题写错（反正可以再点一次）。
+ * ⚠️ 偏好文件（术语表、Em Dash、打码、Title Case…）**必须也带进来** —— 标题里一样会出现
+ *    「一中」「周深」这种专名，漏了就会出一个跟正文不一致的译名。
+ */
+export async function translateTitle({ apiKey, baseUrl, model, title, direction = 'zh2en', style, signal }) {
+  const toZh = direction === 'en2zh';
+  const messages = [
+    {
+      role: 'system',
+      content: [
+        directionIntro(toZh),
+        '',
+        String(style || '').trim() || '（没有额外偏好文件，按自然、口语的目标语言翻译。）',
+        '',
+        '## 你的任务',
+        '',
+        `把用户给你的这**一个标题**翻成${toZh ? '中文' : '英文'}。`,
+        '',
+        '- 只输出译文本身：不加引号、不加说明、不另起一行。',
+        '- 标题里的专名一律按上面那张术语表来。',
+        '- 保持原标题的标点和语气。',
+      ].join('\n'),
+    },
+    { role: 'user', content: String(title || '') },
+  ];
+  const raw = await streamTranslation({ apiKey, baseUrl, model, messages, signal });
+  return cleanTitleText(raw);
 }
 
 /**
@@ -138,12 +174,5 @@ export async function streamTranslation(options) {
 
 /**
  * 把流出来的整份译文切成「标题 + 正文」。
- * ⚠️ 没有 frontmatter title 的文章（吐槽）整份都是正文 —— 判据由调用方给，不靠猜。
+ * ⚠️ 已经不用了：标题现在由 translateTitle 单独翻、走响应头（这样模型漏标题也不会把正文第一行当标题）。
  */
-export function splitTranslation(text, hasTitle) {
-  const clean = String(text || '').replace(/\r\n/g, '\n').trim();
-  if (!hasTitle) return { title: '', body: clean };
-  const nl = clean.indexOf('\n');
-  if (nl < 0) return { title: clean, body: '' };
-  return { title: clean.slice(0, nl).trim(), body: clean.slice(nl + 1).trim() };
-}

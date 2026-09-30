@@ -1642,14 +1642,6 @@ const editorConfig = {
 			}
 
 			/** 把流出来的整份译文切成标题和正文：原文没有 title（吐槽）时整份都是正文 */
-			function splitTr(text: string, hasTitle: boolean) {
-				const clean = text.replace(/\r\n/g, '\n').trim();
-				if (!hasTitle) return { title: '', body: clean };
-				const nl = clean.indexOf('\n');
-				if (nl < 0) return { title: clean, body: '' };
-				return { title: clean.slice(0, nl).trim(), body: clean.slice(nl + 1).trim() };
-			}
-
 			async function runTranslation() {
 				if (!current || trRunning) return;
 				const path = current.path;
@@ -1680,7 +1672,9 @@ const editorConfig = {
 						return;
 					}
 					trTargetPath = decodeURIComponent(res.headers.get('x-target-path') ?? '');
-					const hasTitle = res.headers.get('x-has-title') === '1';
+					// ⚠️ 标题由服务端单独翻好、放在响应头里（正文那一流里只有正文）
+					const outTitle = decodeURIComponent(res.headers.get('x-title') ?? '');
+					const displayPrefix = outTitle ? outTitle + '\n\n' : '';
 					trTarget.textContent = trTargetPath;
 
 					const reader = res.body?.getReader();
@@ -1692,7 +1686,7 @@ const editorConfig = {
 						if (done) break;
 						text += decoder.decode(value, { stream: true });
 						// 哨兵只用于判「有没有收完整」，不进显示
-						trOut.textContent = text.split(TR_DONE)[0];
+						trOut.textContent = displayPrefix + text.split(TR_DONE)[0];
 						trOut.scrollTop = trOut.scrollHeight;
 					}
 					text += decoder.decode(); // 收尾：把最后那个可能被截断的多字节字符冲出来
@@ -1702,9 +1696,9 @@ const editorConfig = {
 						toast('翻译中断', 'err');
 						return;
 					}
-					const full = text.split(TR_DONE)[0];
-					trParts = splitTr(full, hasTitle);
-					trOut.textContent = full;
+					const body = text.split(TR_DONE)[0].trim();
+					trParts = { title: outTitle, body };
+					trOut.textContent = displayPrefix + body;
 					trWrite.disabled = !trParts.body;
 					// 目标语言以服务端给的路径为准（英文那份路径里带 en-US）
 					const outLang = trTargetPath.includes('/en-US/') ? '英文' : '中文';
