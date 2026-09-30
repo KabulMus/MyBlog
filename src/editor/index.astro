@@ -276,7 +276,7 @@ const editorConfig = {
 				<div class="np-grid">
 					<div class="fm-row is-post-meta"><label for="np-title-zh">中文标题</label><input id="np-title-zh" class="fm-title" type="text" /></div>
 					<div class="fm-row is-post-meta"><label for="np-title-en">English title</label><input id="np-title-en" class="fm-title" type="text" /></div>
-					<div class="fm-row"><label for="np-slug">URL 后缀</label><input id="np-slug" type="text" placeholder="留空按英文标题" /></div>
+					<div class="fm-row"><label for="np-slug">URL 后缀</label><input id="np-slug" type="text" placeholder="留空按英文标题生成" /></div>
 					<div class="fm-row">
 						<label for="np-when">日期</label>
 						<span class="fm-date-wrap">
@@ -299,7 +299,7 @@ const editorConfig = {
 		<!-- AI 翻译：译文流式吐进来，看完了再落盘（英文文件已存在就是覆盖） -->
 		<div class="editor-modal" id="tr-modal" hidden>
 			<div class="editor-modal-card editor-modal-card--tr" role="dialog" aria-modal="true" aria-labelledby="tr-modal-title">
-				<h3 class="editor-modal-title" id="tr-modal-title">AI 翻译</h3>
+				<h3 class="editor-modal-title" id="tr-modal-title">AI翻译</h3>
 				<p class="tr-target" id="tr-target"></p>
 				<pre class="tr-out" id="tr-out"></pre>
 				<div class="editor-modal-btns">
@@ -320,7 +320,7 @@ const editorConfig = {
 			</div>
 			<div class="editor-linkpop-row">
 				<label for="link-text">文字</label>
-				<input id="link-text" type="text" autocomplete="off" placeholder="留空 = 拿链接地址当文字" />
+				<input id="link-text" type="text" autocomplete="off" placeholder="留空则以链接地址作文字" />
 			</div>
 			<div class="editor-linkpop-btns">
 				<button type="button" id="link-apply" class="is-primary">确定</button>
@@ -675,8 +675,8 @@ const editorConfig = {
 				}
 				closePostMenu();
 				const ok = !dirty || (await askConfirm({
-					title: '有未保存的改动',
-					text: '切到别的文章会丢掉这些改动，确认切换？',
+					title: '未保存的改动',
+					text: '部分改动未保存，切换文章后将丢失。确认切换？',
 					ok: '切换',
 				}));
 				if (!ok) return;
@@ -1019,7 +1019,7 @@ const editorConfig = {
 				const end = sel.from + base.length + RUBY_READING.length;
 				editor.chain().focus().setTextSelection({ from: end - RUBY_READING.length, to: end }).run();
 				setDirty(true);
-				toast('已插入 ruby 注音');
+				toast('已插入ruby注音');
 			}
 
 			/**
@@ -1035,14 +1035,14 @@ const editorConfig = {
 					const placeholder = 'x';
 					editor.chain().focus().insertContentAt(sel.from, '$' + placeholder + '$').run();
 					editor.chain().focus().setTextSelection({ from: sel.from + 1, to: sel.from + 1 + placeholder.length }).run();
-					toast('已插入行内公式 $x$');
+					toast('已插入行内公式');
 				} else {
 					const raw = editor.state.doc.textBetween(sel.from, sel.to);
 					const from = sel.from + (raw.length - raw.trimStart().length);
 					const to = sel.to - (raw.length - raw.trimEnd().length);
 					editor.chain().focus().insertContentAt(to, '$').run();
 					editor.chain().focus().insertContentAt(from, '$').run();
-					toast('已把选区包成行内公式');
+					toast('已把选区设为行内公式');
 				}
 				setDirty(true);
 			}
@@ -1118,7 +1118,7 @@ const editorConfig = {
 				if (!linkTarget) return;
 				const href = normalizeHref(linkUrlInput.value);
 				if (!href) {
-					toast('链接地址不合法：只支持 http/https/mailto/tel 或站内相对路径', 'err');
+					toast('链接地址不合法：只支持http/https/mailto/tel或站内相对路径', 'err');
 					linkUrlInput.focus();
 					return;
 				}
@@ -1147,7 +1147,7 @@ const editorConfig = {
 				editor.chain().focus().setTextSelection(target.to).unsetMark('link').run();
 				closeLinkPop();
 				syncToolbar();
-				toast('已移除链接（文字保留）');
+				toast('已移除链接');
 			}
 
 			for (const input of [linkUrlInput, linkTextInput]) {
@@ -1196,7 +1196,7 @@ const editorConfig = {
 					const sel = editor.state.selection;
 					const pos = sel.empty ? sel.from : sel.to;
 					editor.chain().focus().insertContentAt(pos, { type: 'rawBlock', attrs: { source: `![](${out.url})`, kind: 'image' } }).run();
-					toast(`已插入 ${out.url}（${Math.max(1, Math.round(Number(out.bytes ?? 0) / 1024))} KB；alt、尺寸、图注在卡片里补）`);
+					toast(`已插入 ${out.url}（${Math.max(1, Math.round(Number(out.bytes ?? 0) / 1024))} KB）`);
 				} catch (err) {
 					toast('图片上传失败：' + String((err as Error)?.message ?? err), 'err');
 				}
@@ -1373,15 +1373,15 @@ const editorConfig = {
 				const slug = slugify(npSlug.value || titleEn || titleZh);
 				// 吐槽不写 title（信息流靠日期和正文）⇒ 勾了就只问后者一个 URL 后缀
 				if (!npFlags.rant) {
-					if (!titleZh) { npError.textContent = '中文标题得填'; npTitleZh.focus(); return; }
-					if (!titleEn) { npError.textContent = '英文标题也得填（en-US 那份要用）'; npTitleEn.focus(); return; }
+					if (!titleZh) { npError.textContent = '中文标题为必填'; npTitleZh.focus(); return; }
+					if (!titleEn) { npError.textContent = '英文标题为必填'; npTitleEn.focus(); return; }
 				}
-				if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) { npError.textContent = '日期时间格式不对（用右边那个日历选的）'; npWhen.focus(); return; }
-				if (!slug) { npError.textContent = 'URL 后缀生成不出来，手填一个（小写字母/数字/短横）'; npSlug.focus(); return; }
+				if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) { npError.textContent = '日期时间格式不正确'; npWhen.focus(); return; }
+				if (!slug) { npError.textContent = '无法生成URL后缀，请手动输入'; npSlug.focus(); return; }
 				// 同名先拦一道：服务端也会拦，但先说清楚比白跑一趟强
 				const file = `${when.slice(0, 10)}-${slug}.md`;
 				const clash = posts.filter((p) => p.path.endsWith('/' + file));
-				if (clash.length) { npError.textContent = '已经有同名文件了：' + clash.map((p) => p.path).join('、'); return; }
+				if (clash.length) { npError.textContent = '已有同名文件：' + clash.map((p) => p.path).join('、'); return; }
 				npCreateBtn.disabled = true;
 				npError.textContent = '创建中…';
 				try {
@@ -1406,7 +1406,7 @@ const editorConfig = {
 					const zh = out.files.find((f) => f.lang === 'zh') ?? out.files[0];
 					localStorage.setItem('editor:last-post', zh.path);
 					await loadPost(zh.path);
-					toast(`已新建 ${out.files.map((f) => f.path.split('/').pop()).join(' 和 ')}（中文那份已经打开，正文填完点保存）`);
+					toast(`已新建 ${out.files.map((f) => f.path.split('/').pop()).join(' 和 ')}`);
 				} catch (err) {
 					npError.textContent = '创建失败：' + String((err as Error)?.message ?? err);
 				} finally {
@@ -1464,8 +1464,8 @@ const editorConfig = {
 				// 没保存就先提一句：没落盘的改动根本不会进这次 commit（作者会以为已经发出去了）
 				if (dirty) {
 					const go = await askConfirm({
-						title: '还有没保存的改动',
-						text: '这些改动还没落盘，不会被这次 commit 带上。要现在发布吗？',
+						title: '未保存的改动',
+						text: '部分改动未保存，不会进入本次commit。现在发布？',
 						ok: '仍然发布',
 						cancel: '先去保存',
 					});
@@ -1473,7 +1473,7 @@ const editorConfig = {
 				}
 				const ok = await askConfirm({
 					title: '发布到线上？',
-					text: '会跑 scripts/publish.mjs：git add -A → commit → push，Cloudflare Pages 自动构建。注意 add -A 会把工作区里其他未提交的改动也一起提交。',
+					text: '运行scripts/publish.mjs：git add -A → commit → push，Cloudflare Pages自动构建。注意add -A会把工作区里其他未提交的改动也一起提交。',
 					ok: '发布',
 				});
 				if (!ok) return;
@@ -1698,7 +1698,7 @@ const editorConfig = {
 					text += decoder.decode(); // 收尾：把最后那个可能被截断的多字节字符冲出来
 
 					if (!text.includes(TR_DONE)) {
-						trOut.textContent += '\n\n（没收到收尾标记：连接断了，重新点一次）';
+						trOut.textContent += '\n\n（未收到收尾标记：连接断开）';
 						toast('翻译中断', 'err');
 						return;
 					}
@@ -1735,7 +1735,7 @@ const editorConfig = {
 						trWrite.disabled = false;
 						return;
 					}
-					toast(`${out.overwritten ? '已覆盖' : '已写入'} ${String(out.path ?? '').split('/').pop()} · 已标 AI`);
+					toast(`${out.overwritten ? '已覆盖' : '已写入'} ${String(out.path ?? '').split('/').pop()} · 已标AI`);
 					trModal.hidden = true;
 					await loadList(); // 下拉里立刻能看到那份英文
 				} catch (err) {
@@ -1844,7 +1844,7 @@ const editorConfig = {
 				const newPath = (next ? dir + '/rants' : dir.replace(/\/rants$/, '')) + '/' + file;
 				if (dirty) await save(); // 先落盘：底下移动的是磁盘上的原文，没保存的改动不能丢
 				const freshRes = await fetch(api('/post?path=' + encodeURIComponent(path)));
-				if (!freshRes.ok) { toast('移动失败：读不到原文件', 'err'); return; }
+				if (!freshRes.ok) { toast('移动失败：无法读取原文件', 'err'); return; }
 				const fresh = (await freshRes.json()) as PostDetail;
 				const raw = String(fresh.raw).replace(/layout: '((?:\.\.\/)+)layouts\/Layout\.astro'/, (_m, ups: string) =>
 					`layout: '${next ? ups + '../' : ups.replace(/\.\.\/$/, '')}layouts/Layout.astro'`);
@@ -1916,7 +1916,7 @@ const editorConfig = {
 				const index = Math.max(0, posts.findIndex((p) => p.path === target));
 				const ok = await askConfirm({
 					title: '删除这篇文章？',
-					text: `将删除${lang === 'en' ? '英文版' : '中文版'} ${file}。该操作会从磁盘移除文件，未保存的改动将丢失。`,
+					text: `将删除 ${file} ${lang === 'en' ? '(EN)' : '(ZH)'}。该操作会从磁盘移除文件，未保存的改动将丢失。`,
 					ok: '删除',
 				});
 				if (!ok) return;

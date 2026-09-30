@@ -2246,6 +2246,14 @@ body.is-home footer {
     margin: 0.9rem 0 0;
 }
 
+/* 卡片里的注脚：文章那套是 4rem 的顶部留白（给整篇用的），塞进卡片里空得太夸张 ⇒ 收紧到跟段落间距一档。
+   只动卡片的（.typography-body .footnotes 那两条是 0,2,0，这里三段选器压得住，不用 !important）。
+   文章页照旧，不受影响。 */
+.rant-card .rant-card-body .footnotes {
+    margin-top: 1.6rem;
+    padding-top: 1rem;      /* 虚线和「注释」标签之间那 1.5rem 也收一点 */
+}
+
 /* 正文吃文章那套排版（.typography-body 的规则本来就在 main 上），只把卡片两端的多余间距收掉 */
 .rant-card-body > :first-child {
     margin-top: 0;

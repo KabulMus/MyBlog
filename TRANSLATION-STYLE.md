@@ -27,7 +27,7 @@
 | 中文 | 英文 |
 | --- | --- |
 | 中国大陆 | Chinese mainland（**禁止**写成 mainland China） |
-| 周深 | Zhou Shen（昵称「查理」→ Charlie） |
+| 周深 | Zhou Shen（昵称「深深」/etc. → Charlie(查理)） |
 | 军训 | military training |
 | 高一 / 高二 / 高三 | 10th / 11th / 12th grade |
 | 第一中学 | No.1 High School（**`No.` 后面不留空格**，不要写成 No. 1） |
