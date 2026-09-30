@@ -1365,6 +1365,10 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 .editor-form.is-rant .is-post-meta,
 .editor-modal.is-rant .is-post-meta { display: none; }
 
+/* 没题图就没有「题图标注」这一栏（JS 按题图输入框内容切 [hidden]；
+   ⚠️ .fm-row 自带 display: flex，会盖掉 [hidden] 的 display: none ⇒ 这里得显式写一遍） */
+.fm-credit-row[hidden] { display: none; }
+
 /* 宽屏：容器不参与布局（它只是手机弹层的外壳），四组直接排在下面的 .fm-row--meta 里 */
 .fm-meta { display: contents; }
 

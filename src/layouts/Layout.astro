@@ -376,6 +376,17 @@ function getLangSwitchHref(pathname: string) {
 												<span class="ai-badge-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.49,2.91l1.22,3.15"/><path d="M1.68,6.05h12.8"/><path d="M4,7.91s1.27,3.69,3.87,5.43c2.6,1.74,7.16,2.81,7.16,2.81"/><path d="M12.19,6.05l-.05.35s-.99,3.89-3.59,6.17c-2.6,2.28-6.88,3.33-6.88,3.33"/><polyline points="22.06 21.1 17.31 10.28 12.56 21.1"/><line x1="14.46" y1="17.21" x2="20.17" y2="17.21"/></svg></span><span class="ai-badge-text">AI</span>
 											</span>
 										)}
+										{/* 题图来源（frontmatter.imageCredit，不填就不渲染）：和序号/日期/时间同款 group，
+										    默认推到本行右端；放不下被挤到下一行时由 placeCredit 打 .is-wrapped 左对齐 */}
+										{frontmatter?.imageCredit && (
+											<span class="date-group article-credit" data-pagefind-ignore>
+												<svg class="date-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+													<path fill-rule="evenodd" clip-rule="evenodd" d="M5 10C5 8.89543 5.89543 8 7 8L41 8C42.1046 8 43 8.89543 43 10V38C43 39.1046 42.1046 40 41 40H7C5.89543 40 5 39.1046 5 38V10Z"/>
+													<path fill-rule="evenodd" clip-rule="evenodd" d="M14.5 18C15.3284 18 16 17.3284 16 16.5C16 15.6716 15.3284 15 14.5 15C13.6716 15 13 15.6716 13 16.5C13 17.3284 13.6716 18 14.5 18Z"/>
+													<path d="M15 24L20 28L26 21L43 34V38C43 39.1046 42.1046 40 41 40H7C5.89543 40 5 39.1046 5 38V34L15 24Z"/>
+												</svg> {String(frontmatter.imageCredit)}
+											</span>
+										)}
 									</span>
 								)}
 							</div>
@@ -634,6 +645,20 @@ function getLangSwitchHref(pathname: string) {
 					} else {
 						img.style.height = '';
 					}
+					placeCredit(hero);
+				}
+
+				// 题图来源标注：它就是「序号/日期/时间」那一行里的一个 group（同一个 .date-group 排版），
+				// 默认靠 margin-left:auto 推到该行右端。行放不下、它被挤到下一行时，把 auto 撤掉，
+				// 跟其它组一样从行首左对齐。
+				// ⚠️ 只改 class、不动 DOM：两种形态共用同一个元素。
+				function placeCredit(hero) {
+					var credit = hero.querySelector('.article-credit');
+					if (!credit || !credit.parentElement) return;
+					// 基准 = 那一行自己的首行顶端（不能拿兄弟节点比：「序号」组可能已经换到别的行）
+					var rowTop = credit.parentElement.getBoundingClientRect().top;
+					var wrapped = credit.getBoundingClientRect().top - rowTop > 4;
+					credit.classList.toggle('is-wrapped', wrapped);
 				}
 				var fitHeroTimer = null;
 				function scheduleFitHero() {

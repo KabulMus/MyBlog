@@ -153,6 +153,10 @@ const editorConfig = {
 								</button>
 								<input type="file" id="fm-image-file" accept="image/*" hidden />
 							</div>
+							<div class="fm-meta-group fm-row is-post-meta fm-credit-row" id="fm-credit-row">
+								<label for="fm-image-credit">题图标注</label>
+								<input id="fm-image-credit" type="text" placeholder="署名 / 说明" />
+							</div>
 							<div class="fm-meta-group"><span class="fm-meta-label">标记</span><div class="fm-chips fm-chips--flags" id="fm-flags"></div></div>
 							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">分类</span><div class="fm-chips" id="fm-category"></div></div>
 							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">标签</span><div class="fm-chips" id="fm-tags"></div></div>
@@ -921,6 +925,7 @@ const editorConfig = {
 					const out = await uploadImage(file, slug);
 					imageInput.value = out.url;
 					frontmatter.image = out.url;
+					syncCreditRow();
 					setDirty(true);
 					toast(`题图已设为 ${out.url}`);
 				} catch (err) {
@@ -930,6 +935,7 @@ const editorConfig = {
 
 			imageInput.addEventListener('input', () => {
 				frontmatter.image = imageInput.value.trim();
+				syncCreditRow();
 				setDirty(true);
 			});
 			imageFile.addEventListener('change', () => {
@@ -938,6 +944,16 @@ const editorConfig = {
 				if (file) void uploadHeroImage(file);
 			});
 			el<HTMLButtonElement>('fm-image-upload').addEventListener('click', () => imageFile.click());
+
+			// 题图标注（frontmatter 的 `imageCredit`）：纯文字，不填就不显示；清空 = 去掉这个字段。
+			// 没题图就不显示这一栏（标注是给题图看的）
+			const creditInput = el<HTMLInputElement>('fm-image-credit');
+			const creditRow = el<HTMLDivElement>('fm-credit-row');
+			function syncCreditRow() { creditRow.hidden = !imageInput.value.trim(); }
+			creditInput.addEventListener('input', () => {
+				frontmatter.imageCredit = creditInput.value.trim();
+				setDirty(true);
+			});
 
 			// ── 工具条 ────────────────────────────────────────────────
 			// 「插入块」的模板：一律以 rawBlock 形式落地（kind + 原文）⇒ 保存时原样写进 markdown。
@@ -1756,6 +1772,8 @@ const editorConfig = {
 				titleInput.value = String(frontmatter.title ?? '');
 				dateInput.value = String(frontmatter.date ?? '').slice(0, 16);
 				imageInput.value = String(frontmatter.image ?? '');
+				creditInput.value = String(frontmatter.imageCredit ?? '');
+				syncCreditRow();
 				renderChips(); // 含「标记」那一行（草稿 / AI）
 
 				loadBody(editor, detail.body);

@@ -2716,6 +2716,12 @@ html[lang='en-US'] .post-title-link {
     /* 2. ⚡️ 方案 A：高级淡蓝果冻背景 + 品牌蓝文字（推荐，极具现代感） */
     color: var(--primary-blue) !important;                /* 文字直接变成你的品牌蓝 */
     font-weight: 600 !important;                           /* 让关键词稍微加粗，更醒目 */
+
+    /* 3. ⚡️ 中文是「单字一个 token」（精确搜索要的）⇒ 每个命中的字各是一个 <mark>。
+       而正文那条 `.typography-body mark` 的 `padding: 0 4px` 会漏进来（首页整体在 .typography-body 里），
+       相邻两个字之间就多出 4+4=8px 纯色空白，看着像「每个字被撑开」。
+       清掉 padding 后相邻色块无缝拼接，渐变连成一整条（高亮效果照旧，只是两端不再留白）。 */
+    padding: 0 !important;
 }
 
 /* 如果你还想顺便改一下搜索结果里“跳转链接”的悬停颜色，可以把这个也加上 */
@@ -2948,6 +2954,22 @@ html[lang='en-US'] .post-title-link {
 .article-tags .tag-sep,
 .article-tags .tag-group-sep {
     margin-right: 0;
+}
+
+/* 题图标注（frontmatter.imageCredit）：它就是「序号/日期/时间」那一行里的一个 .date-group，
+   排版/图标/颜色全部继承那一条，这里只负责字号和位置。
+   ⚠️ 那一行是 shrink-to-fit 的 inline-flex ⇒ 不撑满就推不到右边；只在带标注时才让它占满一行
+   （用 :has 收窄影响面，没有标注的文章完全不受影响）。
+   ⚠️ 放不下换行时由 Layout.astro 的 placeCredit() 加 .is-wrapped，撤掉 auto 改成跟其它组一样左对齐。 */
+.page-hero .date:has(.article-credit) {
+    width: 100%;
+}
+.article-credit {
+    font-size: 0.8125rem;      /* 比日期那几个 group 小一号（图标 1em 会跟着缩） */
+    margin-left: auto;
+}
+.article-credit.is-wrapped {
+    margin-left: 0;
 }
 
 /* tag 行窄屏重排辅助（Layout.astro relayoutTagRows 用）

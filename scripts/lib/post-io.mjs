@@ -19,7 +19,7 @@ export const POST_DIRS = [
 ];
 
 /** frontmatter 字段顺序（写回时保持一致，避免 YAML 抖动） */
-export const FM_ORDER = ['layout', 'title', 'date', 'image', 'draft', 'ai', 'category', 'tags', 'warning'];
+export const FM_ORDER = ['layout', 'title', 'date', 'image', 'imageCredit', 'draft', 'ai', 'category', 'tags', 'warning'];
 
 const toPosix = (p) => p.split(sep).join('/');
 

@@ -3,6 +3,7 @@ layout: '../../layouts/Layout.astro'
 title: '周深出道十二周年快乐！！！'
 date: '2026-07-25T17:52'
 image: '/images/2026-07-25-anni-concert.webp'
+imageCredit: '周深工作室'
 draft: false
 category: ['music']
 tags: ['insync']
