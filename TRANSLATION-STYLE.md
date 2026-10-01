@@ -27,10 +27,15 @@
 | 中文 | 英文 |
 | --- | --- |
 | 中国大陆 | Chinese mainland（**禁止**写成 mainland China） |
-| 周深 | Zhou Shen（昵称「深深」/etc. → Charlie(查理)） |
-| 军训 | military training |
+| 周深 | Zhou Shen（昵称「深深」等 → Charlie(查理)） |
+| 初一 / 初二 / 初三 (年级, 不要与农历的初一初二混为一谈) | 7th / 8th / 9th grade |
 | 高一 / 高二 / 高三 | 10th / 11th / 12th grade |
+| 初中 | middle school |
+| 高中 | high school |
+| 自习 | study hall |
+| (农历)X月Y | the Y'th day of the X'th lunar month |
 | 第一中学 | No.1 High School（**`No.` 后面不留空格**，不要写成 No. 1） |
+| 音高测量(名词性) / 音测(名词性) / 测音(动词性) | vocal pitch analysis (名词性, 音高分析) / analyze vocal pitch (动词性，分析音高) |
 
 ## 三、语气与用词偏好
 

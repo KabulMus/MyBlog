@@ -3,8 +3,8 @@ layout: '../../layouts/Layout.astro'
 title: '网站终于基本完工了！！'
 date: '2026-08-05T20:12'
 draft: false
-category: ['essays', 'studio']
-tags: ['article', 'code']
+category: ['studio']
+tags: ['code']
 ---
 
 ## 快来玩！！

@@ -38,6 +38,6 @@ Omg Mr. <ruby>Yang<rt>Loong</rt></ruby> absolutely kills me lmao
 
 I swear he must have been on a stand-up show (jk)—everything he says is just naturally hilarious
 
-We had a class meeting during evening self-study, and after we picked the class officers he went off on another tangent—talked for a full half hour, and there wasn't a single person who didn't <ruby>look<rt>laugh</rt></ruby> up the whole time hahahahaha
+We had a class meeting during evening study hall, and after we picked the class officers he went off on another tangent—talked for a full half hour, and there wasn't a single person who didn't <ruby>look<rt>laugh</rt></ruby> up the whole time hahahahaha
 
 The things he says—I could never come up with lines like that even if I deliberately tried to nitpick 🤣🤣🤣

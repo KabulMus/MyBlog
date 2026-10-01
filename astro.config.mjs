@@ -700,6 +700,29 @@ function blogEditorApi() {
             res.write(tr.DONE_MARK); // 收尾哨兵：少了它前端按「翻译被截断」处理
             return res.end();
           }
+          // 只翻一个标题（新建文章弹窗上那枚小按钮用：中文标题 → 英文标题）。
+          // 用的还是 translateTitle —— 跟顶栏那套同一份提示词、同一份 TRANSLATION-STYLE.md。
+          if (req.method === 'POST' && route === '/translate/title') {
+            const body = await readBody(req);
+            const title = String(body.title || '').trim();
+            if (!title) return send(400, { error: '标题是空的' });
+            const tr = await import('./scripts/lib/translate.mjs');
+            const { loadEnv } = await import('vite');
+            const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
+            const apiKey = env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY || '';
+            if (!apiKey) {
+              return send(400, { error: '没找到 DEEPSEEK_API_KEY：在项目根目录的 .env 里加一行 DEEPSEEK_API_KEY=sk-…' });
+            }
+            const out = await tr.translateTitle({
+              apiKey,
+              baseUrl: env.DEEPSEEK_BASE_URL || undefined,
+              model: env.DEEPSEEK_MODEL || undefined,
+              title,
+              direction: 'zh2en',
+              style: tr.readStyleGuide(),
+            });
+            return send(200, { title: out });
+          }
           // 把译文写成英文文件（frontmatter 由 Node 侧拼，见 post-io 的 writeTranslation）
           if (req.method === 'POST' && route === '/translate/write') {
             const body = await readBody(req);

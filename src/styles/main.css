@@ -3471,6 +3471,14 @@ html[lang='en-US'] .cat-filter-btn {
 .jianpu-score svg g[sn-tag='info'] tspan[font-family='serif'] {
     font-family: 'Source Serif 4', Bravura, 'Noto Serif SC', serif;
 }
+/* 三连音的 `3`：字形与「拍号/速度数字」一致 —— 改由 JS 画成 **Bravura 雕刻数字**（`timeSig3`，
+   见 Layout.astro 的 `placeJianpuTripletLabels` + `bravura-digits.ts`），所以这里**不再管字号/字重**
+   （tspan 自带 font-family/font-size 属性，会赢过这里；字重保持常规，乐谱字体别去合成加粗）。
+   这条规则只当「万一没走成 JS」时的兑底：把库写死的 sans-serif 换成站内衬线栈。
+   tieline 层里只有这个标记是 <text>（连音线是 path），所以选择器可以只管直接子 text。 */
+.jianpu-score svg g[sn-tag='tieline'] > text {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+}
 /* 作曲行（右对齐的那个 text）：改斜体（标题是 middle、调号/速度是 start，不会误伤）。
    调号里那个「1」的 700 字重由 JS 包 tspan 设置（见 normalizeJianpuInfo）——CSS 选不到单个字符。 */
 .jianpu-score svg g[sn-tag='info'] text[text-anchor='end'] {
@@ -3609,6 +3617,12 @@ html.hero-lock .page-hero.has-hero-image.is-hero-ready {
 .abc-score .abcjs-composer {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
     font-style: italic;
+}
+/* 🎼 三连音上的那个 `3`：abcjs 按雕版惯例排成**斜体**（Times italic，书写形态），
+   用户看着别扭 → 改成直立。数字那个 <text> 自己没有 class，但它的父级是
+   `g.abcjs-triplet`（abcjs 给每连音组加的分组），所以选择器走父级。 */
+.abc-score .abcjs-triplet text {
+    font-style: normal;
 }
 /* 🎼 选中态文字颜色：SVG <text> 的字形颜色由 fill（而非 color）决定，全局 ::selection 的
    color / -webkit-text-fill-color 都管不到它；实测(Chromium)只有 ::selection 里直接写 fill

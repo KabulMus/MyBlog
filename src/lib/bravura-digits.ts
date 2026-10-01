@@ -112,8 +112,10 @@ export function drawBravuraDigits(
 	let left = x === null ? 0 : centre ? x - m.total / 2 : x;
 	Array.from(digits).forEach((ch, i) => {
 		const s = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-		// ⚠️ 逐字给了绝对 x 时必须 start：父级 anchor=middle 会让每个字各自居中
-		s.setAttribute('text-anchor', 'start');
+		// ⚠️ 逐字给了绝对 x（或不止一个字）时必须 start：父级 anchor=middle 会让每个字各自居中。
+		//    **单字且不给 x** 时不写锚点 ⇒ 继承父级（父级 anchor=middle 时正好以父级 x 为中心）：
+		//    后续步骤重写父级 x 时字才会跟着走（简谱的 justify 就是逐元素重写 x，看不见 tspan 上的绝对 x）。
+		if (x !== null || digits.length > 1) s.setAttribute('text-anchor', 'start');
 		if (x !== null) s.setAttribute('x', String(left));
 		if (relative) {
 			if (i === 0) s.setAttribute('dy', String(baseline));

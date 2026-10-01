@@ -1239,7 +1239,7 @@ function getLangSwitchHref(pathname: string) {
 	</script>
 
 	<script>
-		import { bravuraDigitSize, drawBravuraDigits, whenBravuraReady } from '../lib/bravura-digits';
+		import { bravuraDigitMetrics, bravuraDigitSize, drawBravuraDigits, whenBravuraReady } from '../lib/bravura-digits';
 
 		// 🎼 ABC 乐谱渲染（abcjs）：仅当本页存在 .abc-score 时才动态加载 abcjs（代码分割，不污染其他页）。
 		// 绘制颜色取自当前主题的 --text-main；主题切换（手动切换 / 跟随系统）会改 html[data-theme]，
@@ -1293,6 +1293,60 @@ function getLangSwitchHref(pathname: string) {
 						target.appendChild(tail);
 					}
 				});
+			};
+
+			/** abcjs 给连音组数字的字号（实测 15）及其墨迹下缘高度（Times 的 `3`：上缘 0.733em、下缘 0.067em，实测） */
+			const ABC_TRIPLET_FONT_SIZE = 15;
+			const ABC_TRIPLET_INK_DESC = 0.067;
+
+			/**
+			 * 连音组上的数字（`(2`–`(9`；abcjs 一律画成单个 Times 斜体数字，CSS 已把斜体掰直）：
+			 * 换成跟简谱 / 拍号**同一套 Bravura 雕刻数字**（`timeSig0`–`timeSig9` 全在子集里 ⇒ 2…9 都行），
+			 * 并把横向位置改到**梁的墨迹中点** ——
+			 * abcjs 是按「中间那个音的**音符头**中心」摆的，而梁是从第一个音杆到最后一个音杆，
+			 * 中点比它靠右半个杆宽（实测 4.3px），看着就是「有点偏左」（用户实测否掉）。
+			 * 纵向：让 Bravura 的墨迹**下缘**落在原来那个字形墨迹的下缘上（= 它的基线 + 0.067em）→
+			 *      换字体后离梁的净空不变。
+			 * ⚠️ 幂等：换过之后 text 里是个 tspan（打 `data-abc-triplet` 标记），重跑直接跳过。
+			 * ⚠️ `responsive: 'resize'` 时 abcjs 会自己重画（我们的替换被冲掉）→ 重画后要再补一遍。
+			 */
+			const engraveTripletDigits = (host: HTMLElement) => {
+				const svg = host.querySelector('svg');
+				if (!svg) return;
+				const ctm = svg.getScreenCTM();
+				const scale = ctm && ctm.a ? ctm.a : 1; // 一个用户单位占几个 CSS px
+				const beams = Array.from(svg.querySelectorAll('.abcjs-beam-elem')).map((b) => b.getBoundingClientRect());
+				svg.querySelectorAll('.abcjs-triplet text').forEach((textEl) => {
+					if (textEl.hasAttribute('data-abc-triplet')) return;
+					// abcjs 把连音组的数字画成一个 <text>：`(2`–`(9` 都是**单个数字**（`(3:2` 这种只写分子）
+					const n = (textEl.textContent || '').trim();
+					if (!/^[2-9]$/.test(n)) return;
+					const r = textEl.getBoundingClientRect();
+					if (!r.width || !r.height) return; // 容器不可见时量不到任何东西：留给下次
+					const cx = (r.left + r.right) / 2;
+					const fs = parseFloat(textEl.getAttribute('font-size') || '') || ABC_TRIPLET_FONT_SIZE;
+					// 梁 = 横跨这个数字、又在它下头、离得最近的那根（没有就不动 abcjs 给的 x）
+					const beam = beams
+						.filter((b) => b.left <= cx && b.right >= cx && b.top >= r.top && b.top - r.bottom <= fs * 4 * scale)
+						.sort((a, b) => a.top - b.top)[0];
+					if (beam) {
+						const x = parseFloat(textEl.getAttribute('x') || '0') + ((beam.left + beam.right) / 2 - cx) / scale;
+						textEl.setAttribute('x', String(x));
+					}
+					const size = bravuraDigitSize(fs);
+					const ink = bravuraDigitMetrics(n, size);
+					const inkBottom = parseFloat(textEl.getAttribute('y') || '0') + fs * ABC_TRIPLET_INK_DESC;
+					textEl.setAttribute('text-anchor', 'middle');
+					textEl.setAttribute('data-abc-triplet', '1');
+					textEl.textContent = '';
+					drawBravuraDigits(textEl, n, size, null, false, inkBottom - ink.desc);
+				});
+			};
+
+			/** 刻字：速度行数字 + 连音组数字（abcjs 每次重画都会冲掉它们，凡重画后都得补） */
+			const engraveDigits = (host: HTMLElement) => {
+				engraveTempoDigits(host);
+				engraveTripletDigits(host);
 			};
 
 			// ⚠️ abcjs 的分句有个隐形门槛（见 abcjs 源码 abc_tunebook_svg.js）：
@@ -1361,11 +1415,11 @@ function getLangSwitchHref(pathname: string) {
 					host.dataset.abcPerLine = String(usePerLine);
 					host.dataset.abcStaffWidth = String(width);
 					host.dataset.abcScale = String(scale);
-					engraveTempoDigits(host);
+					engraveDigits(host);
 					// Bravura 是异步加载的：第一次可能量不到（已退回正文数字）→ 字体**真正可用**后补一次
 					if (!host.dataset.abcTempoFontReady) {
 						host.dataset.abcTempoFontReady = '1';
-						whenBravuraReady(() => engraveTempoDigits(host));
+						whenBravuraReady(() => engraveDigits(host));
 					}
 					return abcLineCounts(host);
 				};
@@ -1418,7 +1472,7 @@ function getLangSwitchHref(pathname: string) {
 				const width = abcStaffWidth(h);
 				const prevWidth = Number(h.dataset.abcStaffWidth) || 0;
 				if (String(abcTierFor(width)) !== h.dataset.abcTier || Math.abs(prevWidth - width) >= 24) renderOne(h);
-				else engraveTempoDigits(h); // abcjs 自己重画会把拍号数字冲掉，补回来
+				else engraveDigits(h); // abcjs 自己重画会把刻字冲掉，补回来
 			});
 			window.addEventListener('resize', syncAbcLayout);
 			if ('ResizeObserver' in window) {
@@ -1471,6 +1525,9 @@ function getLangSwitchHref(pathname: string) {
 		const JIANPU_LINE_MARGIN = 24; // 每行首末墨迹距谱面左右边缘的留白（左右对称）
 		const JIANPU_ROW_GAP = 2; // 谱行之间的额外间距（库 score.lineSpace 默认 10；和弦功能去掉后行距显得太散）
 		const JIANPU_INFO_GAP = 16; // 调号与速度同行时的空隙；也是信息行与作曲行之间的最小净空
+		const JIANPU_INFO_PAD_LEFT = 10; // 信息行左边界（库的 `info.padding` 横向值）：没写调号时拍号贴到这儿
+		const JIANPU_BAR_TWIN_DX = 3; // 小节线同伴（双纵线/终止线的那第二根）偏移多少 px（与库里那对一致）
+		const JIANPU_BAR_END_INSET = 10; // 每行最后那根小节线（行末那组的主线）距谱面右边缘的像素（`|]` 的粗线因此在 −7）
 		const JIANPU_INFO_SIZE = 18; // 信息区（调号/拍号/速度/作曲）字号；库给的是 14（用户要求「再稍微大点」：14 → 16 → 18）
 		//                             ⚠️ 拍号数字用的是 Bravura-Digits，字号 = 本值 × 1.4（见 src/lib/bravura-digits.ts）→ 会自动跟着变
 		const JIANPU_INFO_GLYPH_SIZE = JIANPU_INFO_SIZE * (18 / 14); // 速度行的四分音符符号 𝅘𝅥 字号：库给 18（基准 14）→ 按同比例跟着长（18 → 23.1）
@@ -1483,6 +1540,8 @@ function getLangSwitchHref(pathname: string) {
 		//                               收窄 26px = 信息行以下整块上提 26px（谱面跟着上提，viewBox 自动变矮）。
 		const JIANPU_INFO_H_DEF = 120; // 库默认的信息带高度（仅作参考：库就是按这个高度把标题摆在带子正中的）
 		const JIANPU_INFO_TOP_RATIO = 0.5; // 信息块上方留白占「可用空白」的比例（0.5 = 居中；越小越往上靠）
+		const JIANPU_CONTENT_PAD_TOP = 20; // 库的 `content.padding` 纵向值（谱首上边留白）；下面「收空白」时拿它当基准
+		const JIANPU_HEAD_GAP = 5; // 谱首最后一行墨迹 → 谱面第一行墨迹的净空（有标题没信息时，谱面就贴到标题下头）
 		const JIANPU_BEAT_SPLIT = 9; // 拍号退路（正文数字）时，两根本线各偏离基线多少
 		//                             （数字墨迹高 ≈0.7em，两根差 2×9=18 → 中间 6.8px 净空、分数线居中各留 3.4px）
 		const JIANPU_BEAT_BAR_ASC = 0.35; // 分数线在基线上方多少 em（= 数字墨迹高 0.7em 的一半 → 正好落在两数字正中）
@@ -1492,27 +1551,76 @@ function getLangSwitchHref(pathname: string) {
 		//                              ⚠️ 谱宽 = SVG viewBox 宽，**随容器变**（436/636/696/736/800…）→ 不能写死绝对 x
 		const JIANPU_GRACE_GAP = 0; // 倚音墨迹右端距主数字墨迹左端的净空
 		const JIANPU_GRACE_ABOVE = 2; // 倚音墨迹底部距主数字墨迹顶部的净空
+		const JIANPU_GRACE_STEP = 2.5; // 一组多个倚音时，相邻倚音**墨迹**之间的净空（库的 8px 锚点间距会挤在一起）
 		const JIANPU_GRACE_ARC_RATIO = 0.15; // 倚音引导线中部最大厚度 = **弦长 × 该比例**（线短就细：这条弦长 7.09 → 约 1.06px；
 		//                                      连音线是固定 2.4px 但弦长 23px（比例 ≈ 0.1），不能拿绝对值硬套小弧）
 		const JIANPU_ACC_SIZE = 12; // 变音记号的字号（库用 12，偏小）
 		const JIANPU_ACC_GAP = -1; // 变音记号**墨迹**右端与数字**墨迹**左端之间要留的净空（按 canvas 量的真实墨迹）
 		const JIANPU_TIE_NEST_GAP = 7; // 连音线套连音线时，外层弧下缘与内层弧上缘之间的净空（2.5/4 时视觉上都不够分）
 		const JIANPU_TIE_THICK = 2.4; // 连音线中间最大厚度（两端收成尖，纺锤形填充）
+		const JIANPU_TRIPLET_LABEL_GAP = 2; // 嵌在弧缺口里的数字：墨迹底端距弦线的净空（2026-10-01 由 4 下移到 2，用户：「数字稍微往下一点」）
+		const JIANPU_TRIPLET_LABEL_SIZE = 14; // `3` 的目标字号（对照衬线数字的墨迹高；Bravura 数字要 ×1.4 才有同样墨迹）
+		const JIANPU_TRIPLET_SPLIT_GAP = 2.5; // 圆滑线在中间为数字让出的缺口：数字墨迹两侧各再留这么多
+		const JIANPU_DOT_GAP = -0.7; // 附点的**墨迹左端**距数字**墨迹右端**的净空（负 = 轻微压进数字边界；用户认可的视觉）
+		const JIANPU_UNDERLINE_RIM = 1.5; // 减时线两端超出音符墨迹的长度（固定，不再被 justify 的拉伸系数乘大）
+		const JIANPU_UNDERLINE_JOIN = 2; // 同层两条减时线首尾相差这么多以内就并成一条（库在拍之间会留 ~6px 缝）
+		const JIANPU_GRACE_BEAM_JOIN = 4; // 倚音减时线：倚音之间本来就只留 ~2.5px 墨迹净空，缝 ≤ 这个值就算相接
+		const JIANPU_BAR_PAIR_GAP = 8; // 离反复/终止线的粗线这么近的细线跟它同组，不单独挪
+		const JIANPU_REPEAT_DOT_NEAR = 12; // 反复号的圆点离竖线这么近就算它那一组的（一起挪）
 
-		/** 解析围栏源码 → { info, lyric, score } */
+		/**
+		 * 解析围栏源码 → { info, lyric, score }
+		 *
+		 * 头部字段：站点全称（`title / composer / lyricist / key / beat / time / len / tempo / lyric / wrap`）
+		 * ＋**与 abc 对齐的单字母别名**：`T:` `C:` `K:` `M:` `L:` `Q:` `W:`（`M: 4/4` 一行顶拍号两行，
+		 * `L: 1/8` = `len: 8`，`Q: 90` / `Q: 1/4=90` = `tempo: 90`，`W:` = `lyric:`）。后写的覆盖先写的。
+		 */
 		function parseJianpuSource(raw: string) {
 			const info: Record<string, string> = {};
 			const lyricLines: string[] = [];
 			const scoreLines: string[] = [];
+			/** 单字母别名 → 全称（对齐 abc：T 标题 / C 作曲 / K 调号 / M 拍号 / L 默认时值 / Q 速度 / W 歌词） */
+			const ALIAS: Record<string, string> = { t: 'title', c: 'composer', k: 'key', m: 'beat', l: 'len', q: 'tempo', w: 'lyric' };
+			const KNOWN = ['title', 'composer', 'lyricist', 'key', 'beat', 'time', 'len', 'tempo', 'lyric', 'wrap'];
 			raw.split('\n').forEach((line) => {
-				const m = /^(title|composer|lyricist|key|beat|time|tempo|lyric|wrap)\s*[:：]\s*(.*)$/i.exec(line.trim());
-				if (m) {
-					const k = m[1].toLowerCase();
-					if (k === 'lyric') lyricLines.push(m[2]);
-					else info[k] = m[2];
-				} else {
+				const m = /^([A-Za-z]+)\s*[:：]\s*(.*)$/.exec(line.trim());
+				if (!m) {
 					scoreLines.push(line);
+					return;
 				}
+				const rawKey = m[1];
+				const key = rawKey.length === 1 ? ALIAS[rawKey.toLowerCase()] ?? rawKey.toLowerCase() : rawKey.toLowerCase();
+				if (!KNOWN.includes(key)) {
+					scoreLines.push(line); // 认不出的键（`X:` / `R:` 之类）当正文，交给归一丢字符
+					return;
+				}
+				const value = m[2].trim();
+				if (key === 'lyric') {
+					lyricLines.push(m[2]);
+					return;
+				}
+				// 拍号一行写法：`M: 4/4`（也认 `beat: 4/4`）
+				if (key === 'beat' && /^\d+\s*\/\s*\d+$/.test(value)) {
+					const [b, t] = value.split('/').map((v) => v.trim());
+					info.beat = b;
+					info.time = t;
+					return;
+				}
+				// 默认时值：`L: 1/8` 与 `L: 8` / `len: 8` 等价
+				if (key === 'len') {
+					const n = /(\d+)\s*$/.exec(value);
+					if (n) info.len = n[1];
+					return;
+				}
+				// 速度：`Q: 90` 或 `Q: 1/4=90`（后者顺带告诉库「一拍 = 四分音符」，没写 time 时才采用）
+				if (key === 'tempo') {
+					const q = /^(?:(\d+)\s*\/\s*(\d+)\s*=\s*)?(\d+)\s*$/.exec(value);
+					if (!q) return;
+					if (q[2] && !info.time) info.time = q[2];
+					info.tempo = q[3];
+					return;
+				}
+				info[key] = value;
 			});
 			return { info, lyric: lyricLines.join('\n'), score: scoreLines.join('\n').trim() };
 		}
@@ -1532,57 +1640,327 @@ function getLangSwitchHref(pathname: string) {
 		}
 
 		/**
-		 * 谱面分句：按**固定小节数**切行（手写换行不再当硬边界）。
+		 * 谱面结构：**每行的小节 + 每条小节线后面的记号**（记号 = 原文里的 `|` / `||` / `|]`；null = 没写）。
 		 *
-		 * ⚠️ 之前把手写换行当「乐句边界」保留 → 每个乐句自成一行，永远看不到「每行 4 小节」的效果
-		 *    （实测谱宽 736、perLine=4 时各行小节数还是 4/3/2/3/3/3/4…，用户：「你看看这真对了吗」）。
-		 *    现在先把所有行合并成一串小节，再严格每 perLine 个切一行（最后一行不足就短着）。
-		 *    想保留手写换行当边界就用 `wrap: off`。
+		 * 一份结构两处用：① 拼给库的谱面（小节间单竖线、换行 = 乐句）；② `shapeJianpuBarlines`
+		 * 照它把库画出来的线一条条对上记号（库给每行末尾都补一根粗线，那根不属于任何小节）。
+		 *
+		 * 分句：按**固定小节数**切行，手写换行不再当硬边界（想保留就用 `wrap: off`）。
 		 * ⚠️ 库不会自动折行：完全不换行的话整首歌会被塞进一行，音符间距会被压到几个像素。
-		 *
-		 * ⚠️ **最后一行不能只剩 1 小节**（用户要求：要么没有剩余，要么至少剩 2 个）。
-		 *    作者偏向「挤进去」：余 1 节时把它并进**当前这一行**（那行变 perLine+1 小节，音符排紧一点），
-		 *    于是最后一行始终是满的、不会孤零零甩一节出来。只有总数就 1 节时才真的只剩 1 节。
+		 * ⚠️ **最后一行不能只剩 1 小节**（用户要求：要么没有剩余，要么至少剩 2 个）⇒ 余 1 节时
+		 *    并进**当前这一行**（那行变 perLine+1 小节，音符排紧一点）。只有总数就 1 节时才真的只剩 1 节。
 		 */
-		function wrapJianpuScore(score: string, perLine: number) {
-			if (!perLine || perLine < 1) return score; // wrap: off → 保持手写换行
-			const measures = score
+		function planJianpuBars(score: string, perLine: number) {
+			const parsed = score
 				.split(/\r?\n/)
 				.map((l) => l.trim())
 				.filter(Boolean)
-				.join('|')
-				.split('|')
-				.map((s) => s.trim())
-				.filter(Boolean);
-			// 每行放几节：先按整行分，余 1 节就并进这一行（「挤进去」）
-			const sizes: number[] = [];
+				.map((line) => {
+					const measures: string[] = [];
+					const tokens: (string | null)[] = [];
+					const parts = line.split(/(\|\]|\|\||\|)/);
+					for (let i = 0; i < parts.length; i += 2) {
+						const body = (parts[i] || '').trim();
+						if (!body) continue;
+						measures.push(body);
+						tokens.push(i + 1 < parts.length ? parts[i + 1] : null);
+					}
+					return { measures, tokens };
+				})
+				.filter((r) => r.measures.length);
+			// 手写换行处（= 乐句边界）没写记号的话补 `|`：换行本来就意味着有条线；最后一个不补
+			parsed.forEach((row, ri) => {
+				const lastIdx = row.tokens.length - 1;
+				if (ri < parsed.length - 1 && row.tokens[lastIdx] === null) row.tokens[lastIdx] = '|';
+			});
+			const rows: { measures: string[]; tokens: (string | null)[] }[] = [];
+			if (!perLine || perLine < 1) {
+				parsed.forEach((row) => rows.push(row)); // wrap: off → 手写换行就是行
+				return rows;
+			}
+			// 把所有行拉平成一串（小节 + 记号），再按 perLine 切行
+			const measures: string[] = [];
+			const tokens: (string | null)[] = [];
+			parsed.forEach((row) => {
+				row.measures.forEach((m, i) => {
+					measures.push(m);
+					tokens.push(row.tokens[i]);
+				});
+			});
 			let left = measures.length;
+			let at = 0;
 			while (left > 0) {
 				let take = Math.min(perLine, left);
-				if (left - take === 1) take = perLine + 1;
-				take = Math.min(take, left); // 只剩 1 节时没得并，就老老实实放 1 节
-				sizes.push(take);
+				if (left - take === 1) take = perLine + 1; // 余 1 节⇒并进这一行（「挤进去」）
+				take = Math.min(take, left);
+				rows.push({ measures: measures.slice(at, at + take), tokens: tokens.slice(at, at + take) });
+				at += take;
 				left -= take;
 			}
-			const lines: string[] = [];
-			let at = 0;
-			sizes.forEach((n) => {
-				lines.push(measures.slice(at, at + n).join('|'));
-				at += n;
-			});
-			return lines.join('\n');
+			return rows;
 		}
 
+		/** `len:` 允许的默认时值（分母：4 = 四分音符，8 = 八分音符…） */
+		const JIANPU_LEN_DENS = [1, 2, 4, 8, 16, 32];
+		/** 库能**单独画出来**的短时值（单位 = 四分音符）→ 音级后面的后缀。凑不出精确值时取最近的一档 */
+		const JIANPU_SHORT_DURS: [number, string][] = [
+			[0.125, '/32'],
+			[0.1875, '/32.'],
+			[0.25, '/16'],
+			[0.375, '/16.'],
+			[0.5, '/8'],
+			[0.75, '/8.'],
+			[1, ''],
+			[1.5, '.'],
+		];
+
 		/**
-		 * 把「和弦记号」这个功能整个去掉（用户 2026-09-13：用不到，不要再显示）。
+		 * 音符写法归一：作者写的写法 → 库认的写法（**原文不动**，磁盘/编辑器里还是你敲的）。
 		 *
-		 * 做法是在**源文本**里就把 `{...}` 剔除 —— 库根本不知道有和弦这回事，连它给和弦预留的
-		 * 那 13px 上方空间也不会留（只删 DOM 里的文字的话，空位还在）。
-		 * ⚠️ `{1.}` / `{2.}`（反复小房子）和 `{v}`（换气符）是同一条语法进来的，必须留着，
-		 *    否则小房子数字 + 括线一起没。
+		 * 音高：音级 `1`-`7`、休止 `0` 或 `z`、延长 `-`
+		 * 顺序：**变音记号 → 音级 → 八度 → 时值 → 附点**，例 `#6,/8.`
+		 *   · 变音记号 `#`（升）/ `b`（降）/ `=`（**还原号**，可叠）；八度 `,` 低 / `'` 高（abc 的写法），`_`/`^` 是库自己的写法、也认
+		 *   · 时值都相对**默认时值 L**（围栏 `len:`，不写 = 四分音符）：`/`（可叠）减半、`*N`（N 可省 = 2）倍长、
+		 *     `.` 附点、`>` / `<` 附点节奏对（同 abc）、`-` = **一拍**（绝对量、加法）
+		 * 分隔符 = **空白**（逗号不当分隔符）
+		 * 记号（都跟 abc 对齐）：
+		 *   · `(1 2 3)` = **圆滑线 / 连音线**（库的连音线写法，弧线不管音高、能跨小节）
+		 *   · `[1.]` `[2.]` = **小房子**（也认 `[1` / `[1]`；老写法 `{1.}` 照旧）
+		 *   · `{5 6}` = **倚音**；`{v}` / `!breath!` = 换气符；其它 `{Dm7}` 这类和弦名整段丢掉
+		 *   · `n(1 2 3)` = **连音组**（n = 2…9，如 `3(1 2 3)` 三连音、`5(1 2 3 4 5)` 五连音；数字紧贴括号）
+		 * ⚠️ 交给库的只有两种时值写法：**整拍及以上 = 裸音级 + `-`**（一拍一个破折号，简谱惯例）；
+		 *    **不足一拍 = `/N`**（附点值 `/N.`）。凑不出精确时值（如 L=8 时 `*5/`）就近取整。
+		 * ⚠️ 库只认 `#`/`b`（`parseNote` 里按个数相加）⇒ `=` 先按 `#` 发给库（保证有字形、时值权重也与升号一致），
+		 *    画出来再按「记号出现顺序」把字形换成还原号（见 `applyJianpuNaturals`）。这里把下标记进 `naturals`。
+		 * ⚠️ 换行不能碰（那是乐句边界）、`|` 系列小节线也不能碰 ⇒ 按行处理。
+		 * ⚠️ 认不出的字符直接丢掉 —— 以前会原样透传给库，变成垃圾音/报错音。
 		 */
-		function stripJianpuChords(score: string) {
-			return score.replace(/\{[^}]*\}/g, (m) => (/^\{\s*(\d+\.|[vV])\s*\}$/.test(m) ? m : ''));
+		function normalizeJianpuNotes(score: string, lenDen: number, tuplets: string[] = [], naturals: number[] = [], graceAccs: string[] = []) {
+			const base = 4 / (JIANPU_LEN_DENS.includes(lenDen) ? lenDen : 4); // 默认时值（单位 = 四分音符）
+			/** 已发出去的音符里，带变音记号的那个的序号（0 起）—— `naturals` 记的是它的下标 */
+			let accIndex = 0;
+			/**
+			 * 从 `i` 处读一个音：`[#b]*` + 音级（或 `-`/`z`）+ 八度（`,`/`'`/`^`/`_`）+ 时值（`*N` / `/`·叠）+ 附点。
+			 * 读不出音就返回 null（调用方接着看别的记号）。
+			 */
+			const readNote = (s: string, i: number) => {
+				const start = i;
+				let accidental = '';
+				while (i < s.length && (s[i] === '#' || s[i] === 'b' || s[i] === '=')) accidental += s[i++];
+				const ch = s[i];
+				if (ch === undefined || (!/\d/.test(ch) && ch !== '-' && ch !== 'z' && ch !== 'Z')) return null;
+				const head = ch === 'z' || ch === 'Z' ? '0' : ch; // `z` = 休止符（跟 abc 一样），库写 `0`
+				i++;
+				let oct = '';
+				let mult = 1;
+				let halves = 0;
+				let dot = false;
+				for (;;) {
+					const c = s[i];
+					if (c === ',' || c === '^' || c === '_' || c === "'" || c === '\u2019') {
+						// `,` = 低八度（跟 abc 一样）、`'` = 高八度（abc 的写法）、`_`/`^` = 库自己的写法
+						oct += c === '_' || c === ',' ? '_' : '^';
+						i++;
+						continue;
+					}
+					if (c === '*') {
+						i++;
+						let digits = '';
+						while (i < s.length && /\d/.test(s[i])) digits += s[i++];
+						mult *= digits ? parseInt(digits, 10) : 2;
+						continue;
+					}
+					if (c === '/') {
+						halves++;
+						i++;
+						continue;
+					}
+					if (c === '.' && !dot) {
+						dot = true;
+						i++;
+						continue;
+					}
+					break;
+				}
+				if (i === start) return null;
+				return { accidental, head, oct, mult: mult || 1, halves, dot, end: i };
+			};
+			/** 一段文本 → 音符 token 数组（调用方用 `,` 连起来就是库的写法） */
+			/** ⚠️ `grace` = 这段是倚音：库**不画**倚音上的变音记号（实测 `{#5 6}` 只出两个裸数字）⇒ 下标不能算它，
+			 *  否则后面所有记号都会错位一位；连音组在倚音里时照样继承这个标记。 */
+			const scan = (text: string, grace = false): string[] => {
+				const tokens: string[] = [];
+				/** 已解析、还没吐出的音（等 `>` / `<` 定倍率） */
+				let pending: { text: string; oct: string; q: number; suffix: string; isDash: boolean } | null = null;
+				let prefix = ''; // 下一个音符的前缀（`{1.}` / `[` / `(` / `<5 6>`）
+				let ratio = 1; // `>` / `<` 给**下一个**音的倍率
+				/** 按最终时值 q 把音吐出来 */
+				const emit = (rec: { text: string; oct: string; suffix: string; isDash: boolean }, q: number) => {
+					if (rec.isDash) {
+						// 延长线：一拍一根（`-` 是一拍，不是一份 L）
+						const n = Math.max(1, Math.round(q));
+						tokens.push(prefix + rec.text + rec.suffix);
+						for (let k = 1; k < n; k++) tokens.push('-');
+						prefix = '';
+						return;
+					}
+					if (q > 1.5) {
+						// 一拍半以上（且不是附点值）⇒ 就近取整拍，用 `-` 铺
+						const n = Math.max(1, Math.round(q));
+						tokens.push(prefix + rec.text + rec.oct + rec.suffix);
+						for (let k = 1; k < n; k++) tokens.push('-');
+						prefix = '';
+						return;
+					}
+					let best = JIANPU_SHORT_DURS[0];
+					let dist = Infinity;
+					JIANPU_SHORT_DURS.forEach(([v, suffix]) => {
+						const d = Math.abs(v - q);
+						if (d < dist) {
+							dist = d;
+							best = [v, suffix];
+						}
+					});
+					tokens.push(prefix + rec.text + best[1] + rec.oct + rec.suffix);
+					prefix = '';
+				};
+				const flush = () => {
+					if (!pending) return;
+					const rec = pending;
+					pending = null;
+					emit(rec, rec.q);
+				};
+				let i = 0;
+				while (i < text.length) {
+					const c = text[i];
+					if (/\s/.test(c)) {
+						i++; // 空白只是分隔，**先不 flush** —— `>` / `<` 后面还要改前一个音
+						continue;
+					}
+					if (c === '|' || c === ':') {
+						flush();
+						tokens.push(c);
+						i++;
+						continue;
+					}
+					// 花括号 = 倚音 `{5 6}`；也认老写法的 `{1.}` 小房子 / `{v}` 换气；
+					// 其余（`{Dm7}` 这种和弦名）整段丢掉 —— 用户已明确不要和弦功能。
+					// ⚠️ 一律当**后面那个音的前缀**（库就是这么认的：逗号不能插在中间）。
+					if (c === '{') {
+						const j = text.indexOf('}', i);
+						const inner = (j < 0 ? text.slice(i + 1) : text.slice(i + 1, j)).trim();
+						i = j < 0 ? text.length : j + 1;
+						flush();
+						if (/^\d+\.?$/.test(inner)) prefix += '{' + inner.replace(/\.?$/, '.') + '}'; // 小房子（老写法）
+						else if (/^[vV]$/.test(inner)) prefix += '{v}'; // 换气符
+						else if (/\d/.test(inner) && /^[-#b=\d\s,\^_./*()z']*$/.test(inner)) prefix += '<' + scan(inner, true).join(',') + '>'; // 倚音
+						continue;
+					}
+					// 方括号 = 小房子（abc 的写法）：`[1.]` / `[1.` / `[1]`；其余方括号（以前是连音线）丢掉
+					if (c === '[') {
+						const m = /^\[(\d+)\s*\.?\s*\]?/.exec(text.slice(i));
+						flush();
+						if (m) {
+							prefix += '{' + m[1] + '.}';
+							i += m[0].length;
+						} else i++;
+						continue;
+					}
+					if (c === ']') {
+						i++; // 光杆方括号没有含义了
+						continue;
+					}
+					// 圆括号 = 圆滑线 / 连音线 ⇒ 用库的连音线写法（`(1 2 3)` → `[1,2,3]`，那条弧线不管音高、能跨小节）
+					if (c === '(') {
+						flush();
+						prefix += '[';
+						i++;
+						continue;
+					}
+					if (c === ')') {
+						if (pending) pending.suffix += ']';
+						else if (tokens.length) tokens[tokens.length - 1] += ']';
+						i++;
+						continue;
+					}
+					// 附点节奏：前一个 ×1.5（`>`）/ ×0.5（`<`），后一个反过来（同 abc 的 `>` `<`）
+					if (c === '>' || c === '<') {
+						if (pending) pending.q *= c === '>' ? 1.5 : 0.5;
+						ratio = c === '>' ? 0.5 : 1.5;
+						i++;
+						continue;
+					}
+					// 装饰记号：`!breath!` = 换气符（同 abc），其余（`!trill!` 之类）库不支持 ⇒ 丢掉
+					if (c === '!') {
+						const j = text.indexOf('!', i + 1);
+						const name = (j < 0 ? text.slice(i + 1) : text.slice(i + 1, j)).trim().toLowerCase();
+						i = j < 0 ? text.length : j + 1;
+						flush();
+						if (name === 'breath') prefix += '{v}';
+						continue;
+					}
+					// 连音组 `n(1 2 3)`（n = 2…9）：数字紧接括号、且前面是空白/小节线/行首 ⇒ 整组当一个 token（库的写法）。
+					// ⚠️ 圆括号现在也是圆滑线 ⇒ 靠「数字紧贴在括号前面」区分（全篇就这一处位置规则）；
+					//    `1(` / `0(` 不算连音组（没有这种连音），照旧按「音符 + 圆滑线起点」解。
+					// ⚠️ 库只认 `3(`（正则写死的）⇒ 交给库时**一律写成 `3(`**，真实数字按出现顺序记进 `tuplets`，
+					//    由 `styleJianpuTriplets` 取回来当标签（组内音符不受影响，库本来也不换算连音时值）。
+					const tm = /^([2-9])\(/.exec(text.slice(i, i + 2));
+					if (tm && (i === 0 || /[\s|:{[]/.test(text[i - 1]))) {
+						const j = text.indexOf(')', i);
+						const inner = j < 0 ? text.slice(i + 2) : text.slice(i + 2, j);
+						const members = scan(inner, grace);
+						flush();
+						// 空组（`5()`）不发 —— 库碰上空组也不会画括号，发了只会让两边的顺序错位
+						if (members.length) {
+							tuplets.push(tm[1]);
+							tokens.push('3(' + members.join(',') + ')');
+						}
+						i = j < 0 ? text.length : j + 1;
+						continue;
+					}
+					const rec = readNote(text, i);
+					if (rec) {
+						flush();
+						// 变音记号：库只认 `#`/`b`（`=` 它会当不存在直接忽略）⇒ `=` 先按 `#` 发过去，
+						// 画出来再按「记号出现顺序」换字形（下标记进 `naturals`，见 applyJianpuNaturals）
+						if (rec.accidental) {
+							// 库只会在「音级（不是休止/延长）且升降个数不相互抵消」时画记号，下标得跟它一致
+							const libAcc = rec.accidental.replace(/=/g, '#');
+							const net = (libAcc.match(/#/g) || []).length - (libAcc.match(/b/g) || []).length;
+							if (!grace && net !== 0 && rec.head !== '0' && rec.head !== '-') {
+								if (rec.accidental.includes('=')) naturals.push(accIndex);
+								accIndex++;
+							}
+						}
+						// 倚音的记号库**根本不画**（`drawGraceNote` 里不调 `drawUpDownCount`）⇒ 按倚音顺序逐个记下来，
+						// 渲染后由 `drawJianpuGraceAccidentals` 照库的比例自己补字形（空串 = 这个倚音没记号）
+						if (grace) graceAccs.push(rec.accidental);
+						pending = {
+							text: rec.accidental.replace(/=/g, '#') + rec.head,
+							oct: rec.head === '-' ? '' : rec.oct,
+							q: (rec.mult / 2 ** rec.halves) * (rec.dot ? 1.5 : 1) * (rec.head === '-' ? 1 : base) * ratio,
+							suffix: '',
+							isDash: rec.head === '-',
+						};
+						ratio = 1; // `>` / `<` 给的倍率只作用在它后面那一个音上
+						i = rec.end;
+						continue;
+					}
+					flush();
+					i++; // 认不出的字符直接丢掉（以前会当一个音符 token 发给库 ⇒ 变成垃圾音）
+				}
+				flush();
+				return tokens;
+			};
+			return score
+				.split('\n')
+				.map((line) => {
+					let out = scan(line).join(',');
+					out = out.replace(/,+/g, ','); // 多个逗号并一个
+					out = out.replace(/,(?=\||\])/g, '').replace(/([|\[]),/g, '$1'); // 紧贴小节线的逗号收掉
+					return out.replace(/^,+|,+$/g, '');
+				})
+				.join('\n');
 		}
 
 		/**
@@ -1815,7 +2193,12 @@ function getLangSwitchHref(pathname: string) {
 			const musicText = texts.find((t) => TEMPO_NOTE_RE.test(t.textContent || '')) || null;
 			const lines = musicText ? Array.from(musicText.children).filter((c) => c.tagName === 'tspan') : [];
 			const tempoLine = lines.find((c) => TEMPO_NOTE_RE.test(c.textContent || '')) || null;
-			const keyLine = lines.find((c) => c !== tempoLine && /1\s*=/.test(c.textContent || '')) || null;
+			// ⚠️ 调号**不能**靠 musicText 找：没写 `tempo:` 就没有那个音符符号，musicText = null ⇒ 认不出调号、
+			//    拍号会被当成首项贴到左缘、直接压在调号上（用户实测：「有调号的时候拍号也不给调号留地方」）。
+			const keyText = texts.find((t) => t.getAttribute('text-anchor') !== 'middle' && /1\s*=/.test(t.textContent || '')) || null;
+			const keyLines = keyText ? Array.from(keyText.children).filter((c) => c.tagName === 'tspan') : [];
+			// 取没混进速度符号的那一层 tspan（= 整行 `1 = C`，含字母、也带 dy）
+			const keyLine = keyLines.find((c) => /1\s*=/.test(c.textContent || '') && !TEMPO_NOTE_RE.test(c.textContent || '')) || keyLines[0] || keyText;
 			const beatText = texts.find((t) => /^\s*\d+\s*\/\s*\d+\s*$/.test(t.textContent || '')) || null;
 			if (!keyLine && !tempoLine && !beatText) return;
 			// 右边界：有作曲就用作曲的墨迹左缘（不能压到它），没有就用谱面宽 − 10（库自己的内边距）
@@ -1878,35 +2261,43 @@ function getLangSwitchHref(pathname: string) {
 				}
 			}
 			// 依次横排：调号 → 拍号（若有）→ 速度（若有），中间各留 JIANPU_INFO_GAP。
-			// 首项**留在原地**（没写 key 时就让拍号待在自己原本的位置，不要凭空往左顶）。
+			// ⚠️ 没写调号时拍号就是首项 → 贴到信息行左缘。库把拍号摆在「调号槽」里，不挪它左边缘
+			//    会空出一整块（用户实测：「没写调号 拍号会给留出来空」）。
+			const moveX = (el: Element | null, dx: number) => {
+				if (!el || !dx) return;
+				[el, ...Array.from(el.querySelectorAll('[x]'))].forEach((node) => {
+					node.setAttribute('x', String(num(node.getAttribute('x')) + dx));
+				});
+			};
+			const moveBeatBar = (dx: number) => {
+				if (!beatBar || !dx) return;
+				beatBar.setAttribute('x1', String(num(beatBar.getAttribute('x1')) + dx));
+				beatBar.setAttribute('x2', String(num(beatBar.getAttribute('x2')) + dx));
+			};
+			const leftEdge = keyText ? num(keyText.getAttribute('x')) : JIANPU_INFO_PAD_LEFT;
 			let cursor: number | null = keyBox ? keyBox.x + keyBox.width : null;
 			if (beatText) {
 				const bb = box(beatText);
 				if (cursor === null) {
-					cursor = bb.x + bb.width; // 拍号当首项：原地不动
+					moveX(beatText, leftEdge - bb.x); // 拍号当首项：贴左缘
+					moveBeatBar(leftEdge - bb.x);
+					cursor = leftEdge + bb.width;
 				} else {
 					const dx = cursor + JIANPU_INFO_GAP - bb.x;
 					// ⚠️ 拆分后 x 落在两根 tspan 上（text 自己的 x 已被子 tspan 覆盖）→ 两边一起挪
-					[beatText, ...Array.from(beatText.querySelectorAll('[x]'))].forEach((el) => {
-						el.setAttribute('x', String(num(el.getAttribute('x')) + dx));
-					});
-					if (beatBar) {
-						beatBar.setAttribute('x1', String(num(beatBar.getAttribute('x1')) + dx));
-						beatBar.setAttribute('x2', String(num(beatBar.getAttribute('x2')) + dx));
-					}
+					moveX(beatText, dx);
+					moveBeatBar(dx);
 					cursor += JIANPU_INFO_GAP + bb.width;
 				}
 			}
-			// 速度行只有存在、且前面至少有ー项时才能并到同一行；放不下就保持库原本所在的另一行
-			if (!tempoLine || !musicText || cursor === null || !beatText) return;
+			// 速度行：存在、且前面至少有一项（调号或拍号）就能并到同一行；放不下就保持库原本所在的另一行。
+			// ⚠️ 以前这里还要求 beatText 存在 ⇒ 「只写调号和速度」时永远不合并、白白占两行（用户实测）。
+			if (!tempoLine || !musicText || cursor === null) return;
 			const tempoBox = box(tempoLine);
 			// 放不下就不合并（保持库原本的两行）
 			if (cursor + JIANPU_INFO_GAP + tempoBox.width > limit - JIANPU_INFO_GAP) return;
 			// ① 横向：速度组整体右移（外层 tspan 和 𝅘𝅥 上的 x 都要改）
-			const shiftX = cursor + JIANPU_INFO_GAP - tempoBox.x;
-			[tempoLine, ...Array.from(tempoLine.querySelectorAll('[x]'))].forEach((el) => {
-				el.setAttribute('x', String((parseFloat(el.getAttribute('x') || '') || 0) + shiftX));
-			});
+			moveX(tempoLine, cursor + JIANPU_INFO_GAP - tempoBox.x);
 			// ② 纵向：抬到「首项所在的那条基线」。有调号就抄调号的 dy；只有拍号时按拍号基线反算
 			//    （拍号那个 <text> 的 y 就是调号行的基线，见上面注释）
 			const anchorDy = keyLine
@@ -2017,6 +2408,80 @@ function getLangSwitchHref(pathname: string) {
 		}
 
 		/**
+		 * 谱首留白：标题没写就不给它留位置（后头的信息跟上来），信息也没有就直接跟谱。
+		 *
+		 * 背景：库里信息区是按「标题 + 三行信息」固定高度的（info.height），标题空着那块照样留着；
+		 * 而且没标题时它会把第一行信息摆到标题的位置上、其余留在原处 ⇒ 信息行之间空一大块。
+		 * 做法：**总是**给库一个标题占位（见 renderJianpuScore 里那个 \u00a0），几何就跟
+		 * 「标题 + 信息」完全一致（前面几步微调也都是按这个基准调的），最后在这里把多出来的
+		 * 那截整体上移、并把 viewBox 高度减掉（谱面高度是 viewBox 撑的，不减就成了底部留白）。
+		 * 幂等：位移按「当前几何」算，摆正之后再跑一次是 0。
+		 */
+		function compactJianpuHead(host: HTMLElement) {
+			const svg = host.querySelector('svg') as SVGSVGElement | null;
+			const info = svg && (svg.querySelector('g[sn-tag="info"]') as SVGGElement | null);
+			const scoreG = svg && (svg.querySelector('g[sn-tag="score"]') as SVGGElement | null);
+			if (!svg || !info || !scoreG) return;
+			const hasTitle = host.dataset.jianpuHasTitle === '1';
+			const hasInfo = host.dataset.jianpuHasInfo === '1';
+			if (hasTitle && hasInfo) return; // 都有：维持库 + 各步微调后的样子
+			const num = (v: string | null) => (v === null ? 0 : parseFloat(v) || 0);
+			// 谱面第一行最上面那条墨迹：跟 centerJianpuInfoVertically 用同一套（只认与字体无关的精确几何）
+			const stave = scoreG.querySelector('g[sn-tag^="stave-"]');
+			const tops: number[] = [];
+			if (stave) {
+				stave.querySelectorAll(':scope > line').forEach((l) => tops.push(num(l.getAttribute('y1'))));
+				stave.querySelectorAll('g[sn-tag^="note-"] > circle').forEach((c) => tops.push(num(c.getAttribute('cy')) - num(c.getAttribute('r'))));
+			}
+			const scoreTop = tops.length ? Math.min(...tops) : scoreG.getBBox().y;
+			if (!isFinite(scoreTop)) return;
+			// 信息行的基线（⚠️ 占位标题不能算进来，否则信息块的「顶」就被它拉到标题那条线上）
+			const texts = Array.from(info.querySelectorAll('text'));
+			const stripped = host.dataset.jianpuTitleStripped === '1'; // 占位标题已经收掉（重排时会被重建，所以记在 dataset 上）
+			const placeholder = !hasTitle && !stripped;
+			const titleEl = hasTitle || placeholder ? texts.find((t) => ['middle', 'center'].includes(t.getAttribute('text-anchor') || '')) || texts[0] : null;
+			const lines: number[] = [];
+			texts.forEach((t) => {
+				if (t === titleEl) return;
+				const ys = Array.from(t.children)
+					.filter((c) => c.tagName === 'tspan')
+					.map((c) => num(t.getAttribute('y')) + num(c.getAttribute('dy')));
+				lines.push(...(ys.length ? ys : [num(t.getAttribute('y'))]));
+			});
+			let dy: number;
+			if (!hasTitle) {
+				dy = lines.length
+					? JIANPU_CONTENT_PAD_TOP - (Math.min(...lines) - JIANPU_INFO_SIZE * JIANPU_INFO_INK_ASC) // 信息贴到顶部留白
+					: JIANPU_CONTENT_PAD_TOP - scoreTop; // 连信息都没有：谱面直接跟上来
+			} else {
+				dy = num(titleEl!.getAttribute('y')) + JIANPU_TITLE_SIZE * 0.2 + JIANPU_HEAD_GAP - scoreTop; // 谱面贴到标题下头
+			}
+			if (!(dy < 0)) return; // 只负责上移
+			if (!hasTitle) {
+				// 信息块整体上移（含 tspan 上写死的 y、以及拍号那条分数线 —— 跟 centerJianpuInfoVertically 同一套改法）
+				info.querySelectorAll('text').forEach((t) => {
+					t.setAttribute('y', String(num(t.getAttribute('y')) + dy));
+					t.querySelectorAll('tspan[y]').forEach((c) => c.setAttribute('y', String(num(c.getAttribute('y')) + dy)));
+				});
+				info.querySelectorAll('[data-jianpu-beatbar]').forEach((l) => {
+					l.setAttribute('y1', String(num(l.getAttribute('y1')) + dy));
+					l.setAttribute('y2', String(num(l.getAttribute('y2')) + dy));
+				});
+				if (placeholder && titleEl) {
+					titleEl.remove(); // 占位标题（那行空白）收掉
+					host.dataset.jianpuTitleStripped = '1';
+				}
+			}
+			// 谱面：同一个位移（「信息 ↔ 谱面」那段净空保持不变）。
+			// ⚠️ score 组上还有 centerJianpuScore 加的水平 transform，得读出来再拼，别覆盖掉。
+			const m = /translate\(\s*([-\d.]+)[\s,]+([-\d.]+)\s*\)/.exec(scoreG.getAttribute('transform') || '');
+			scoreG.setAttribute('transform', 'translate(' + (m ? m[1] : '0') + ' ' + ((m ? num(m[2]) : 0) + dy) + ')');
+			// viewBox 跟着变矮（dy 是负数）；谱面高度就是靠 viewBox 撑的
+			const vb = (svg.getAttribute('viewBox') || '').split(/\s+/).map(Number);
+			if (vb.length === 4 && vb[3] > 0) svg.setAttribute('viewBox', vb[0] + ' ' + vb[1] + ' ' + vb[2] + ' ' + (vb[3] + dy));
+		}
+
+		/**
 		 * 库把「时值延长」渲染成半角连字符 "-"（墨迹仅 6.45px，而音符宽 10.35px），看着像断点。
 		 * 换成 en dash "–"（约 8.5px）与音符等宽，延音线更连贯。
 		 * 只改 SVG 文本，不动库写的数据属性（note-data 等），不影响后续播放/光标对齐。
@@ -2074,6 +2539,147 @@ function getLangSwitchHref(pathname: string) {
 			const dx = Math.round(((2 * vb[0] + vb[2] - box.x - (box.x + box.width)) / 2) * 100) / 100;
 			if (!dx) return;
 			scoreG.setAttribute('transform', 'translate(' + dx + ' 0)');
+		}
+
+		/**
+		 * 连音组：库画成「顶上一根横线（sw=2）+ 两个圆角 + 一个 sans-serif 的 `3`」= 方括号，
+		 * 用户要的是「**一条圆滑线 + 上面一个小数字**」。做法：
+		 *   · 摘掉那两根圆角 path 和横线，**保留**库那个 `3`（x 居中，纵向交给 `placeJianpuTripletLabels`；
+		 *     字体由 CSS 换成谱面的衬线栈）；
+		 *   · 原来横线的位置补一条**库风格的单弧**（`M x y A rx ry 0 0 1 x2 y`），交给紧接着的
+		 *     `curveJianpuTieLines` 按连音线同一套算法重画成纺锤形 —— 弧高、厚度、**避让高音点**、套弧
+		 *     全都跟圆滑线一模一样，这里不重复造形。
+		 * ⚠️ 跨度按**所盖音符的中心**取（库那根横线是内缩的、而且内缩量是**库单位**会被 justify 缩放
+		 *    ⇒ 不能拿它 ± 常量）：弧从第一个音中心连到最后一个音中心，不含别的音。
+		 *    ⚠️ 也别再往外扩（曾各外扩半个音距 ⇒ 用户：「这一改又偏宽了」）。
+		 * ⚠️ y **直接用库那根横线的 y**，不要自己加减：库给连音线和三连音括号的是**同一个基准**（实测都是
+		 *    音符基线 − 24），连音线后续会被 `curveJianpuTieLines` 统一 +`JIANPU_TIE_DROP` 下移贴近音符。
+		 *    我一开始在这里先减掉了 drop ⇒ 三连音比圆滑线高 7.5px（用户：「弧离音符太远」）。
+		 * ⚠️ 必须排在 `curveJianpuTieLines` **之前**：库那两个圆角 path 的 `d` 也是「单弧」形状，
+		 *    会被改弧那步当成连音线（跨度才 8px ⇒ k<1 ⇒ ry 被除成 28 的胖疙瘩，实测就是这么画坏的）。
+		 * ⚠️ 必须排在 ⑪ justify **之后**（见管线里的注释：rx 不跟着缩放，渲染器会把椭圆等比放大）。
+		 * @param tuplets `normalizeJianpuNotes` 按出现顺序记下来的连音组数字（库只会画 `3`）
+		 */
+		function styleJianpuTriplets(host: HTMLElement, tuplets: string[] = []) {
+			const svg = host.querySelector('svg');
+			const tieline = svg && svg.querySelector('g[sn-tag="tieline"]');
+			if (!svg || !tieline) return;
+			const NS = 'http://www.w3.org/2000/svg';
+			const num = (el: Element | null, a: string) => (el ? parseFloat(el.getAttribute(a) || 'NaN') : NaN);
+			let nth = 0;
+			Array.from(tieline.children).forEach((label) => {
+				if (label.tagName !== 'text' || (label.textContent || '').trim() !== '3') return;
+				// 库的绘制顺序：圆角 path → 圆角 path → 横线 → `3`，所以 label 的前一个兄弟就是那根横线
+				const line = label.previousElementSibling;
+				if (!line || line.tagName !== 'line') return;
+				const lx1 = parseFloat(line.getAttribute('x1') || 'NaN');
+				const lx2 = parseFloat(line.getAttribute('x2') || 'NaN');
+				const y = parseFloat(line.getAttribute('y1') || '0');
+				if (!Number.isFinite(lx1) || !Number.isFinite(lx2)) return;
+				// 这根横线盖住的音符：库的横线是**内缩**的（首/末音中心各往里一点，且内缩量是库单位、
+				// 会被 justify 缩放），所以按「**相邻音中心的中间**」当边界 —— 天然的、随音距自适应的容差：
+				// 取横线左侧最近的两个音心，它们的**中点**就是左边界（右同理），落在中间的音就是这一组。
+				const stave = Array.from(svg.querySelectorAll('g[sn-tag^="stave-"]'))
+					.map((st) => ({ st, base: num(st.querySelector('text[font-size="18"]') || st, 'y') }))
+					.filter((s) => Number.isFinite(s.base) && s.base >= y)
+					.sort((a, b) => a.base - b.base)[0];
+				if (!stave) return;
+				const centersAll = Array.from(stave.st.querySelectorAll('text[font-size="18"]'))
+					.filter((t) => /^[0-9]/.test(t.textContent || '')) // 只认音符数字（`.` 附点、`–` 延音不算）
+					.map((t) => num(t, 'x'))
+					.filter(Number.isFinite)
+					.sort((a, b) => a - b);
+				const below = centersAll.filter((x) => x <= lx1);
+				const above = centersAll.filter((x) => x >= lx2);
+				const cutL = below.length >= 2 ? (below[below.length - 1] + below[below.length - 2]) / 2 : -Infinity;
+				const cutR = above.length >= 2 ? (above[0] + above[1]) / 2 : Infinity;
+				const centers = centersAll.filter((x) => x > cutL && x < cutR);
+				if (!centers.length) return;
+				const nx1 = Math.min(...centers);
+				const nx2 = Math.max(...centers);
+				const span = nx2 - nx1;
+				// 把库那三个元素（横线 + 两根圆角）摘掉（圆角就是横线前面那俩 path）
+				const corners: Element[] = [];
+				for (let prev = line.previousElementSibling; prev && prev.tagName === 'path' && corners.length < 2; prev = prev.previousElementSibling) corners.push(prev);
+				[line, ...corners].forEach((el) => el.remove());
+				const arc = document.createElementNS(NS, 'path');
+				// rx 取跨度的一半 ⇒ 改弧那步算出的 k = 1（不用缩放补偿），画出来就是标准弧高
+				arc.setAttribute('d', 'M ' + nx1.toFixed(2) + ' ' + y + ' A ' + (span / 2).toFixed(2) + ' 8 0 0 1 ' + nx2.toFixed(2) + ' ' + y);
+				arc.setAttribute('stroke', 'black');
+				arc.setAttribute('data-jianpu-triplet', String(nth));
+				tieline.appendChild(arc);
+				label.setAttribute('data-jianpu-triplet-label', String(nth));
+				label.setAttribute('data-jianpu-tuplet-n', tuplets[nth] || '3'); // 库画的是 `3`，真实数字按顺序取回（没了就退回 3）
+				label.setAttribute('x', String(((nx1 + nx2) / 2).toFixed(2)));
+				nth++;
+			});
+		}
+
+		/**
+		 * 把连音组的数字贴到它那条弧的上方（弧顶 = 弦线 − 外弧 ry），字形用 **Bravura 雕刻数字**
+		 * （`timeSig2`–`timeSig9`，跟拍号/速度数字同一套、同一个子集字体）—— 用户要求跟速度数字统一；
+		 * 度量全走 `bravuraDigitMetrics` 的常量（不依赖字体是否就绪）。
+		 * ⚠️ 这套字形**骑在基线上**（asc ≈ desc ≈ 0.25em）⇒ 基线得算成「弧顶 − 净空 − asc」，
+		 *    否则墨迹一半沉到基线下面、顶到弧上。
+		 * ⚠️ **不给 tspan 写绝对 x**：横向靠「父级 x + 锚点 middle」——库那个 `3` 的 x 就是弧心，
+		 *    而 ⑪ justify 是逐元素重写 x（只认 text 自己的 x，看不清 tspan 上的绝对 x），
+		 *    写死绝对 x 的话弧被移走、字却留在原地（实测偏左 15px，用户：「怎么还有点偏移」）。
+		 * ⚠️ 必须排在 `curveJianpuTieLines` **之后**：弧可能被「避让高音点」抬过，位置得按最终几何读。
+		 */
+		function placeJianpuTripletLabels(host: HTMLElement) {
+			const tieline = host.querySelector('svg g[sn-tag="tieline"]');
+			if (!tieline) return;
+			Array.from(tieline.querySelectorAll('text[data-jianpu-triplet-label]')).forEach((label) => {
+				const nth = label.getAttribute('data-jianpu-triplet-label');
+				const arc = tieline.querySelector('path[data-jianpu-triplet="' + nth + '"]');
+				if (!arc) return;
+				const n = label.getAttribute('data-jianpu-tuplet-n') || '3';
+				const size = bravuraDigitSize(JIANPU_TRIPLET_LABEL_SIZE);
+				const ink = bravuraDigitMetrics(n, size);
+				const put = (x: number, baseline: number) => {
+					label.textContent = '';
+					label.setAttribute('text-anchor', 'middle');
+					label.setAttribute('x', x.toFixed(2));
+					drawBravuraDigits(label, n, size, null, false, baseline);
+				};
+				// 到这一步弧已经过 `curveJianpuTieLines` = 纺锤形：上缘 ryOut、下缘 ryIn 两条共享端点的弧
+				const SP = /^M\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s*A\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([01])\s+([01])\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s*A\s+[\d.eE+-]+\s+([\d.eE+-]+)/.exec((arc.getAttribute('d') || '').trim());
+				if (!SP) {
+					// 认不出来（还没改成纺锤形）→ 退回旧行为：贴到弧顶上方
+					const m0 = /^M\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s*A\s+[\d.eE+-]+\s+([\d.eE+-]+)/.exec((arc.getAttribute('d') || '').trim());
+					if (!m0) return;
+					put(parseFloat(m0[1]), parseFloat(m0[2]) - parseFloat(m0[3]) - JIANPU_TRIPLET_LABEL_GAP - ink.asc);
+					return;
+				}
+				const x1 = parseFloat(SP[1]);
+				const y = parseFloat(SP[2]);
+				const rx = parseFloat(SP[3]);
+				const ryOut = parseFloat(SP[4]);
+				const rot = SP[5];
+				const laf = SP[6];
+				const sw = SP[7];
+				const x2 = parseFloat(SP[8]);
+				const ryIn = parseFloat(SP[10]);
+				const swBack = sw === '1' ? '0' : '1'; // 回程弧用相反 sweep，才能与上缘合成纺锤形
+				const xm = (x1 + x2) / 2;
+				// 中间为数字劈开：左右各半个纺锤，**共用同一个 rx / ry** ⇒ 两半拼起来仍是原来那条弧的上下缘，
+				// 切口处厚度自然归零（用户：「圆滑线中间劈开放个 3，同时保持圆滑线的美观性」）
+				const half = ink.total / 2 + JIANPU_TRIPLET_SPLIT_GAP;
+				const cutL = xm - half;
+				const cutR = xm + half;
+				// ⚠️ 切口必须**落在弧上**（垂直切线），不能连到弦线：`M x1 y A rx ryOut … cutL y` 的两个端点
+				//    要同时落在原椭圆上，否则浏览器只能换一条椭圆 ⇒ 画出来几乎是直线（实测弧高 0.4px）。
+				const s = Math.sqrt(Math.max(0.02, 1 - Math.pow(half / rx, 2)));
+				const oL = y - ryOut * s;
+				const iL = y - ryIn * s;
+				arc.setAttribute(
+					'd',
+					'M ' + x1 + ' ' + y + ' A ' + rx + ' ' + ryOut + ' ' + rot + ' ' + laf + ' ' + sw + ' ' + cutL + ' ' + oL.toFixed(2) + ' L ' + cutL + ' ' + iL.toFixed(2) + ' A ' + rx + ' ' + ryIn + ' ' + rot + ' ' + laf + ' ' + swBack + ' ' + x1 + ' ' + y + ' Z ' +
+						'M ' + cutR + ' ' + iL.toFixed(2) + ' L ' + cutR + ' ' + oL.toFixed(2) + ' A ' + rx + ' ' + ryOut + ' ' + rot + ' ' + laf + ' ' + sw + ' ' + x2 + ' ' + y + ' A ' + rx + ' ' + ryIn + ' ' + rot + ' ' + laf + ' ' + swBack + ' ' + cutR + ' ' + iL.toFixed(2) + ' Z'
+				);
+				// 数字嵌进缺口：横向居中到劈口，纵向墨迹底端距弦线 JIANPU_TRIPLET_LABEL_GAP
+				put(xm, y - JIANPU_TRIPLET_LABEL_GAP - ink.desc);
+			});
 		}
 
 		/**
@@ -2183,8 +2789,12 @@ function getLangSwitchHref(pathname: string) {
 		 * 这里跟变音记号同一套：横向 = 倚音墨迹右端距主数字墨迹左端 `JIANPU_GRACE_GAP`；
 		 * 纵向 = 倚音墨迹底部距主数字墨迹顶部 `JIANPU_GRACE_ABOVE`（字号靠 CSS 改成 13.3px = 12 × 20/18）。
 		 *
+		 * ⚠️ **一个音符组里可能有好几个倚音**（`{5 6}`）：库按 8px 间距摆（12px 字号下挤在一起、还串行），
+		 *    所以这里从右往左逐个摆 —— 最右那个贴住主数字，往左每个留 `JIANPU_GRACE_STEP` 的**墨迹净空**，
+		 *    整组共用同一个基线（组内最低的墨迹底端 = 目标底端）。
 		 * ⚠️ 倚音在音符组里**不是独立分组**：它自己 + 它的下划线（组内 `line[stroke-width="0.5"]`，画时值）
-		 *    都是兄弟节点 → 必须一起平移，否则会和下划线错开。
+		 *    都是兄弟节点 ⇒ 必须一起平移（下划线与倚音按**原 x 对齐**配对），否则会和下划线错开。
+		 * ⚠️ 引导弧跟着**最右**那个倚音走（弧本来就起在最后一个倚音的右下）。
 		 * ⚠️ 要排在 `fixJianpuGraceNotes` 之前（那一步会把标记弧对齐到下划线下方，弧的纵向不用这里管）。
 		 * ⚠️ 依赖字体度量 → 字体未就绪时量到的是兜底字形，故渲染完会等字体就绪再重排一次（见 renderJianpuScore 尾部）。
 		 */
@@ -2197,34 +2807,113 @@ function getLangSwitchHref(pathname: string) {
 				const m = cv.measureText(ch);
 				return { left: m.actualBoundingBoxLeft, right: m.actualBoundingBoxRight, adv: m.width, asc: m.actualBoundingBoxAscent, desc: m.actualBoundingBoxDescent };
 			};
+			const num = (el: Element, a: string) => parseFloat(el.getAttribute(a) || '0');
 			try {
 				host.querySelectorAll('svg g[sn-tag^="note-"]').forEach((g) => {
-					const grace = g.querySelector(':scope > text[font-size="12"]');
-					if (!grace) return;
+					// 倚音数字 = 组内 12px 的 text，但**排除**变音记号（那些是 Bravura 字形）
+					const graces = Array.from(g.querySelectorAll(':scope > text[font-size="12"]')).filter((t) => !/Bravura/.test(t.getAttribute('font-family') || ''));
+					if (!graces.length) return;
 					const digit = Array.from(g.querySelectorAll(':scope > text')).find((d) => d.getAttribute('font-size') === '18');
 					if (!digit) return;
-					const gi = ink(grace, grace.textContent || '');
 					const di = ink(digit, digit.textContent || '');
-					const gx = parseFloat(grace.getAttribute('x') || '0');
-					const gy = parseFloat(grace.getAttribute('y') || '0');
-					const dx = parseFloat(digit.getAttribute('x') || '0');
-					const dy = parseFloat(digit.getAttribute('y') || '0');
-					const digitInkLeft = dx - di.adv / 2 + di.left; // 数字是 text-anchor=middle
-					const dxMove = digitInkLeft - JIANPU_GRACE_GAP - (gx + gi.right);
-					const dyMove = dy - di.asc - JIANPU_GRACE_ABOVE - (gy + gi.desc);
-					// 倚音本体 + 它的下划线一起平移（横纵向都移）
-					[grace, ...Array.from(g.querySelectorAll(':scope > line[stroke-width="0.5"]'))].forEach((el) => {
-						if (el.tagName.toLowerCase() === 'text') {
-							el.setAttribute('x', String(parseFloat(el.getAttribute('x') || '0') + dxMove));
-							el.setAttribute('y', String(parseFloat(el.getAttribute('y') || '0') + dyMove));
-						} else {
-							['x1', 'x2'].forEach((a) => el.setAttribute(a, String(parseFloat(el.getAttribute(a) || '0') + dxMove)));
-							['y1', 'y2'].forEach((a) => el.setAttribute(a, String(parseFloat(el.getAttribute(a) || '0') + dyMove)));
-						}
+					const digitInkLeft = inkLR(digit, digit.textContent || '')?.[0] ?? num(digit, 'x') - di.adv / 2 + di.left; // 数字是 text-anchor=middle
+					const targetRight = digitInkLeft - JIANPU_GRACE_GAP;
+					const targetBottom = num(digit, 'y') - di.asc - JIANPU_GRACE_ABOVE;
+					// 逐个量墨迹：**横向用渲染出来的盒子**（倚音锚点是 start ⇒ 宽度就是真实墨迹宽），
+					// 拿不到就退回 canvas（见 inkLR）；纵向仍用 canvas 的墨迹高/低
+					const items = graces
+						.map((el) => {
+							const i = ink(el, el.textContent || '');
+							const b = inkLR(el, el.textContent || '');
+							const x0 = num(el, 'x');
+							return { el, i, x0, y0: num(el, 'y'), inkLeft: b ? b[0] : x0 + i.left, inkRight: b ? b[1] : x0 + i.right };
+						})
+						.sort((a, b) => a.x0 - b.x0);
+					const baseline = targetBottom - Math.max(...items.map((it) => it.i.desc));
+					// 从右往左摆：最右那个的墨迹右端贴 targetRight，往左每个再留 JIANPU_GRACE_STEP 净空
+					const moves = new Map<Element, { dx: number; dy: number }>();
+					let cursor = targetRight;
+					items
+						.slice()
+						.reverse()
+						.forEach((it) => {
+							const inkLeftWanted = cursor - (it.inkRight - it.inkLeft);
+							moves.set(it.el, { dx: inkLeftWanted - it.inkLeft, dy: baseline - it.y0 });
+							cursor = inkLeftWanted - JIANPU_GRACE_STEP;
+						});
+					// 减时线（下划线）：库写死画成「倚音锚点 → +6px」（13.3px 下盖不满墨迹），而且**同一拍里相邻
+					// 倚音同层的线要接起来**（标准记谱：两个十六分倚音共用一条下划线），范围按所盖倚音的墨迹取。
+					// ⚠️⚠️ 归属**只看 DOM 顺序**、不看 x：库是「画完这个倚音的数字，紧接着画它的下划线」，
+					//    按 x 猜在窄屏/字体没就绪时会整片错位（实测四条下划线全被判给第二个倚音 ⇒ 第一个的线消失，
+					//    用户：「刷新加载瞬间两个都有，加载好之后就成一个了」）。
+					const accs = Array.from(g.querySelectorAll(':scope > circle')).filter((c) => parseFloat(c.getAttribute('r') || '0') === 1); // 倚音自己的八度点
+					const kids = Array.from(g.children);
+					const at = items.map((it) => kids.indexOf(it.el));
+					const linesOf: Element[][][] = items.map(() => []); // [第几个倚音][第几层]
+					kids.forEach((el, k) => {
+						if (el.tagName.toLowerCase() !== 'line' || el.getAttribute('stroke-width') !== '0.5') return;
+						let gi = -1;
+						at.forEach((idx, j) => {
+							if (idx >= 0 && idx < k) gi = j; // 它前面最近的那个倚音
+						});
+						if (gi < 0) return;
+						const byLv = linesOf[gi];
+						(byLv[byLv.length] ||= []).push(el); // 层序 = DOM 序（库按 u 升序画）
 					});
-					// 标记弧只跟横向（纵向由 fixJianpuGraceNotes 对齐到下划线下方）
+					// 倚音的数字 / 八度点先跟着自己走
+					items.forEach((it) => {
+						const mv = moves.get(it.el);
+						if (!mv) return;
+						it.el.setAttribute('x', String(it.x0 + mv.dx));
+						it.el.setAttribute('y', String(it.y0 + mv.dy));
+						accs.filter((c) => Math.abs(num(c, 'cx') - it.x0) < 12).forEach((c) => c.setAttribute('cx', String(num(c, 'cx') + mv.dx)));
+					});
+					const lvCount = Math.max(0, ...linesOf.map((a) => a.length));
+					for (let lv = 0; lv < lvCount; lv++) {
+						let run: number[] = [];
+						const flush = () => {
+							const pair = run.map((gi) => ({ gi, el: linesOf[gi][lv][0] }));
+							pair.forEach(({ gi, el }) => {
+								const dy = moves.get(items[gi].el)?.dy || 0;
+								['y1', 'y2'].forEach((a) => el.setAttribute(a, String(num(el, a) + dy)));
+							});
+							const l = Math.min(...pair.map(({ gi }) => items[gi].inkLeft + (moves.get(items[gi].el)?.dx || 0)));
+							const r = Math.max(...pair.map(({ gi }) => items[gi].inkRight + (moves.get(items[gi].el)?.dx || 0)));
+							pair[0].el.setAttribute('x1', String(l));
+							pair[0].el.setAttribute('x2', String(r));
+							pair.slice(1).forEach(({ el }) => el.remove());
+							run = [];
+						};
+						linesOf.forEach((a, gi) => {
+							if (a[lv] && a[lv].length) run.push(gi);
+							else if (run.length) flush();
+						});
+						if (run.length) flush();
+					}
+					// 引导弧：库画的是**主数字左边那个 5×5 的小四分之一弧**，横向基准是 `innerX`（= 音符**时值槽的左缘**，
+					// 不是数字中心！`drawOctaveCount`/时值线都用 innerX..innerX+innerWidth 这套）⇒ 弧落在槽左缘外侧、
+					// 倚音正右方。⚠️ 两个都错过一次：整条平移 / 只挪一端 → 端点压到别的音；拿**数字中心**当基准
+					//   → 整条弧右移半个数字（≈5.7px）压到数字身上（用户：「倚音的线这不是又跑到里头去了」）。
+					// 也不能跟着 justify 缩放：那个 5px 弦会被乘上整行拉伸系数（实测 s≈5.7 ⇒ 28.6px），
+					// 再经 ⑦c 的叶片形就成了一条长圆滑线。⇒ 按**数字墨迹左端**（≈ innerX）照库的公式重画，纵向原样。
 					const arc = Array.from(g.querySelectorAll(':scope > path')).find((p) => /^M\s*[-\d.eE+]+\s+[-\d.eE+]+\s*A\s*5\s+5\s/.test((p.getAttribute('d') || '').trim()));
-					if (arc && dxMove) arc.setAttribute('d', mapPathData(arc.getAttribute('d') || '', (x) => x + dxMove));
+					if (arc) {
+						const AM = /^M\s*([-\d.eE+]+)\s+([-\d.eE+]+)\s+A\s*([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)\s+([01])\s+([01])\s+([-\d.eE+]+)\s+([-\d.eE+]+)$/.exec((arc.getAttribute('d') || '').trim());
+						if (AM) {
+							// 弧**头**（上端）对准**倚音组墨迹的中央**：一个音就是那个音的中心，两个音就是两者之间；
+							// 尾（下端）落在组的右缘（= 数字墨迹左端 − `JIANPU_GRACE_GAP`，贴着主数字）。
+							// 半径取弦长 ⇒ 仍是库那种 90° 四分之一弧（库：弦 5√2、半径 5）。
+							// ⚠️ 别改成「横跨最后一个音」那种（用户 2026-10-01 明确否掉）。
+							const first = items[0];
+							const lastIt = items[items.length - 1];
+							const gL = first.inkLeft + (moves.get(first.el)?.dx || 0);
+							const gR = lastIt.inkRight + (moves.get(lastIt.el)?.dx || 0);
+							const cx = (gL + gR) / 2;
+							const side = Math.max(2.5, gR - cx);
+							const y1 = +AM[2];
+							arc.setAttribute('d', `M ${cx.toFixed(2)} ${AM[2]} A ${side.toFixed(2)} ${side.toFixed(2)} ${AM[5]} ${AM[6]} ${AM[7]} ${gR.toFixed(2)} ${(y1 + side).toFixed(2)}`);
+						}
+					}
 				});
 			} catch {
 				/* 容器不可见时 getBBox 会抛错：保持库原样 */
@@ -2239,7 +2928,9 @@ function getLangSwitchHref(pathname: string) {
 		 * ⚠️ 倚音下划线的标记：库给它写的是 stroke-width="0.5"（音符组内独有的细线）。
 		 */
 		function fixJianpuGraceNotes(host: HTMLElement) {
-			const ARC_RE = /^M\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s*A\s*5\s+5\s+0\s+0\s+0\s+([\d.eE+-]+)\s+([\d.eE+-]+)$/;
+			// ⚠️ 半径不能用固定值：`placeJianpuGraceNotes` 会按倚音墨迹重算弦长（半径 = 弦长）⇒ 这里只要求
+			//    「一个 90° 弧（rot/laf/sweep = 0 0 0）」
+			const ARC_RE = /^M\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s*A\s*([\d.eE+-]+)\s+([\d.eE+-]+)\s+0\s+0\s+0\s+([\d.eE+-]+)\s+([\d.eE+-]+)$/;
 			host.querySelectorAll('svg g[sn-tag^="note-"]').forEach((g) => {
 				const arc = Array.from(g.querySelectorAll('path')).find((p) => ARC_RE.test((p.getAttribute('d') || '').trim()));
 				if (!arc) return;
@@ -2251,7 +2942,7 @@ function getLangSwitchHref(pathname: string) {
 				if (!(dy > 0)) return;
 				arc.setAttribute(
 					'd',
-					'M ' + m[1] + ' ' + (parseFloat(m[2]) + dy) + ' A 5 5 0 0 0 ' + m[3] + ' ' + (parseFloat(m[4]) + dy)
+					'M ' + m[1] + ' ' + (parseFloat(m[2]) + dy) + ' A ' + m[3] + ' ' + m[4] + ' 0 0 0 ' + m[5] + ' ' + (parseFloat(m[6]) + dy)
 				);
 			});
 		}
@@ -2347,6 +3038,29 @@ function getLangSwitchHref(pathname: string) {
 		}
 
 		/**
+		 * 变音记号字形的**墨迹常量**（em，× 字号）—— 为什么不用 canvas 量：
+		 * 库那份 `Bravura` 是**每次渲染都重新注入 @font-face** 的，注入的那一帧里 canvas 只会量到
+		 * 兜底字形的 .notdef 方块（宽度 = 字号）⇒ 算出来的位置整体偏 ~8px（实测 ♯ 量出 13px、实际 5px）。
+		 * 跟 `src/lib/bravura-digits.ts` 是同一个教训：**字体给不了确定度量，就用常量**。
+		 * 实测自库的 Bravura（13.3px 与 26.6px 两档一致；adv 线性，墨迹左右受 canvas 像素取整影响，误差 ≤0.5px）。
+		 */
+		const JIANPU_ACC_INK: Record<string, { l: number; r: number; asc: number; desc: number }> = {
+			'\uED60': { l: 0.075, r: 0.376, asc: 0.752, desc: 0 }, // ♭
+			'\uED61': { l: 0.075, r: 0.301, asc: 0.752, desc: 0 }, // ♮（还原号）
+			'\uED62': { l: 0.075, r: 0.376, asc: 0.827, desc: 0.075 }, // ♯
+			'\uED63': { l: 0.075, r: 0.526, asc: 0.451, desc: 0 }, // 𝄪
+			'\uED64': { l: 0.075, r: 0.677, asc: 0.752, desc: 0 }, // 𝄫
+		};
+		/** 原文里的变音记号 → 上图用的字形（`=` = 还原号） */
+		const JIANPU_ACC_GLYPH: Record<string, string> = {
+			'#': '\uED62',
+			'##': '\uED63',
+			b: '\uED60',
+			bb: '\uED64',
+			'=': '\uED61',
+		};
+
+		/**
 		 * 变音记号（升号 ♯ / 降号 ♭）：库用 Bravura 字体的 **12px** `<text>` 画在音符左上角
 		 * （`text-anchor="start"`）。库给的字号偏小 → 放大到 JIANPU_ACC_SIZE。
 		 *
@@ -2374,6 +3088,18 @@ function getLangSwitchHref(pathname: string) {
 				const m = cv.measureText(ch);
 				return { left: m.actualBoundingBoxLeft, right: m.actualBoundingBoxRight, adv: m.width, asc: m.actualBoundingBoxAscent, desc: m.actualBoundingBoxDescent };
 			};
+			/**
+			 * 变音记号字形的**墨迹常量**（em，× 字号）—— 为什么不用 canvas 量：
+			 * 库那份 `Bravura` 是**每次渲染都重新注入 @font-face** 的，注入的那一帧里 canvas 只会量到
+			 * 兜底字形的 .notdef 方块（宽度 = 字号）⇒ 算出来的位置整体偏 ~8px（实测 ♯ 量出 13px、实际 5px）。
+			 * 跟 `src/lib/bravura-digits.ts` 是同一个教训：**字体给不了确定度量，就用常量**。
+			 */
+			const inkConst = (el: Element, ch: string) => {
+				const g = JIANPU_ACC_INK[(ch || '').trim()] ?? JIANPU_ACC_INK['\uED62'];
+				// ⚠️ 用**实际渲染字号**（CSS 把 12 放大成 13.3），不是 JIANPU_ACC_SIZE
+				const size = parseFloat(getComputedStyle(el).fontSize) || JIANPU_ACC_SIZE;
+				return { left: size * g.l, right: size * g.r, adv: size * g.r, asc: size * g.asc, desc: size * g.desc };
+			};
 			try {
 				host.querySelectorAll('svg g[sn-tag^="stave-"]').forEach((stave) => {
 					const accs = Array.from(stave.querySelectorAll('g[sn-tag^="note-"] > text[font-family*="Bravura"]'));
@@ -2382,10 +3108,9 @@ function getLangSwitchHref(pathname: string) {
 						t.setAttribute('font-size', String(JIANPU_ACC_SIZE));
 						const digit = Array.from(t.parentElement!.querySelectorAll(':scope > text')).find((d) => d.getAttribute('font-size') === '18');
 						if (!digit) return;
-						const ai = ink(t, t.textContent || '');
+						const ai = inkConst(t, t.textContent || '');
 						const di = ink(digit, digit.textContent || '');
-						const digitX = parseFloat(digit.getAttribute('x') || '0');
-						const digitInkLeft = digitX - di.adv / 2 + di.left; // 数字是 text-anchor=middle
+						const digitInkLeft = parseFloat(digit.getAttribute('x') || '0') - di.adv / 2 + di.left; // 数字是 text-anchor=middle
 						// ① 横向：让「记号墨迹右端」距「数字墨迹左端」正好 JIANPU_ACC_GAP。
 						// ⚠️ **不**再拿左侧元素的 `getBBox()` 去「避让」：那是 advance 框（比墨迹宽），
 						//    八分音符那种窄间距下会把记号一路推到**自己的数字上**（实测窄屏 3/4 个记号
@@ -2406,6 +3131,64 @@ function getLangSwitchHref(pathname: string) {
 			} catch {
 				// 容器不可见时 getBBox 会抛错：跳过，保持库的原始位置（下次重排再算）
 			}
+		}
+
+		/**
+		 * 还原号（♮，原文写 `=`）：库的 `drawUpDownCount` 只会按 `upDownCount` 画升/降号
+		 * （正数升、负数降、**0 直接 return**）⇒ 它虽然符号表里有 `NaTURAL`（U+ED61），解析器却永远用不上。
+		 * 变通：`=` 交给库时按 `#` 发（保证有字形、时值权重也跟升号一致），画出来再按**记号出现顺序**
+		 * 把字形换成还原号 —— 两边顺序都是谱面顺序（库把记号 append 进所在音符组），所以按下标一一对应。
+		 */
+		function applyJianpuNaturals(host: HTMLElement, naturals: number[] = []) {
+			if (!naturals.length) return;
+			const texts = Array.from(host.querySelectorAll('svg g[sn-tag^="stave-"] g[sn-tag^="note-"] > text[font-family*="Bravura"]'));
+			naturals.forEach((n) => {
+				if (texts[n]) texts[n].textContent = '\uED61';
+			});
+		}
+
+		/**
+		 * **倚音上的**变音记号：库 `drawGraceNote` 里压根不调 `drawUpDownCount`（实测 `{#5 6}` 只出两个裸数字）
+		 * ⇒ 记号得我们自己补一个 Bravura `<text>`。摆法与 `adjustJianpuAccidentals` 同一套（按墨迹常量，
+		 * 不用 canvas —— 理由见 `JIANPU_ACC_INK`），只是基准换成**那个倚音**的墨迹，字号按库的比例 ×0.75
+		 * （库给 12px 倚音配 9px 记号）。
+		 * ⚠️ 必须排在 `adjustJianpuAccidentals` **之后**：那一步会把音符组里所有 Bravura text 当成「主数字的记号」
+		 *    去重摆（我们补的这些会被拖到主数字旁边）；排在它后面就不会被它看到。
+		 */
+		function drawJianpuGraceAccidentals(host: HTMLElement, graceAccs: string[] = []) {
+			if (!graceAccs.some(Boolean)) return;
+			const cv = document.createElement('canvas').getContext('2d');
+			const graces = Array.from(host.querySelectorAll('svg g[sn-tag^="note-"] > text[font-size="12"]')).filter((t) => !/Bravura/.test(t.getAttribute('font-family') || ''));
+			if (graces.length !== graceAccs.length) return; // 对不上就整体跳过，保持原样
+			graces.forEach((g, i) => {
+				const glyph = JIANPU_ACC_GLYPH[graceAccs[i]];
+				if (!glyph) return;
+				const cs = getComputedStyle(g);
+				const size = (parseFloat(cs.fontSize) || 12) * 0.75;
+				const gi = JIANPU_ACC_INK[glyph];
+				// 倚音数字 anchor=start ⇒ 墨迹左端 = x + aBBLeft（用渲染出来的盒子量，字体没就绪时宽度为 0，不会错）
+				const box = inkLR(g, g.textContent || '');
+				const inkLeft = box ? box[0] : parseFloat(g.getAttribute('x') || '0');
+				let asc = 0;
+				let desc = 0;
+				if (cv) {
+					cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+					const m = cv.measureText(g.textContent || '');
+					asc = m.actualBoundingBoxAscent;
+					desc = m.actualBoundingBoxDescent;
+				}
+				const el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+				el.setAttribute('data-jianpu-grace-acc', '1');
+				el.setAttribute('font-family', 'Bravura, sans-serif');
+				el.setAttribute('font-size', size.toFixed(2));
+				el.setAttribute('text-anchor', 'start');
+				el.setAttribute('x', String(inkLeft - JIANPU_ACC_GAP - size * gi.r));
+				el.setAttribute('y', String(parseFloat(g.getAttribute('y') || '0') - asc + (asc + desc) * JIANPU_ACC_CENTER_DROP - ((size * gi.desc - size * gi.asc) / 2)));
+				el.textContent = glyph;
+				// 加进倚音所在的那个音符组（x/y 都是绝对坐标，挂在组里哪个位置都一样）
+				const acc = el as SVGTextElement;
+				g.parentElement?.appendChild(acc);
+			});
 		}
 
 		/**
@@ -2463,6 +3246,23 @@ function getLangSwitchHref(pathname: string) {
 					label.setAttribute('x', String(parseFloat(label.getAttribute('x') || '0') + JIANPU_VOLTA_LABEL_DX));
 				}
 			});
+		}
+
+		/**
+		 * canvas 量一段文字的**真实墨迹**左右端（不是 `getBBox` —— 那是 advance 框）。
+		 * ⚠️ 简谱的音符数字都是 `text-anchor: middle` ⇒ 以属性 `x` 为**中心**反推墨迹左右端。
+		 * ⚠️ 字体/字号取**计算样式**（库写在属性上的 SimSun 栈会被 CSS 换成站点衬线栈）。
+		 */
+		let jianpuInkCtx: CanvasRenderingContext2D | null | undefined;
+		function jianpuTextInkLR(el: Element): { l: number; r: number } | null {
+			if (jianpuInkCtx === undefined) jianpuInkCtx = document.createElement('canvas').getContext('2d');
+			if (!jianpuInkCtx) return null;
+			const x = parseFloat(el.getAttribute('x') || 'NaN');
+			if (!Number.isFinite(x)) return null;
+			const cs = getComputedStyle(el);
+			jianpuInkCtx.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+			const m = jianpuInkCtx.measureText(el.textContent || '');
+			return { l: x - m.width / 2 + m.actualBoundingBoxLeft, r: x - m.width / 2 + m.actualBoundingBoxRight };
 		}
 
 		/**
@@ -2524,21 +3324,21 @@ function getLangSwitchHref(pathname: string) {
 				//    ⚠️ 不能把「下面的线」（时值线/下划线，在 beam 层）算进来：它比数字宽，当基准会把整行数字推右
 				//       —— 实测各行数字墨迹左端 23～43.1（极差 20px）。和弦记号/小房子/连音线同理只跟着走、不当基准。
 				//    ⚠️ 反复记号的粗线（stave 直接子层里 sw≥3 的竖线）可以当基准（用户明确允许）。
-				const cv = document.createElement('canvas').getContext('2d');
-				const inkLR = (el: Element) => {
-					if (!cv) return null;
-					const cs = getComputedStyle(el);
-					cv.font = cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
-					const m = cv.measureText(el.textContent || '');
-					const x = num(el, 'x');
-					return { l: x - m.width / 2 + m.actualBoundingBoxLeft, r: x - m.width / 2 + m.actualBoundingBoxRight };
-				};
 				const inStave = (el: Element) => !!el.parentElement && /^stave-/.test(el.parentElement.getAttribute('sn-tag') || '');
 				rows.forEach((row) => {
 					row.els.forEach((el) => {
 						const tag = el.tagName.toLowerCase();
 						if (tag === 'text' && el.getAttribute('font-size') === '18') {
-							const ink = inkLR(el);
+							const ink = jianpuTextInkLR(el);
+							if (ink && Number.isFinite(ink.l)) {
+								row.c0 = Math.min(row.c0, ink.l);
+								row.c1 = Math.max(row.c1, ink.r);
+							}
+						} else if (tag === 'text' && el.getAttribute('font-size') === '12' && !/Bravura/.test(el.getAttribute('font-family') || '')) {
+							// 倚音数字：它比该行第一个主数字还靠左 ⇒ 必须算进端点。
+							// ⚠️ 不算的话它落在 `c0` 外侧，映射是线性外插 ⇒ 会被甩到谱外（实测两个倚音时靠左
+							//    那个跑到 x = −21.6，连带它的引导弧终点也跑到 −5.5，看着像一条长圆滑线）。
+							const ink = jianpuTextInkLR(el);
 							if (ink && Number.isFinite(ink.l)) {
 								row.c0 = Math.min(row.c0, ink.l);
 								row.c1 = Math.max(row.c1, ink.r);
@@ -2560,21 +3360,378 @@ function getLangSwitchHref(pathname: string) {
 				rows.forEach((row) => {
 					if (!(row.c1 > row.c0)) return;
 					const s = (lineR - lineL) / (row.c1 - row.c0);
+					const mapX = (x: number) => lineL + (x - row.c0) * s;
 					const bars = row.els.filter((el) => el.tagName.toLowerCase() === 'line' && inStave(el));
-					const maxBar = bars.reduce((m, l) => Math.max(m, num(l, 'x1')), -Infinity);
 					const keep = new Set<Element>();
-					if (Number.isFinite(maxBar)) {
-						bars.forEach((l) => { if (num(l, 'x1') >= maxBar - 6) keep.add(l); });
-						row.els.forEach((el) => { if (el.tagName.toLowerCase() === 'circle' && parseFloat(el.getAttribute('r') || '0') > 1.7 && num(el, 'cx') >= maxBar - 14) keep.add(el); });
-					}
-					row.els.forEach((el) => {
-						if (keep.has(el)) return;
-						mapElementX(el, (x: number) => lineL + (x - row.c0) * s);
+					const isTwin = (el: Element) => el.getAttribute('data-jianpu-bar') === 'twin';
+					// 反复号（`:|`）：库画成「细 + 粗」两根紧挨着的竖线 + 两个圆点，而且**不是**我们补的同伴
+					// （没有 data-jianpu-bar）⇒ 得自己认：粗线（sw≥3）旁边有反复圆点（r>1.7 才算，八度点是 1.5）就是一组。
+					// ⚠️ 整组必须**共用一条位移**：justify 是逐元素缩放，两根线各算各的会被拉开（实测 4px → 9.4px），
+					//    后面那些按 x 聚类（≤8px）的步骤就认不出这是一对，各自被挪到中点 ⇒ 两根线重合、整组跑到谱外
+					//    （用户：「我把最后改成了反复记号，结果超出去了」）。
+					const dotEls = row.els.filter((el) => el.tagName.toLowerCase() === 'circle' && parseFloat(el.getAttribute('r') || '0') > 1.7);
+					// 行末那组线（最靠右的一组，≤ `JIANPU_BAR_PAIR_GAP` 算一组）+ 它旁边的反复号圆点：这一组**不映射**，
+					// 最后整组钉到行的右端（见下面 `endDx`）。中段的反复号不在这一组里，走 `groupOf` 那一支。
+					const endLines = (() => {
+						if (!bars.length) return [] as Element[];
+						const sorted = [...bars].sort((a, b) => num(a, 'x1') - num(b, 'x1'));
+						const right = num(sorted[sorted.length - 1], 'x1');
+						return sorted.filter((l) => right - num(l, 'x1') <= JIANPU_BAR_PAIR_GAP);
+					})();
+					const endDots = endLines.length ? dotEls.filter((d) => Math.abs(num(d, 'cx') - num(endLines[0], 'x1')) < 20) : [];
+					// ⚠️ 库是拿**它自己算出来的内容宽度**当行宽的：行不满、谱面窄的时候，行末那组会被画在行中间
+					//    甚至行外（实测同一份谱：谱宽 782 时最后一根在 780.9，谱宽 538 时挤在行中 427，
+					//    `len: 8` 那行还冲到 791.8 被 viewBox 裁掉）—— 各行「最右那根线」的位置因此各不相同
+					//    （用户：「最最后面的线在不是全宽的时候为啥会乱跑」）⇒ 一律整组平移到「行末主线 = scoreW − 10」，
+					//    组内间隔、反复号圆点距主线的距离都保持原样（`|]` 的粗线因此落在 scoreW − 7，跟库自己那套一致）。
+					const endDx = endLines.length ? scoreW - JIANPU_BAR_END_INSET - num(endLines[0], 'x1') : 0;
+					endLines.forEach((l) => keep.add(l));
+					endDots.forEach((d) => keep.add(d));
+					const repeatGroups: { lines: Element[]; dots: Element[] }[] = [];
+					bars.forEach((l) => {
+						if (parseFloat(l.getAttribute('stroke-width') || '0') < 3) return;
+						const lx = num(l, 'x1');
+						const dots = dotEls.filter((d) => Math.abs(num(d, 'cx') - lx) < 20);
+						if (!dots.length) return;
+						repeatGroups.push({ lines: bars.filter((o) => Math.abs(num(o, 'x1') - lx) <= 6), dots });
 					});
+					const groupOf = (el: Element) => repeatGroups.find((g) => g.lines.includes(el) || g.dots.includes(el));
+					const doneRepeat = new Set<object>();
+					row.els.forEach((el) => {
+						if (keep.has(el)) return; // 行末那组：整组钉到行右端（下面）
+						if (isTwin(el)) return; // 同伴线跟着主线一起挪（下面那一支）
+						const rg = groupOf(el);
+						if (rg) {
+							if (doneRepeat.has(rg)) return;
+							doneRepeat.add(rg);
+							const x0 = Math.min(...rg.lines.map((l) => num(l, 'x1')));
+							const dx = mapX(x0) - x0;
+							if (dx) [...rg.lines, ...rg.dots].forEach((e) => mapElementX(e, (x) => x + dx));
+							return;
+						}
+						// 线组（双纵线/终止线的那两根）：**整组共用一条位移** —— 各算各的会被缩放拉开
+						// （实测单小节行 s≈4 ⇒ 原本相距 3px 变 12px，用户：「两条线怎么分离了」）
+						const twin = el.nextElementSibling;
+						if (twin && isTwin(twin)) {
+							const dx = mapX(num(el, 'x1')) - num(el, 'x1');
+							[el, twin].forEach((l) => {
+								l.setAttribute('x1', String(num(l, 'x1') + dx));
+								l.setAttribute('x2', String(num(l, 'x2') + dx));
+							});
+							return;
+						}
+						mapElementX(el, mapX);
+					});
+					if (endDx) [...endLines, ...endDots].forEach((el) => mapElementX(el, (x) => x + endDx));
 				});
 			} catch {
 				// 容器不可见时 getBBox 会抛错：整体跳过，保持库的原始排版（下次重排再算）
 			}
+		}
+
+		/**
+		 * 音符自带的**固定像素装饰**：附点（`.`）和八度点（上下那几个 r=1.5 的圆点）。
+		 * 库把它们摆在「数字时值槽」的固定偏移上，而 ⑪ justify 是按**墨迹**把整行拉伸的 ⇒
+		 * 这两样都是**点**（没有宽度），偏移会被拉伸系数整倍放大：实测稀疏行（s≈5.7）附点跑到
+		 * 数字右边 38px 处、八度点也不在数字正上了（用户：「还有没有这种诡异的 bug 快一块修了」）。
+		 * ⇒ 一律按**主数字的最终位置**重摆（库本身就是这么摆的，两行都能对上）：
+		 *   · 附点：墨迹左端 = 数字墨迹右端 + JIANPU_DOT_GAP
+		 *   · 八度点：cx = 数字的 x（= 数字墨迹中心；实测 demo 里 110 个点全是 cx = 数字墨迹中心）
+		 * ⚠️ 必须排在 ⑪ justify 之后：位移是固定像素。纵向不用管（justify 只改 x）。
+		 */
+		function settleJianpuDots(host: HTMLElement) {
+			host.querySelectorAll('svg g[sn-tag^="stave-"] g[sn-tag^="note-"]').forEach((g) => {
+				const digit = Array.from(g.querySelectorAll(':scope > text')).find((d) => d.getAttribute('font-size') === '18');
+				if (!digit) return;
+				const digitX = parseFloat(digit.getAttribute('x') || '0');
+				// 八度点：r=1.5 的小圆点（倚音自己的八度点是 r=1，跟着倚音走，见 placeJianpuGraceNotes）
+				g.querySelectorAll(':scope > circle').forEach((c) => {
+					if (parseFloat(c.getAttribute('r') || '0') !== 1.5) return;
+					c.setAttribute('cx', String(digitX));
+				});
+				const din = jianpuTextInkLR(digit);
+				if (!din) return;
+				g.querySelectorAll(':scope > text').forEach((t) => {
+					if (t === digit || !/^\.+$/.test((t.textContent || '').trim())) return;
+					const ink = jianpuTextInkLR(t);
+					if (!ink) return;
+					t.setAttribute('x', String(parseFloat(t.getAttribute('x') || '0') + (din.r + JIANPU_DOT_GAP - ink.l)));
+				});
+			});
+		}
+
+		/**
+		 * 减时线（音符下面那几根时值线）：库按「线数相同的**音符组**」各画一条（组内只盖自己的音符），
+		 * 而 ⑪ justify 又是**逐元素**重写坐标 ⇒ 两者叠加出两个毛病：
+		 *   · 留头被拉伸系数乘一遍：一行的小节越少、线伸得越长（「线宽随小节宽度变化」）；
+		 *   · 同一拍里线数变化的组各画各的 → `4>3`（附点八分 + 32 分）看着是**断开的两条线**，
+		 *     而 `1/ 1//` 的第 3 条线长度也不对。
+		 * 这里在 justify 之后按**标准记谱**重画：同一条线上**首尾相接**（≤ `JIANPU_UNDERLINE_JOIN`）的线段
+		 * 合成一条，范围按所含音符的**真实墨迹**取（两端各留固定 `JIANPU_UNDERLINE_RIM`）。
+		 * 库在**拍与拍之间**本来就会留缝（实测 6.2px），所以「相接」判据只合并同一拍内的组 ✓。
+		 * ⚠️ 线的「层」按 y 认（基线 + 3 / 6 / 9，层高正好 3px）：曾经用「y 差 ≤8」当行过滤 →
+		 *    第 3 条线（基线 +9）永远被跳过，于是它一直保持库那套错长度。
+		 */
+		function refineJianpuUnderlines(host: HTMLElement) {
+			const svg = host.querySelector('svg');
+			if (!svg) return;
+			const num = (el: Element, a: string) => parseFloat(el.getAttribute(a) || 'NaN');
+			const segs = Array.from(svg.querySelectorAll('g[sn-tag="beam"] line')).map((l) => ({ el: l, x1: num(l, 'x1'), x2: num(l, 'x2'), y: num(l, 'y1') }));
+			if (!segs.length) return;
+			svg.querySelectorAll('g[sn-tag^="stave-"]').forEach((stave) => {
+				const notes: { y: number; l: number; r: number; c: number }[] = [];
+				stave.querySelectorAll('text[font-size="18"]').forEach((t) => {
+					const ink = jianpuTextInkLR(t);
+					const y = num(t, 'y');
+					if (ink && Number.isFinite(y)) notes.push({ y, l: ink.l, r: ink.r, c: (ink.l + ink.r) / 2 });
+				});
+				if (!notes.length) return;
+				const baseY = notes[0].y; // 同一行的音符共用一个基线
+				const rowSegs = segs.filter((s) => Number.isFinite(s.y) && s.y > baseY && s.y < baseY + 14);
+				if (!rowSegs.length) return;
+				const specs: { y: number; x1: number; x2: number }[] = [];
+				Array.from(new Set(rowSegs.map((s) => Math.round(s.y - baseY)))).sort((a, b) => a - b).forEach((lv) => {
+					// 同层的线段按 x 排序，首尾相接的并成一条（库在拍之间留缝 ⇒ 跨拍的不会并上）
+					const chains: { x1: number; x2: number; y: number }[] = [];
+					rowSegs
+						.filter((s) => Math.round(s.y - baseY) === lv)
+						.sort((a, b) => a.x1 - b.x1)
+						.forEach((s) => {
+							const last = chains[chains.length - 1];
+							if (last && s.x1 - last.x2 <= JIANPU_UNDERLINE_JOIN) {
+								last.x2 = Math.max(last.x2, s.x2);
+								return;
+							}
+							chains.push({ x1: s.x1, x2: s.x2, y: s.y });
+						});
+					chains.forEach((ch) => {
+						const under = notes.filter((n) => n.c >= ch.x1 - 2 && n.c <= ch.x2 + 2);
+						if (!under.length) return;
+						specs.push({ y: ch.y, x1: Math.min(...under.map((n) => n.l)) - JIANPU_UNDERLINE_RIM, x2: Math.max(...under.map((n) => n.r)) + JIANPU_UNDERLINE_RIM });
+					});
+				});
+				if (!specs.length) return;
+				const proto = rowSegs[0].el;
+				const parent = proto.parentElement;
+				rowSegs.forEach((s) => s.el.remove());
+				if (!parent) return;
+				specs.forEach((sp) => {
+					const line = proto.cloneNode(false) as Element;
+					line.setAttribute('x1', String(sp.x1));
+					line.setAttribute('x2', String(sp.x2));
+					line.setAttribute('y1', String(sp.y));
+					line.setAttribute('y2', String(sp.y));
+					parent.appendChild(line);
+				});
+			});
+		}
+
+		/**
+		 * 同一行内把**各小节线的留白统一**。库按**时值权重**分小节槽、槽内又按拍位网格摆音符（首末音未必靠边）
+		 * ⇒ 即使 ⑪e 把每根线摆到相邻墨迹的中点（逐条看左右相等），**线跟线之间**的留白也能差一倍
+		 * （同一行实测 41 / 50 / 55，用户：「每个小节线左右的宽度都不太一样，不太工整」）。
+		 * 做法：留白总量不变，只**重新分配** —— 每小节的内容当**刚性块**整体平移（块内音符间距一点不动），
+		 * 块与块之间的空白均分；行末那根竖线（库钉在行宽右端）当锚点不动。
+		 * ⚠️ 用**分段线性映射**改 x（块内 = 平移、块间 = 线性插值）：音符/减时线/连音线/小房子/倚音
+		 *    全都跟着同一个映射走，不用去认「谁属于哪一小节」。
+		 * ⚠️ 必须排在 ⑪e（连音线/三连音弧已经造好）之后、`centerJianpuBarlines` 之前：
+		 *    前者要一起映射，后者负责把线精确摆到新留白的中点。
+		 */
+		function evenJianpuBarGaps(host: HTMLElement) {
+			const svg = host.querySelector('svg');
+			if (!svg) return;
+			const num = (el: Element | null, a: string) => (el ? parseFloat(el.getAttribute(a) || 'NaN') : NaN);
+			const rows: { baseY: number; mapX: (x: number) => number }[] = [];
+			svg.querySelectorAll('g[sn-tag^="stave-"]').forEach((stave) => {
+				const baseY = num(stave.querySelector('text[font-size="18"]'), 'y');
+				// ① 每小节内容的墨迹范围（小节组里的 18px 数字 + 附点 + 延音破折号）
+				const spans = Array.from(stave.children)
+					.filter((c) => c.tagName === 'g' && /^measure-/.test(c.getAttribute('sn-tag') || ''))
+					.map((m) => {
+						const inks = Array.from(m.querySelectorAll('text[font-size="18"]'))
+							.map((t) => jianpuTextInkLR(t))
+							.filter((i): i is { l: number; r: number } => !!i);
+						return inks.length ? { l: Math.min(...inks.map((i) => i.l)), r: Math.max(...inks.map((i) => i.r)) } : null;
+					})
+					.filter((s): s is { l: number; r: number } => !!s)
+					.sort((a, b) => a.l - b.l);
+				if (spans.length < 2) return;
+				// ② 边界组的墨迹范围（竖线 ± 反复号的两个圆点）：按 x 邻近聚类（与 centerJianpuBarlines 同一套）
+				const dotEls = Array.from(stave.querySelectorAll('circle')).filter((c) => num(c, 'r') >= 1.7);
+				const clusters: { l: number; r: number }[] = [];
+				Array.from(stave.children)
+					.filter((c) => c.tagName === 'line')
+					.map((l) => num(l, 'x1'))
+					.filter(Number.isFinite)
+					.sort((a, b) => a - b)
+					.forEach((x) => {
+						const last = clusters[clusters.length - 1];
+						if (last && x - last.r <= JIANPU_BAR_PAIR_GAP) {
+							last.r = x;
+							return;
+						}
+						clusters.push({ l: x, r: x });
+					});
+				if (!clusters.length) return;
+				clusters.forEach((c) => {
+					dotEls.forEach((d) => {
+						const cx = num(d, 'cx');
+						const r = num(d, 'r');
+						if (cx > c.l - JIANPU_REPEAT_DOT_NEAR && cx < c.r + JIANPU_REPEAT_DOT_NEAR) {
+							c.l = Math.min(c.l, cx - r);
+							c.r = Math.max(c.r, cx + r);
+						}
+					});
+				});
+				const endX = clusters[clusters.length - 1].r; // 行末那组竖线（含同伴）的右端：锚点
+				const startX = spans[0].l; // 行首内容左端：锚点
+				const m = spans.length;
+				// ③ 交替成「块」：小节内容块、边界块（竖线 + 反复号的两个圆点）——
+				//    两类块都是**刚性**的（块内坐标关系一点不动），留白只在块与块之间均分 ⇒
+				//    反复号那组竖线/圆点自己不会变形，各条线的留白也完全一样。
+				const blocks: { l: number; r: number }[] = [];
+				for (let i = 0; i < m; i++) {
+					blocks.push({ l: spans[i].l, r: spans[i].r });
+					const nextL = i + 1 < m ? spans[i + 1].l : endX;
+					const after = clusters.filter((c) => c.l >= spans[i].r - 1 && c.l <= nextL + 1).sort((a, b) => a.l - b.l)[0];
+					if (!after) return;
+					blocks.push({ l: after.l, r: after.r });
+				}
+				const inner = blocks.reduce((a, b) => a + (b.r - b.l), 0);
+				const gapCount = blocks.length - 1; // 相邻块之间各一份留白：2m − 1
+				const G = (endX - startX - inner) / gapCount;
+				if (!(G > 0)) return;
+				const targets: { l: number; r: number }[] = [];
+				let cur = startX;
+				blocks.forEach((b) => {
+					targets.push({ l: cur, r: cur + (b.r - b.l) });
+					cur += b.r - b.l + G;
+				});
+				const mapX = (x: number) => {
+					if (x <= blocks[0].l || x >= endX) return x;
+					for (let i = 0; i < blocks.length; i++) {
+						const b = blocks[i];
+						if (x <= b.r) return targets[i].l + (x - b.l); // 块内：纯平移
+						const nb = blocks[i + 1];
+						if (!nb) return x;
+						if (x < nb.l) return targets[i].r + ((x - b.r) / (nb.l - b.r)) * (targets[i + 1].l - targets[i].r); // 块间：线性插值
+					}
+					return x;
+				};
+				if (Number.isFinite(baseY)) rows.push({ baseY, mapX });
+				stave.querySelectorAll('text, circle, line, path').forEach((el) => mapElementX(el, mapX));
+			});
+			if (!rows.length) return;
+			// 减时线/连音线/和弦层不在 stave 里：按 y 就近认行（与 justifyJianpuLines 同一套）
+			const layerY = (el: Element) => {
+				const tag = el.tagName.toLowerCase();
+				if (tag === 'text') return num(el, 'y');
+				if (tag === 'circle') return num(el, 'cy');
+				if (tag === 'line') return num(el, 'y1');
+				if (tag === 'path') {
+					const n = (el.getAttribute('d') || '').match(/-?\d*\.?\d+/g);
+					return n && n.length > 1 ? parseFloat(n[1]) : NaN;
+				}
+				return NaN;
+			};
+			svg.querySelectorAll('g[sn-tag="beam"] *, g[sn-tag="chord"] *, g[sn-tag="tieline"] *').forEach((el) => {
+				const y = layerY(el);
+				if (!Number.isFinite(y)) return;
+				const row = rows.reduce((best, r) => (Math.abs(r.baseY - y) < Math.abs(best.baseY - y) ? r : best));
+				mapElementX(el, row.mapX);
+			});
+		}
+
+		/**
+		 * 小节线左右留白不等：库把每小节的**内容整块居中在自己的小节槽**里，而线画在**槽边界**上 ⇒
+		 * 线左边那点空来自「上一小节内容居中后剩下的尾巴」、右边那点空来自「下一小节内容的左边距」——
+		 * 两个数出自**两个不同的小节**，必然不等（实测 14.5 vs 22.6、18.8 vs 21.7、18.6 vs 22.8；
+		 * 用户：「小节线/双纵线这些线的前面和后面空白不一样」）。
+		 * 做法：⑪ justify 之后，把每**组**线挪到「前一个墨迹右端」与「后一个墨迹左端」的**中点**。
+		 * ⚠️ 「组」按 x 邻近（≤ `JIANPU_BAR_PAIR_GAP`）聚类：单线、双纵线的两根、终止线的细 + 粗、
+		 *    库里自己画的反复号（`|:` `:|` 的两根竖线）都自然成组，整组共用一条位移（组内间距不变）。
+		 * ⚠️ 反复号的两个圆点（r≥1.7，都在竖线一侧）也归到它那一组里**一起挪**，并且算进整组的墨迹范围
+		 *    —— 不然「点」会被甩在原地，右侧留白也量不对。
+		 * ⚠️ 行末那组后面没音符 ⇒ 不动（库把它钉在行宽右端，那是它该在的位置）。
+		 */
+		function centerJianpuBarlines(host: HTMLElement) {
+			const svg = host.querySelector('svg');
+			if (!svg) return;
+			const barX = (el: Element) => parseFloat(el.getAttribute('x1') || 'NaN');
+			const num = (el: Element, a: string) => parseFloat(el.getAttribute(a) || 'NaN');
+			svg.querySelectorAll('g[sn-tag^="stave-"]').forEach((stave) => {
+				const inks: { l: number; r: number }[] = [];
+				stave.querySelectorAll('text[font-size="18"]').forEach((t) => {
+					const ink = jianpuTextInkLR(t);
+					if (ink) inks.push(ink);
+				});
+				if (!inks.length) return;
+				type Group = { lines: Element[]; dots: Element[]; left: number; right: number };
+				const groups: Group[] = [];
+				Array.from(stave.children)
+					.filter((c) => c.tagName === 'line')
+					.map((l) => ({ l, x: barX(l) }))
+					.filter((b) => Number.isFinite(b.x))
+					.sort((a, b) => a.x - b.x)
+					.forEach(({ l, x }) => {
+						const g = groups[groups.length - 1];
+						if (g && x - g.right <= JIANPU_BAR_PAIR_GAP) {
+							g.lines.push(l);
+							g.right = x;
+							return;
+						}
+						groups.push({ lines: [l], dots: [], left: x, right: x });
+					});
+				const dotEls = Array.from(stave.querySelectorAll('circle')).filter((c) => num(c, 'r') >= 1.7);
+				groups.forEach((g) => {
+					const bars = g.lines.map((l) => [num(l, 'y1'), num(l, 'y2')] as const);
+					const yTop = Math.min(...bars.map((b) => b[0]));
+					const yBot = Math.max(...bars.map((b) => b[1]));
+					g.dots = dotEls.filter((d) => {
+						const cx = num(d, 'cx');
+						const cy = num(d, 'cy');
+						return cx > g.left - JIANPU_REPEAT_DOT_NEAR && cx < g.right + JIANPU_REPEAT_DOT_NEAR && cy > yTop - 4 && cy < yBot + 4;
+					});
+					g.dots.forEach((d) => {
+						const r = num(d, 'r');
+						const cx = num(d, 'cx');
+						g.left = Math.min(g.left, cx - r);
+						g.right = Math.max(g.right, cx + r);
+					});
+					const prev = inks.filter((n) => n.r <= g.left).sort((a, b) => b.r - a.r)[0];
+					const next = inks.filter((n) => n.l >= g.right).sort((a, b) => a.l - b.l)[0];
+					if (!prev || !next) return;
+					const dx = (prev.r + next.l) / 2 - (g.left + g.right) / 2;
+					if (!Number.isFinite(dx) || !dx) return;
+					[...g.lines, ...g.dots].forEach((el) => {
+						if (el.tagName === 'line') {
+							el.setAttribute('x1', String(num(el, 'x1') + dx));
+							el.setAttribute('x2', String(num(el, 'x2') + dx));
+						} else {
+							el.setAttribute('cx', String(num(el, 'cx') + dx));
+						}
+					});
+				});
+			});
+		}
+
+		/**
+		 * 元素渲染出来的**横向墨迹**（绝对坐标 `[左, 右]`）—— 用 `getBBox()`。
+		 * ⚠️ 为什么不用 canvas 量：字体没就绪时 canvas 会**静默落到兜底字形**（.notdef 方块 = 字号那么大），
+		 *    而库那份 `Bravura` 是**渲染时才注入 @font-face** 的，同一帧里就可能拿不到字形
+		 *    （实测 ♯ 量出 13px、实际 5px ⇒ 变音记号整体左偏 8px，倚音也被摆到主数字身上）；
+		 *    `getBBox()` 量的是**已经画出来的东西**，拿不到字形时宽度为 0 ⇒ 天然不会错。
+		 * ⚠️ 纵向不能用它：SVG 文本的盒子高度是**行盒**（含字体 ascent/descent），不是墨迹高。
+		 * 容器不可见时 `getBBox()` 会抛错 → 返回 null，调用方退回 canvas 度量。
+		 */
+		function inkLR(el: Element, _ch: string): [number, number] | null {
+			try {
+				const b = (el as SVGGraphicsElement).getBBox();
+				if (b.width > 0) return [b.x, b.x + b.width];
+			} catch {
+				/* 落到 null */
+			}
+			return null;
 		}
 
 		/** 把元素里所有「绝对 x 坐标」按 map 重写：text@x / circle@cx / line@x1,x2 / path@d */
@@ -2628,15 +3785,156 @@ function getLangSwitchHref(pathname: string) {
 			return out.join(' ');
 		}
 
+		/**
+		 * 小节线按围栏原文**精确对应**（用户要求）：
+		 *   `|`  → 小节线（一根细线）
+		 *   `||` → 双纵线（两根细线）
+		 *   `|]` → 终止线（细 + 粗）
+		 *
+		 * ⚠️ 库只认 `|`：`||` / `|]` 都被它当普通 `|`；而且它**永远**在行末补一对「细 + 粗」。
+		 *    所以这里按「原文里记号的顺序」对着库画出来的线逐个修正 —— 行内的小节线按第 1..n−1 个记号，
+		 *    行末那对按**最后一个记号**重塑；原文末尾没有记号就把那对整组去掉。
+		 * ⚠️ 补出来的第二根打 `data-jianpu-bar="twin"`：`justifyJianpuLines` 里它必须跟主线
+		 *    **共用一条位移**（各算各的会被缩放拉开 —— 单小节行 s≈4 时 3px 会变 12px，用户实测「两条线分离了」）。
+		 */
+		function shapeJianpuBarlines(host: HTMLElement, rows: { measures: string[]; tokens: (string | null)[] }[]) {
+			const svg = host.querySelector('svg') as SVGSVGElement | null;
+			if (!svg || !rows.length) return;
+			const dx = JIANPU_BAR_TWIN_DX;
+			const setWidth = (l: SVGLineElement, w: number) => l.setAttribute('stroke-width', String(w));
+			/** 给某根线补同伴（克隆它的 y 与描边样式，只改 x 与粗细） */
+			const addTwin = (line: SVGLineElement, thick: boolean) => {
+				line.setAttribute('data-jianpu-bar', 'main');
+				const twin = line.cloneNode(true) as SVGLineElement;
+				const x = (v: string) => parseFloat(line.getAttribute(v) || '0') + dx;
+				twin.setAttribute('data-jianpu-bar', 'twin');
+				twin.setAttribute('x1', String(x('x1')));
+				twin.setAttribute('x2', String(x('x2')));
+				setWidth(twin, thick ? 3 : 1);
+				line.insertAdjacentElement('afterend', twin);
+			};
+			// 一行一条地对着 planJianpuBars 给的结构修（库每行都补了根粗线，那根不要）
+			Array.from(svg.querySelectorAll('g[sn-tag^="stave-"]')).forEach((stave, si) => {
+				const row = rows[si];
+				if (!row) return;
+				const bars = (Array.from(stave.querySelectorAll(':scope > line')) as SVGLineElement[]).sort(
+					(a, b) => parseFloat(a.getAttribute('x1') || '0') - parseFloat(b.getAttribute('x1') || '0')
+				);
+				if (!bars.length) return;
+				const x1 = (l: SVGLineElement) => parseFloat(l.getAttribute('x1') || '0');
+				const sw = (l: SVGLineElement) => parseFloat(l.getAttribute('stroke-width') || '0');
+				// 反复号的两个圆点（r=1.8）——用来把「反复号的那对竖线」和「库在行末补的细+粗」区分开
+				const dots = Array.from(stave.querySelectorAll('circle')).filter((c) => parseFloat(c.getAttribute('r') || '0') >= 1.7);
+				const nearDot = (x: number) => dots.some((d) => Math.abs(parseFloat(d.getAttribute('cx') || '0') - x) < 14);
+				// 行末那根「粗」是库给每行都加的收尾装饰 → 摘掉（真终止线由下面按记号自己补）
+				// ⚠️ 反复号（`:|`）也是「细 + 粗」挨着，而且它自带圆点 ⇒ 靠圆点区分，别把反复号的粗线当成收尾装饰删掉
+				const last = bars[bars.length - 1];
+				const prev = bars[bars.length - 2];
+				if (prev && x1(last) - x1(prev) <= dx + 1 && sw(last) >= 3 && !nearDot(x1(last))) {
+					last.remove();
+					bars.pop();
+				}
+				// 按 x 邻近聚成「边界组」：一根单独的小节线、双纵线/终止线的两根、反复号的两根 + 下一个小节的起始线
+				const groups: SVGLineElement[][] = [];
+				bars.forEach((l) => {
+					const g = groups[groups.length - 1];
+					if (g && x1(l) - x1(g[g.length - 1]) <= JIANPU_BAR_PAIR_GAP) g.push(l);
+					else groups.push([l]);
+				});
+				// 一条边界线（组）↔ 一个小节后面的记号（null = 原文没写 → 这行不该有线）
+				groups.forEach((g, k) => {
+					const token = row.tokens[k];
+					// 反复号（组里有粗线）：库自己画的「两根竖线 + 两个圆点」原样保留，
+					// 但**下一个小节的起始小节线**是多余的（库每小节都画一根）⇒ 删掉它，否则看着像三根线。
+					const thick = g.find((l) => sw(l) >= 3);
+					if (thick) {
+						const mate = g.filter((l) => l !== thick).sort((a, b) => Math.abs(x1(a) - x1(thick)) - Math.abs(x1(b) - x1(thick)))[0];
+						g.forEach((l) => {
+							if (l !== thick && l !== mate) l.remove();
+						});
+						return;
+					}
+					if (!token) {
+						g.forEach((l) => l.remove());
+						return;
+					}
+					const line = g[0];
+					g.slice(1).forEach((l) => l.remove());
+					setWidth(line, 1);
+					line.removeAttribute('data-jianpu-bar');
+					if (token === '|]') addTwin(line, true);
+					else if (token === '||') addTwin(line, false);
+				});
+			});
+		}
+
+		/**
+		 * 等**库注入的那份 `Bravura`**（变音记号 / 倚音字形用的就是这个族，跟我们自己的
+		 * `Bravura-Digits` 是两码事）真正可用后回调一次。
+		 *
+		 * ⚠️ 为什么必须单独等它：`whenBravuraReady` 探的是 `Bravura-Digits`（拍号/速度数字用），
+		 *    而库那份 `Bravura` 是**渲染时才注入 @font-face**、就绪得更晚 ⇒ ⑧（变音记号）/⑦（倚音）
+		 *    量墨迹会量到**兜底字形的 .notdef 方块**（实测 ♯ 量出 13px、实际只有 5px ⇒ 记号整体
+		 *    左偏 8px、倚音被摆到主数字身上）。
+		 * ⚠️ 用 `setTimeout` 轮询而不是 rAF：后台标签页里 rAF 不触发（同 bravura-digits.ts）。
+		 */
+		function whenScoreBravuraReady(cb: () => void) {
+			const probe = '\uED62'; // 升号（库的 Bravura 里就有）
+			const ready = () => {
+				try {
+					return document.fonts.check('13px Bravura', probe);
+				} catch {
+					return false;
+				}
+			};
+			try {
+				document.fonts.load('13px Bravura', probe).catch(() => {
+					/* 失败就靠轮询收尾 */
+				});
+			} catch {
+				/* 环境不支持就靠轮询 */
+			}
+			let tries = 0;
+			const poll = () => {
+				if (ready()) {
+					cb();
+					return;
+				}
+				if (++tries < 12) window.setTimeout(poll, 250);
+			};
+			poll();
+		}
+
 		/** 渲染单个谱面（幂等：成功后会清空容器，可安全用于宽度变化后的重排） */
 		function renderJianpuScore(host: HTMLElement, SimpleNotation: any): boolean {
 			const raw = host.dataset.jianpu || '';
 			if (!raw) return false;
 			const { info, lyric, score } = parseJianpuSource(raw);
 			if (!score) return false;
+			delete host.dataset.jianpuTitleStripped;
+			// 标题 / 信息到底写没写：库里信息区是按「标题 + 三行」固定留高的，标题空着它也照留，
+			// 所以把「有没有」记在 dataset 上，渲染完由 compactJianpuHead 把多出来那截收掉。
+			const hasTitle = !!(info.title || '').trim();
+			const hasInfo = ['composer', 'lyricist', 'key', 'beat', 'time', 'tempo'].some((k) => String((info as any)[k] ?? '').trim());
+			host.dataset.jianpuHasTitle = hasTitle ? '1' : '0';
+			host.dataset.jianpuHasInfo = hasInfo ? '1' : '0';
 			host.dataset.jianpuWrap = info.wrap || '';
 			host.dataset.jianpuTime = (info.time || '').trim(); // 速度记号前的音符符号要用它决定（全/二分/四分…）
 			const perLine = measuresPerLine(host);
+			// 谱面结构：每行的小节 + 每条小节线后面的记号（`|` / `||` / `|]` / null=没写）
+			const barRows = planJianpuBars(score, perLine);
+			// 连音组的 N（`2(`–`9(`）：库只认 `3(` ⇒ 交给库时一律写 `3(`，真实数字按出现顺序记在这儿，
+			// 由 `styleJianpuTriplets` 取回来当标签（标签本来就会被换成 Bravura 字形）
+			const tuplets: string[] = [];
+			// 还原号（`=`）在**带变音记号的音符**里的下标（库只能画升/降号，见 applyJianpuNaturals）
+			const naturals: number[] = [];
+			// 倚音上的变音记号（按倚音出现顺序，空串 = 没记号）——库不画，见 drawJianpuGraceAccidentals
+			const graceAccs: string[] = [];
+			// 默认时值（`len:` 的分母，不写 = 4 = 四分音符）：音符时值都相对它
+			const lenDen = (() => {
+				const m = /(\d+)\s*$/.exec(String(info.len ?? ''));
+				return m ? +m[1] : 4;
+			})();
 			host.dataset.jianpuPerLine = String(perLine);
 			host.dataset.jianpuWidth = String(Math.round(host.clientWidth || 736));
 			// ⚠️ simple-notation 内部用全局运行时（SNRuntime）：同页多个实例会互相覆盖。
@@ -2664,7 +3962,10 @@ function getLangSwitchHref(pathname: string) {
 				});
 				const data: any = {
 					info: {
-						title: info.title || '',
+						// ⚠️ 标题没写也给个空白占位：库里「有没有标题」会改变信息行的摆法（没标题时它把第一行
+						// 信息摆到标题的位置上、其余留在原处 ⇒ 信息行之间空一大块）。给占位 = 几何跟「有标题」
+						// 完全一致，后面几步微调也都按这个基准调；最后 compactJianpuHead 再把它连空白一起收掉。
+						title: hasTitle ? info.title : '\u00a0',
 						composer: info.composer,
 						lyricist: info.lyricist,
 						key: info.key,
@@ -2672,7 +3973,10 @@ function getLangSwitchHref(pathname: string) {
 						time: info.time,
 						tempo: info.tempo,
 					},
-					score: stripJianpuChords(wrapJianpuScore(score, perLine)),
+					// ⚠️ 交给库之前：① 空格也当音符分隔符（用户不想老打逗号）；② 小节线一律给它单竖线
+					//    （库只认 `|`，还会把 `|]` 里的 `]` 另当成一个小节边界 → 凭空多一根线）。
+					//    记号本身由 `shapeJianpuBarlines` 按 barRows 里的记号重塑，这里丢掉这层信息没关系。
+					score: normalizeJianpuNotes(barRows.map((r) => r.measures.join('|')).join('\n'), lenDen, tuplets, naturals, graceAccs),
 					lyric: lyric || undefined,
 				};
 				sn.loadData(data);
@@ -2692,6 +3996,8 @@ function getLangSwitchHref(pathname: string) {
 				}
 				// ② 去掉冗余排版：小节号 + 每句开头的起始小节线
 				cleanJianpuSvg(host);
+				// ②a1 行内小节线：按围栏原文精确对应（`|` 单线 / `||` 双纵线 / `|]` 终止线）
+				shapeJianpuBarlines(host, barRows);
 				// ②b 信息行：去掉「作曲: 」前缀（只留名字）
 				stripJianpuInfoLabels(host);
 				// ②c 信息区：字号 14 → 16（𝅘𝅥 18 → 20.5），并解掉 𝅘𝅥 上写死的 y
@@ -2715,22 +4021,53 @@ function getLangSwitchHref(pathname: string) {
 				centerJianpuInfoVertically(host);
 				// ⑤ 反复记号的两个点收拢
 				tightenJianpuRepeatDots(host);
-				// ⑥ 连音线弧度：库算出来的太平（跨度×0.08），放大到看得出的弧
+				// ⑩ 反复「小房子」：整体右下移一点
+				shiftJianpuVolta(host);
+				// ⑪ 每行首末墨迹贴齐左右边界（坐标重写式 justify，几何都定下来之后再动）
+				justifyJianpuLines(host);
+				// ⑪b 音符自带的固定像素装饰（附点、八度点）：按主数字的最终位置重摆
+				//     （必须在 justify 之后：justify 会把这些偏移乘上整行拉伸系数）
+				settleJianpuDots(host);
+				// ⑪c 减时线：同层首尾相接的线段并成一条，长度按音符墨迹固定（justify 会按拉伸系数把它乘长）
+				refineJianpuUnderlines(host);
+				// ⑪d 连音组：库画的方括号换成「一条圆滑线 + 上面一个小数字」
+				//    ⚠️ 必须排在 ⑪e 之前：库那两个圆角 path 的 d 是「单弧」形状，会被改弧那步当成连音线
+				//    ⚠️ 必须排在 ⑪ justify **之后**：弧的 rx 在 justify 里只跟着端点跑、**不跟着缩放**，
+				//       而 SVG 渲染器发现 rx < 半弦长时会把整个椭圆**等比放大**补齐 ⇒ 行被拉伸 2.3 倍时
+				//       弓高被放大成 16.8px（弧又粗又盖住数字）。放在后面就是按**最终跨度**造弧。
+				styleJianpuTriplets(host, tuplets);
+				// ⑪e 连音线弧度：库算出来的太平（跨度×0.08），按最终跨度重画成纺锤形
 				curveJianpuTieLines(host);
+				// ⑪e 后：连音组的数字贴到它那条弧的上方（弧可能刚被避让高音点的逻辑抬过）
+				placeJianpuTripletLabels(host);
+				// ⑪f 同一行内把各小节线的留白统一（内容当刚性块整体平移，块间空白均分）
+				evenJianpuBarGaps(host);
+				// ⑪g 小节线挪到相邻音符墨迹的中点（库画在槽边界上，前后留白来自两个不同小节 ⇒ 必然不等）
+				centerJianpuBarlines(host);
 				// ⑦ 倚音：按真实墨迹重新定位（本体 + 下划线一起，排在标记弧对齐之前）
+				//    ⚠️ 必须排在**所有横向位移之后**：⑦ 里摆的是 JIANPU_GRACE_GAP/STEP 这种固定像素的净空，
+				//    放在 ⑪ justify 之前会被整行的拉伸系数乘一遍（同一份谱 s 到 2.5 ⇒ 间隙 4px 变 10px，
+				//    两个倚音时靠左那个直接跑到谱外 —— 用户：「又被 bug 了，CD 组的倚音被甩到外边去了」）。
 				placeJianpuGraceNotes(host);
 				// ⑦b 倚音标记弧跟着倚音的下划线往下走（有下划线时会撞在一起）
 				fixJianpuGraceNotes(host);
 				// ⑦c 倚音引导线：改成两端细中间粗的叶片形（和连音线同一套画法）
 				taperJianpuGraceArcs(host);
-				// ⑧ 变音记号：左移 + 放大（库给的偏小、且贴着音符数字）
+				// ⑪h 还原号：`=` 交给库时是按 `#` 发的，这一步换成真正的还原字形（得排在 ⑧ 量墨迹之前）
+				applyJianpuNaturals(host, naturals);
+				// ⑧ 变音记号：按真实墨迹摆到数字左上角（库给的偏小、且贴着音符数字）
+				//    ⚠️ 必须排在**所有横向位移之后**：⑪ justify 会给整行乘一个拉伸系数，记号与数字的间隙也跟着被乘
+				//       —— 实测同一份谱（行不满时 s 到 2.5）间隙从 −1px 变成 15.6px，窄屏下记号离自己的音符很远
+				//       （用户：「符号按理说该跟着音符走吧，怎么宽度一窄了变音记号感觉没变化」）。
+				//    又要排在 ⑫ centerJianpuScore 之前：它移动的是最左墨迹，居中得用挪完的位置算。
 				adjustJianpuAccidentals(host);
-				// ⑩ 反复「小房子」：整体右下移一点
-				shiftJianpuVolta(host);
-				// ⑪ 每行首末墨迹贴齐左右边界（坐标重写式 justify，几何都定下来之后再动）
-				justifyJianpuLines(host);
+				// ⑦d 倚音上的变音记号：库不画，用同一套墨迹常量自己补（必须排在 ⑧ 之后）
+				drawJianpuGraceAccidentals(host, graceAccs);
 				// ⑫ 删掉谱首小节线后左侧留白变大 → 按实际墨迹重新居中
 				centerJianpuScore(host);
+				// ⑬ 谱首留白：标题空着就不给它留位置（信息跟上来），信息也没有就直接跟谱
+				//    ⚠️ 必须排在各步之后：它是按「最终几何」整体上移 + 收 viewBox 高度的
+				compactJianpuHead(host);
 				// ⚠️ Bravura 的 @font-face 是**库在渲染时才注入**的、且字体是异步加载的：
 				//    字体就绪之前，canvas 量到的是兜底字体的字形宽度 → 变音记号会按错误宽度定位
 				//    （实测间隙 1.4 / 2.9 / 6.0 / 10.0px 忽大忽小）。所以字体就绪后再整体重排一次。
@@ -2745,6 +4082,18 @@ function getLangSwitchHref(pathname: string) {
 					host.dataset.jianpuFontRetry = '1';
 					whenBravuraReady(() => {
 						if (host.isConnected) renderJianpuScore(host, SimpleNotation);
+					});
+				}
+				// ⚠️ 上面那次等的是 **Bravura**；但**音符数字本身用的是站点的衬线 web font**，它也是异步加载的 ⇒
+				//    ⑦（倚音）/⑧（变音记号）量墨迹会拿到兜底字形的宽度（实测差 ~8px：记号歪向左边、倚音被摆到
+				//    主数字身上、引导线也压住数字 —— 用户：「D 的倚音线和音符 6 重叠了」）。所以「页面用到的字体全部
+				//    就绪」后再整体重排一次（dataset 标记保证只排这一轮，不会来回循环）。
+				if (!host.dataset.jianpuFontRetryAll) {
+					host.dataset.jianpuFontRetryAll = '1';
+					whenScoreBravuraReady(() => {
+						Promise.resolve(document.fonts?.ready).then(() => {
+							if (host.isConnected) renderJianpuScore(host, SimpleNotation);
+						});
 					});
 				}
 				return true;

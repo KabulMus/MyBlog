@@ -125,7 +125,7 @@ const editorConfig = {
 				<form class="editor-form" id="fm-form" autocomplete="off">
 					<div class="fm-row fm-row--title is-post-meta">
 						<label for="fm-title">标题</label>
-						<input id="fm-title" class="fm-title" type="text" />
+						<input id="fm-title" class="fm-title" type="text" autocomplete="off" />
 					</div>
 					<div class="fm-row">
 						<label for="fm-date">日期</label>
@@ -278,8 +278,14 @@ const editorConfig = {
 			<div class="editor-modal-card editor-modal-card--form" role="dialog" aria-modal="true" aria-labelledby="new-modal-title">
 				<h3 class="editor-modal-title" id="new-modal-title">新建文章</h3>
 				<div class="np-grid">
-					<div class="fm-row is-post-meta"><label for="np-title-zh">中文标题</label><input id="np-title-zh" class="fm-title" type="text" /></div>
-					<div class="fm-row is-post-meta"><label for="np-title-en">English title</label><input id="np-title-en" class="fm-title" type="text" /></div>
+					<div class="fm-row is-post-meta"><label for="np-title-zh">中文标题</label><input id="np-title-zh" class="fm-title" type="text" autocomplete="off" /></div>
+					<div class="fm-row is-post-meta">
+						<label for="np-title-en">English title</label>
+						<input id="np-title-en" class="fm-title" type="text" autocomplete="off" />
+						<button type="button" class="editor-btn editor-btn--icon" id="np-title-tr" aria-label="AI 翻译成英文">
+							<svg viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.25" stroke-miterlimit="10" aria-hidden="true"><path d="M7.5,1.41c.13,0,.24.09.27.21.1.38.22.75.38,1.11.4.94.96,1.76,1.66,2.46.7.7,1.52,1.26,2.46,1.66.36.15.73.28,1.11.38.12.03.21.14.21.27s-.09.24-.21.27c-.38.1-.75.22-1.11.38-.94.4-1.76.96-2.46,1.66-.7.7-1.26,1.52-1.66,2.46-.15.36-.28.73-.38,1.11-.03.12-.14.21-.27.21-.13,0-.24-.09-.27-.21-.1-.38-.22-.75-.38-1.11-.4-.94-.96-1.76-1.66-2.46-.7-.7-1.52-1.26-2.46-1.66-.36-.15-.73-.28-1.11-.38-.12-.03-.21-.14-.21-.27,0-.13.09-.24.21-.27.38-.1.75-.22,1.11-.38.94-.4,1.76-.96,2.46-1.66.7-.7,1.26-1.52,1.66-2.46.15-.36.28-.73.38-1.11.03-.12.14-.21.27-.21Z" /></svg>
+						</button>
+					</div>
 					<div class="fm-row"><label for="np-slug">URL 后缀</label><input id="np-slug" type="text" placeholder="留空按英文标题生成" /></div>
 					<div class="fm-row">
 						<label for="np-when">日期</label>
@@ -811,6 +817,12 @@ const editorConfig = {
 				btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 			}
 
+			/** 「无主 tag」判定：配了 cats、而配的那些分类一个都不在选中里 ⇒ 它已经没地方挂了 */
+			const isOrphanTag = (key: string, cats: string[]) => {
+				const def = config.tags.find((t) => t.key === key);
+				return !!def && def.cats.length > 0 && def.cats.every((c) => !cats.includes(c));
+			};
+
 			/** 标签那排：候选 = 当前分类里有的（分类一变就得重画这排，所以拎出来单独一份） */
 			function renderTagChips() {
 				const catNow = strArray(frontmatter.category);
@@ -900,7 +912,14 @@ const editorConfig = {
 					toggleChip(btn, next.includes(key));
 					// ⚠️ 只有分类会牵动「哪些 tag 可选」⇒ 那时才重画标签那排；其余一律就地改，
 					//    被点的这枚留在原地，过渡才跑得起来。
-					if (group === 'category') renderTagChips();
+					if (group === 'category') {
+						// 取消分类时，把那分类专属的 tag 一并撤掉：标签那排已经不显示它了，
+						// 值再留着的话文章上照样挂着这枚 tag
+						const tagNow = strArray(frontmatter.tags);
+						const kept = tagNow.filter((k) => !isOrphanTag(k, next));
+						if (kept.length !== tagNow.length) frontmatter.tags = kept.length ? kept : undefined;
+						renderTagChips();
+					}
 					setDirty(true);
 				});
 			}
@@ -964,7 +983,7 @@ const editorConfig = {
 				},
 				jianpu: {
 					kind: 'fence',
-					source: ['```jianpu', 'title: ', 'key: C', 'beat: 4', 'time: 4', 'tempo: 90', '', '{C}1,2,3,4|', '```'].join('\n'),
+					source: ['```jianpu', 'title: ', 'key: C', 'beat: 4', 'time: 4', 'tempo: 90', '', '1 2 3 4|5 6 7 1^|]', '```'].join('\n'),
 				},
 				image: { kind: 'image', source: '![图片说明](/images/2026-01-01-slug-name.webp)' },
 				table: {
@@ -1362,9 +1381,39 @@ const editorConfig = {
 					const next = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
 					npPick[group] = next;
 					toggleChip(btn, next.includes(key));
-					if (group === 'category') renderNewTagChips(); // 改分类要重算可选标签
+					if (group === 'category') {
+						npPick.tags = npPick.tags.filter((k) => !isOrphanTag(k, next)); // 同上：分类没了，专属 tag 也不留
+						renderNewTagChips();
+					}
 				});
 			}
+
+			// 新建弹窗里「英文标题」那枚：只翻标题。服务端走的还是 translateTitle
+			// （提示词和 TRANSLATION-STYLE.md 都是顶栏那套，译名跟正文一致）。
+			const npTitleTrBtn = el<HTMLButtonElement>('np-title-tr');
+			npTitleTrBtn.addEventListener('click', async () => {
+				const src = npTitleZh.value.trim();
+				if (!src) { npError.textContent = '先写中文标题'; npTitleZh.focus(); return; }
+				npError.textContent = '';
+				npTitleTrBtn.disabled = true;
+				try {
+					const res = await fetch(api('/translate/title'), {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ title: src }),
+					});
+					const out = (await res.json().catch(() => ({}))) as { title?: string; error?: string };
+					if (!res.ok) { npError.textContent = '翻译失败：' + (out.error ?? res.status); return; }
+					const got = String(out.title ?? '').trim();
+					if (!got) { npError.textContent = '没翻出东西，再点一次'; return; }
+					npTitleEn.value = got;
+					toast('英文标题：' + got);
+				} catch (err) {
+					npError.textContent = '翻译失败：' + String((err as Error)?.message ?? err);
+				} finally {
+					npTitleTrBtn.disabled = false;
+				}
+			});
 
 			function openNewModal() {
 				npPick = { category: ['essays'], tags: [], warning: [] };

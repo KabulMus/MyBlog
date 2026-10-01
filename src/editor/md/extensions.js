@@ -14,7 +14,12 @@ export const editorExtensions = [
 	//    （点开一个链接想改文字，结果跳去别的网站）⇒ 普通点击只放光标，想打开走
 	//    弹层里的「打开」或 Ctrl/⌘ + 点击（index.astro 里自己接管）。
 	//    linkOnPaste: true = 选中文字后直接粘贴一个网址就成链接，保留。
-	StarterKit.configure({ codeBlock: false, link: { openOnClick: false, linkOnPaste: true } }),
+	//    落点横线（原生拖动，比如拖选中的文字）改成站点主色 —— 选项名是 dropcursor。
+	StarterKit.configure({
+		codeBlock: false,
+		link: { openOnClick: false, linkOnPaste: true },
+		dropcursor: { color: 'var(--primary-blue)', width: 2 },
+	}),
 	Markdown.configure({ html: false, linkify: false, breaks: false, tightLists: true }),
 	RawBlock,
 	// 行内特殊样式：<mark>/<sup>/<sub>/<kbd>/<ruby>（真格式）+ 脚注引用 [^1]

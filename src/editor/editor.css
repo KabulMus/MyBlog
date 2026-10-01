@@ -693,6 +693,47 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 .md-block-head > .md-block-mini { margin-left: auto; }
 .md-block-head > .md-block-mini + .md-block-mini { margin-left: 0; }
 
+/* 卡片头的拖动手柄（拖动逻辑在 block-views.js，是**手搓**的 pointer 拖动）。
+   没有可见文字 ⇒ 含义靠 aria-label；配色沿用 mini 按钮那套 hover 转主色。
+   光标：悬停＝手掌（pan），按住拖＝抓住（closehand）—— 跟系统那套光标一个路子，
+   两张图在 src/assets/ 里（24×24，手铺满整张图，热点压在掌心）。 */
+.md-block-grip {
+	flex: 0 0 auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	margin-left: -3px;
+	color: var(--text-sub);
+	opacity: 0.6;
+	cursor: url('../assets/pan.png') 12 12, grab;
+	border-radius: 5px;
+	transition: color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+.md-block-grip svg { width: 15px; height: 15px; }
+.md-block-grip:hover { color: var(--primary-blue); background: var(--color-blue-bg); opacity: 1; }
+/* 正在被拖的那张卡片低调一点，好看出拖的是哪一块 */
+.md-block.is-dragging { opacity: 0.5; }
+
+/* 手搓拖动：**按下那一刻**就把整页光标锁成「抓住」，谁都不许抢（cursor 本身是继承的，
+   但页面里不少元素自己写了 cursor ⇒ 拿 `*` + !important 压住）。松手（或取消）才还回手掌。 */
+html.is-card-dragging,
+html.is-card-dragging * {
+	cursor: url('../assets/closehand.png') 12 12, grabbing !important;
+}
+html.is-card-dragging { user-select: none; }
+
+/* 手搓拖动的落点线（原生那套 dropCursor 只管原生拖动，这条得自己画） */
+.md-drop-line {
+	position: absolute;
+	height: 2px;
+	background: var(--primary-blue);
+	border-radius: 1px;
+	pointer-events: none;
+	z-index: 60;
+}
+
 .md-block-mini,
 .md-field-add {
 	flex: 0 0 auto;

@@ -4,15 +4,15 @@ title: 'My website is finally ready!!'
 date: '2026-08-05T20:12'
 draft: false
 ai: true
-category: ['essays', 'studio']
-tags: ['article', 'code']
+category: ['studio']
+tags: ['code']
 ---
 
 ## Come check it out!!
 
-Main site: **[www.ethan929.com](https://www.ethan929.com/en-US)**
+Main site: [**www.ethan929.com**](https://www.ethan929.com/en-US)
 
-Blog: **[blog.ethan929.com](https://blog.ethan929.com/en-US)**
+Blog: [**blog.ethan929.com**](https://blog.ethan929.com/en-US)
 
 ## Some ramblings
 
@@ -28,7 +28,7 @@ i dunno. maybe just for fun—don't you think having your own domain and your ow
 
 ## Why does this site exist?
 
-Hmm... At first I just wanted a personal site + tool site to replace the messy pile of web tools I used while editing videos (plus an interactive [pitch PDF](/docs/2026-08-05-大调各音级一览.pdf) that I laid out in InDesign in literally half a minute<sup>???</sup>). But as I went along, features just kept piling up, and it turned into a personal site + tool site + blog + channel tracker + an **I-love-Charlie** site + ... (?)
+Hmm... At first I just wanted a personal site + tool site to replace the messy pile of web tools I used while editing videos (plus an interactive [pitch PDF](/docs/2026-08-05-%E5%A4%A7%E8%B0%83%E5%90%84%E9%9F%B3%E7%BA%A7%E4%B8%80%E8%A7%88.pdf) that I laid out in InDesign in literally half a minute<sup>???</sup>). But as I went along, features just kept piling up, and it turned into a personal site + tool site + blog + channel tracker + an **I-love-Charlie** site + ... (?)
 
 Yeah, that's about it.
 
@@ -112,4 +112,3 @@ I'm pretty satisfied with it myself~ There'll probably still be small updates do
 And thanks to all of you for giving me the chance to share my thoughts on this site!!
 
 Love you all!!
-

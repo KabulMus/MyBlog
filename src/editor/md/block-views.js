@@ -14,6 +14,155 @@ import { UPLOAD_ICON, uploadImage } from './upload-image.js';
 /** 卡片里没有 toast（那是编辑器外壳的），用事件把它叫出来（index.astro 接了这条） */
 const tellEditor = (msg, kind = 'ok') => document.dispatchEvent(new CustomEvent('editor-toast', { detail: { msg, kind } }));
 
+/**
+ * 卡片搬运：**手搓拖动**，不走原生 HTML5 拖放。
+ * 为什么：原生拖动一旦开始，光标就交给系统了，CSS 的 cursor 一律失效 ——
+ * 想让「搬着东西的那只手」全程跟着指针（一直到松手都是攥着的），只能自己搬：
+ *   pointerdown 记下这块 → pointermove 算落点、画落点线 → pointerup 一笔事务搬过去。
+ * 落点用 PM 原生拖动同一套算法（`dropPoint`：吸附到块边界；落回原位＝不动），
+ * 搬运是「删原位置 + 插到落点」一笔事务 ⇒ Ctrl+Z 一次就能撤回来。
+ * ⚠️ 手柄因此**不能**带 draggable：不然移动时浏览器还会自己起一次原生拖动，两套打架。
+ */
+
+/** 整段拖动只用一个落点线元素，反复摆位置 */
+const dropLine = document.createElement('div');
+dropLine.className = 'md-drop-line';
+dropLine.hidden = true;
+(document.body || document.documentElement).append(dropLine);
+
+/** 最近的可滚动祖先（拖到边缘时自动滚屏用） */
+function scrollParent(el) {
+	for (let p = el.parentElement; p; p = p.parentElement) {
+		const oy = getComputedStyle(p).overflowY;
+		if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+	}
+	return null;
+}
+
+/** 把落点线摆到 target 这个文档位置对应的那条缝上（块边界上：块顶或块底） */
+function placeDropLine(view, target) {
+	const $pos = view.state.doc.resolve(target);
+	let el = null;
+	let edge = 'top';
+	if ($pos.nodeAfter && $pos.depth === 0) {
+		el = view.nodeDOM(target);
+	} else if ($pos.nodeBefore) {
+		el = view.nodeDOM(target - $pos.nodeBefore.nodeSize);
+		edge = 'bottom';
+	}
+	const rect = (el && el.getBoundingClientRect ? el : view.dom).getBoundingClientRect();
+	const y = (edge === 'bottom' ? rect.bottom : rect.top) + window.scrollY;
+	dropLine.style.left = rect.left + window.scrollX + 'px';
+	dropLine.style.width = rect.width + 'px';
+	dropLine.style.top = y - 1 + 'px';
+}
+
+/** 从手柄按下：开始一次卡片搬运 */
+function beginCardDrag(editor, dom, getPos, downEvent) {
+	const view = editor.view;
+	const pos = getPos();
+	if (typeof pos !== 'number') return;
+	const node = view.state.doc.nodeAt(pos);
+	if (!node) return;
+	downEvent.preventDefault(); // 别让这次按下变成选字 / 原生拖动
+	// 按下的那一刻就攥拳（不等移动）：光标归 CSS 管，松手才还回去
+	document.documentElement.classList.add('is-card-dragging');
+
+	const from = pos;
+	const to = pos + node.nodeSize;
+	const startX = downEvent.clientX;
+	const startY = downEvent.clientY;
+	const scroller = scrollParent(view.dom);
+	let started = false; // 过了位移阈值才算真在拖（不然点一下也会晃一下）
+	let target = null; // 当前落点（文档位置），null = 放不下 / 落回原位
+	let lastY = startY;
+	let raf = 0;
+
+	/**
+	 * 落点：posAtCoords → 就着吸到「块与块之间那条缝」。
+	 * （PM 有个 `dropPoint` 干这事，但 `@tiptap/pm/view` 那个优化包没把它 export 出来，
+	 *  自己来：指针落在某块上半 ⇒ 插到它前面，下半 ⇒ 插到它后面。落回自己前后 ＝ 没动。）
+	 */
+	const computeTarget = (x, y) => {
+		const hit = view.posAtCoords({ left: x, top: y });
+		if (!hit) return null;
+		const doc = view.state.doc;
+		const $pos = doc.resolve(hit.pos);
+		let at = hit.pos;
+		if ($pos.depth > 0) {
+			const start = $pos.before(1);
+			const block = doc.nodeAt(start);
+			if (!block) return null;
+			const el = view.nodeDOM(start);
+			const rect = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+			const lowerHalf = rect ? y > rect.top + rect.height / 2 : false;
+			at = lowerHalf ? start + block.nodeSize : start;
+		}
+		return at === from || at === to ? null : at;
+	};
+
+	const paint = () => {
+		if (target != null) placeDropLine(view, target);
+	};
+
+	/** 帧循环：拖到窗口上下边缘时自动滚屏（原生拖动是浏览器帮滚的，手搓得自己来） */
+	const tick = () => {
+		raf = 0;
+		if (!started) return;
+		if (scroller) {
+			const r = scroller.getBoundingClientRect();
+			const edge = 64;
+			const step = 14;
+			if (lastY < r.top + edge) scroller.scrollTop -= step;
+			else if (lastY > r.bottom - edge) scroller.scrollTop += step;
+		}
+		paint();
+		raf = requestAnimationFrame(tick);
+	};
+
+	const onMove = (event) => {
+		lastY = event.clientY;
+		if (!started) {
+			if (Math.abs(event.clientX - startX) < 4 && Math.abs(event.clientY - startY) < 4) return;
+			started = true;
+			dom.classList.add('is-dragging');
+			dropLine.hidden = false;
+			if (scroller) raf = requestAnimationFrame(tick);
+		}
+		target = computeTarget(event.clientX, event.clientY);
+		dropLine.hidden = target == null;
+		paint();
+	};
+
+	const finish = (commit) => {
+		window.removeEventListener('pointermove', onMove);
+		window.removeEventListener('pointerup', onUp);
+		window.removeEventListener('pointercancel', onCancel);
+		window.removeEventListener('keydown', onKey, true);
+		if (raf) cancelAnimationFrame(raf);
+		document.documentElement.classList.remove('is-card-dragging');
+		dom.classList.remove('is-dragging');
+		dropLine.hidden = true;
+		if (!commit || !started || target == null) return;
+		// 删原位置 + 插到落点：一笔事务（Ctrl+Z 一次撤），位置映射跟 PM 原生拖动一样
+		const tr = view.state.tr;
+		tr.delete(from, to);
+		tr.insert(tr.mapping.map(target), node);
+		view.dispatch(tr);
+	};
+
+	const onUp = () => finish(true);
+	const onCancel = () => finish(false);
+	const onKey = (event) => {
+		if (event.key === 'Escape') finish(false);
+	};
+
+	window.addEventListener('pointermove', onMove);
+	window.addEventListener('pointerup', onUp);
+	window.addEventListener('pointercancel', onCancel);
+	window.addEventListener('keydown', onKey, true);
+}
+
 const h = (tag, cls, text) => {
 	const el = document.createElement(tag);
 	if (cls) el.className = cls;
@@ -65,18 +214,24 @@ const SPECS = {
 			['key', '调号', '如 C / G / F'],
 			['beat', '拍数', '拍号分子（每小节几拍）'],
 			['time', '拍值', '拍号分母（以几分音符为一拍）'],
+			['len', '默认时值', '不写 = 4（四分音符）；8 = 八分音符'],
 			['tempo', '速度', '每分钟多少拍'],
 			['lyric', '歌词', '可写多行歌词（第二行请到「其他头部行」里加）'],
 			['wrap', '每行小节', 'off / 4 / 3 / 2'],
 		],
 		wide: ['title', 'lyric'],
-		placeholders: { title: '曲名', composer: '作曲', lyricist: '作词', key: 'C', beat: '4', time: '4', tempo: '90', lyric: '歌词', wrap: 'off / 4 / 3 / 2' },
-		// 只认站点解析器认的那几个键（否则谱面里带冒号的行会被误判成字段）
-		lineRe: /^\s*(title|composer|lyricist|key|beat|time|tempo|lyric|wrap)\s*[:：]\s*(.*)$/i,
-		sameKey: (a, b) => a.toLowerCase() === b.toLowerCase(),
+		placeholders: { title: '曲名', composer: '作曲', lyricist: '作词', key: 'C', beat: '4', time: '4', len: '4 / 8 / 16', tempo: '90', lyric: '歌词', wrap: 'off / 4 / 3 / 2' },
+		// 只认站点解析器认的那几个键（否则谱面里带冒号的行会被误判成字段）；
+		// 另外认与 abc 对齐的单字母别名（T/C/K/M/L/Q/W）
+		lineRe: /^\s*(title|composer|lyricist|key|beat|time|len|tempo|lyric|wrap|[tckmlqw])\s*[:：]\s*(.*)$/i,
+		sameKey: (a, b) => jianpuKey(a) === jianpuKey(b),
 		stopAfter: null,
 	},
 };
+
+/** 简谱头部字段的单字母别名（与 abc 对齐）：`T:` = `title:`、`C:` = `composer:` … */
+const JIANPU_HEAD_ALIAS = { t: 'title', c: 'composer', k: 'key', m: 'beat', l: 'len', q: 'tempo', w: 'lyric' };
+const jianpuKey = (key) => (key.length === 1 ? JIANPU_HEAD_ALIAS[key.toLowerCase()] ?? key.toLowerCase() : key.toLowerCase());
 
 const FENCE_OPEN_RE = /^(\s*)(`{3,}|~{3,})(.*)$/;
 const IMAGE_LINE_RE = /^(\s*)!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"([^"]*)")?\s*\)(\{[^}]*\})?(\s*)$/;
@@ -231,6 +386,17 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 	dom.contentEditable = 'false';
 	const head = h('div', 'md-block-head');
 	const bodyHost = h('div', 'md-block-body');
+
+	// 拖动手柄：卡片本体不让 PM 插手（stopEvent），所以搬运只挂在这枚手柄上，
+	// 而且是**手搓拖动**（自己算落点、自己画落点线），理由见 beginCardDrag 上面的说明。
+	const grip = h('span', 'md-block-grip');
+	grip.setAttribute('role', 'button');
+	grip.setAttribute('tabindex', '-1');
+	grip.setAttribute('aria-label', '拖动手柄');
+	grip.innerHTML =
+		'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+	// ⚠️ 刻意不设 draggable：拖动是手搓的（见 beginCardDrag 上面的说明）
+	grip.addEventListener('pointerdown', (event) => beginCardDrag(editor, dom, getPos, event));
 	dom.append(head, bodyHost);
 
 	/** 自适应高度；⚠️ 还没挂进文档 / 代码字体刚换进来时 scrollHeight 不准，所以带重试 */
@@ -296,7 +462,7 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 
 	/** 重建卡片头 */
 	const makeHead = (label, color) => {
-		head.replaceChildren();
+		head.replaceChildren(grip);
 		const badge = h('span', 'md-block-badge', label);
 		badge.dataset.color = color;
 		head.append(badge);
