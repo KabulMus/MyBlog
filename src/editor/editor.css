@@ -38,11 +38,20 @@
 }
 
 /* ⚠️ 表单控件（input / button / select / textarea）**拿不到** main.css 里 body 上那套
-   `font-feature-settings: "liga" 1, "calt" 1, "halt" 1`：UA 给控件的样式里有 `font` 简写，
-   而 font 简写会把 font-feature-settings 重置成 normal ⇒ 输入框里打出来的中文标点不会半宽
-   （halt 没了），跟站点正文/标签的字距对不上。这里显式补回来，控件和它们的内部文本（option…）都吃到。
+   `font-feature-settings`：UA 给控件的样式里有 `font` 简写，而 font 简写会把 font-feature-settings
+   重置成 normal ⇒ 输入框里打出来的中文标点不会半宽（halt 没了），跟站点正文/标签的字距对不上。
+   这里显式补回来，控件和它们的内部文本（option…）都吃到。
    ⚠️ 站点那边（main.css 的 `button, input, select, textarea { font-family: inherit }`）同一个坑还在，
-      只是站点控件里没写过中文标点，所以一直没露出来。 */
+      只是站点控件里没写过中文标点，所以一直没露出来。
+   ⚠️ **只有「代码区」的字体特性要关**（用户 2026-10-01：「只代码编辑区关」）：等宽字体是 JetBrains Mono / Fira Code，
+      它们的 `//` 是一个连字字形（两笔连成一个宽斜杠，看着就像一根；`calt` 还带上下文规则 ⇒ 边打边排与
+      整段重排结果不一致，「打 `//` 有时显示成单斜杠，刷新又正常」）。
+      所以**代码那一堆**写 `font-feature-settings: 'liga' 0, 'calt' 0`：卡片源码框 `.md-input` / 行号层 `.md-lines`、
+      正文里的 `code`/`pre`、源码视图 `.editor-source`、自检页的 `.diff`；
+      **正文与普通控件不关**（保持和站点一致，halt 半宽照旧），见下面两条。
+   ⚠️⚠️ 关连字**不能写 `font-feature-settings: normal`**（踩过）：`normal` 只是「用字体自己的默认特性」，
+      而 `calt`（上下文替代，JetBrains Mono 的 `//` / `==` / `->` 连字全在它名下）**默认就是开的**
+      ⇒ 写 normal 等于没关，计算值看着是 normal，字却还是连着的。必须显式给 0。 */
 .editor-body :is(input, button, select, textarea) {
 	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
 }
@@ -433,6 +442,8 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 	white-space: pre-wrap;
 	word-break: break-word;
 	tab-size: 2;
+	/* 代码区：连字关掉（同上，必须显式给 0：normal 会让默认开启的 calt 继续生效） */
+	font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .editor-frame {
@@ -592,6 +603,7 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 	border-radius: 6px;
 	white-space: pre-wrap;
 	word-break: break-all;
+	font-feature-settings: 'liga' 0, 'calt' 0; /* 代码区：连字关掉（同上） */
 }
 
 .diff-before { color: var(--color-red); }
@@ -781,7 +793,8 @@ html.is-card-dragging { user-select: none; }
 
 .md-block-body { padding: 8px 10px; }
 
-/* 源码输入框：软换行；行号是叠在同一份文本上的覆盖层（同字体同尺寸 ⇒ 换行后依旧对齐） */
+/* 源码输入框：软换行；行号是叠在同一份文本上的覆盖层（同字体同尺寸 ⇒ 换行后依旧对齐）
+   ⚠️ 连字关掉：等宽字体的 `//` / `==` 这类连字会让源码看着变形（见文件开头那条注释） */
 .md-code { position: relative; --md-gutter: 2.6em; }
 
 .md-input,
@@ -792,6 +805,7 @@ html.is-card-dragging { user-select: none; }
 	tab-size: 4;
 	white-space: pre-wrap;
 	overflow-wrap: break-word;
+	font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .md-input {
@@ -814,6 +828,12 @@ html.is-card-dragging { user-select: none; }
 	color: transparent;
 	pointer-events: none;
 	user-select: none;
+}
+
+/* ⚠️ 源码框是 <textarea>，会被上面那条 `.editor-body :is(input…, textarea)` 盖回去（优先级更高）
+   ⇒ 带 `.editor-body` 提一级，代码区才真的关掉连字。 */
+.editor-body textarea.md-input {
+	font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .md-line { display: block; position: relative; }
@@ -895,10 +915,11 @@ html.is-card-dragging { user-select: none; }
 .md-field-input:focus { border-color: var(--primary-blue); }
 .md-field-input::placeholder { color: var(--text-sub); opacity: 0.7; }
 
-/* 卡片里的小下拉（现在只有图片卡片的「尺寸」）：复用 .editor-select 那一整套
+/* 卡片里的小下拉（图片卡片的「尺寸」）与乐谱头部字段表里的「默认时值」：复用 .editor-select 那一整套
    —— 弹层美化、描边箭头都在 @supports (appearance: base-select) 的共享块里（表格列对齐也是这套），
-   这儿只把尺寸/字重收成跟 .md-field-input 一致的那一档，让它跟旁边的「路径」「说明」对齐。 */
-.editor-select.md-card-select {
+   这儿只把尺寸/字重收成跟 .md-field-input 一致的那一档，让它跟旁边的字段输入框对齐。 */
+.editor-select.md-card-select,
+.editor-select.md-cell-select {
 	width: auto;
 	flex: 1 1 auto;
 	/* ⚠️ min-height 必须清零：base-select 给收起态扣了一个 24px 的「地板」，光调内边距压不下去
@@ -1738,7 +1759,8 @@ html.is-card-dragging { user-select: none; }
    `font-variant-ligatures: none`（= font-feature-settings: "liga" 0），并且 white-space: pre-wrap
    会让 line-break 变成 after-white-space —— 正好把站点 body 上的
    `font-feature-settings: "liga" 1, "calt" 1, "halt" 1` 和 `line-break: strict` 盖掉，
-   中文标点的半宽（halt）和连字就没了。这里按站点正文原样恢复。 */
+   中文标点的半宽（halt）和连字就没了。这里按站点正文原样恢复。
+   ⚠️ 代码（`code` / `pre`）不在这个范围里 —— 那里连字要关掉，见下面那条。 */
 body .editor-prose {
 	font-variant-ligatures: normal;
 	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
@@ -1761,6 +1783,13 @@ body .editor-prose .punct-full.punct-line-end {
 /* 下一行开头那几项被粘成一整块：合计宽过半格就塞不进压半宽省出来的那半格 */
 body .editor-prose .punct-line-head {
 	white-space: nowrap;
+}
+
+/* 代码里尤其不能要字体特性（`//` 会被排成一个宽字形）：站点 main.css 的 `.typography-body code`
+   写的是 `"liga", "calt", "halt"`（= 全开，优先级也比继承高）⇒ 这里显式盖掉。 */
+body .editor-prose :is(code, pre),
+body .editor-prose :is(code, pre) * {
+	font-feature-settings: 'liga' 0, 'calt' 0;
 }
 
 .editor-prose {

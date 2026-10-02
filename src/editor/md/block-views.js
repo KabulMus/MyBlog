@@ -185,7 +185,7 @@ const BADGE = {
 /**
  * 头部字段表（[字段名, 中文标签, 提示]）。
  * · abc 常用那 7 个（其余 R/P/O/Z… 不铺开：源里出现了就落到「其他头部行」里，照样能改）
- * · 简谱 = 站点 Layout.astro 里 parseJianpuSource 认的那 9 个
+ * · 简谱 = 站点 Layout.astro 里 parseJianpuSource 认的常见那几个（其余落到「其他头部行」里）
  * placeholder 写的是「不写这行时渲染器会用什么默认值」，空着就等于用默认值。
  */
 const SPECS = {
@@ -195,12 +195,17 @@ const SPECS = {
 			['T', '标题', '曲名；可写多行标题（第二行请到「其他头部行」里加）'],
 			['C', '作曲', '作曲 / 来源'],
 			['M', '拍号', '不写默认 4/4'],
-			['L', '默认时值', '不写默认 1/8'],
+			['L', '默认时值', '留空 = 跟随拍号的分母（如 2/4 就是四分音符）'],
 			['Q', '速度', '每分钟多少拍，如 90'],
 			['K', '调号', '必填，且必须是头部的最后一行'],
 		],
 		wide: ['T'],
-		placeholders: { X: '1', T: '曲名', C: '作曲 / 来源', M: '4/4', L: '1/4', Q: '90', K: 'C' },
+		// 「默认时值」用下拉框：abc 写**分数形式**的音符时值（`1/1` 全音符 … `1/16` 十六分音符）。
+		// 第一项「默认」= 空值 = 源里不写这一行（abcjs 自己按 1/8 算）。
+		selects: {
+			L: [['', '默认'], ['1/1', '全音符'], ['1/2', '二分音符'], ['1/4', '四分音符'], ['1/8', '八分音符'], ['1/16', '十六分音符']],
+		},
+		placeholders: { X: '1', T: '曲名', C: '作曲 / 来源', M: '2/4', L: '1/4', Q: '90', K: 'C' },
 		// 字段名区分大小写；K: 之后的行归正文（abc 标准：头部到 K: 为止）
 		lineRe: /^\s*([A-Za-z])\s*[:：]\s*(.*)$/,
 		sameKey: (a, b) => a === b,
@@ -210,19 +215,24 @@ const SPECS = {
 		fields: [
 			['title', '标题', '曲名'],
 			['composer', '作曲', '作曲'],
-			['lyricist', '作词', '作词'],
 			['key', '调号', '如 C / G / F'],
-			['beat', '拍数', '拍号分子（每小节几拍）'],
-			['time', '拍值', '拍号分母（以几分音符为一拍）'],
-			['len', '默认时值', '不写 = 4（四分音符）；8 = 八分音符'],
+			['beat', '拍号', '分数写法，如 2/4（不写默认 4/4）'],
+			['len', '默认时值', '留空 = 跟随拍号的分母（如 2/4 就是四分音符）'],
 			['tempo', '速度', '每分钟多少拍'],
 			['lyric', '歌词', '可写多行歌词（第二行请到「其他头部行」里加）'],
-			['wrap', '每行小节', 'off / 4 / 3 / 2'],
 		],
 		wide: ['title', 'lyric'],
-		placeholders: { title: '曲名', composer: '作曲', lyricist: '作词', key: 'C', beat: '4', time: '4', len: '4 / 8 / 16', tempo: '90', lyric: '歌词', wrap: 'off / 4 / 3 / 2' },
+		// 「默认时值」用下拉框：简谱这边 `len:` 写的是**分母**（`4` = 四分音符）。
+		// 第一项「默认」= 空值 = 源里不写这一行（站点那边会**跟随拍号的分母**）。
+		selects: {
+			len: [['', '默认'], ['1', '全音符'], ['2', '二分音符'], ['4', '四分音符'], ['8', '八分音符'], ['16', '十六分音符']],
+		},
+		placeholders: { title: '曲名', composer: '作曲', key: 'C', beat: '2/4', len: '4 / 8 / 16', tempo: '90', lyric: '歌词' },
 		// 只认站点解析器认的那几个键（否则谱面里带冒号的行会被误判成字段）；
 		// 另外认与 abc 对齐的单字母别名（T/C/K/M/L/Q/W）
+		// ⚠️ `lyricist`（作词）与 `wrap`（每行小节）**不再铺开成字段**（用户 2026-10-01 要求）；
+		//    拍号也合成一个字段（写 `2/4`，过去是 `beat:` + `time:` 两行，两个键现在都还认、也都能写分数）。
+		//    它们仍然在这个 lineRe 里 —— 源里出现了就落到「其他头部行」里，照样能改，不会掉进谱面正文。
 		lineRe: /^\s*(title|composer|lyricist|key|beat|time|len|tempo|lyric|wrap|[tckmlqw])\s*[:：]\s*(.*)$/i,
 		sameKey: (a, b) => jianpuKey(a) === jianpuKey(b),
 		stopAfter: null,
@@ -460,6 +470,33 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 		return input;
 	};
 
+	/**
+	 * 头部字段表里的**下拉框**（现在只有「默认时值」用）：复用 `.editor-select` 那一整套
+	 * （弹层美化 + 描边箭头都在 @supports (appearance: base-select) 的共享块里）—— 别再自己写一套原生样式的下拉。
+	 * ⚠️ 源里写了表外的值（手写的 `L: 1/32` / `len: 64`）要**原样挂一项**进去，别给它吞掉。
+	 * 空值（源里没这一行）在表里就有对应项（「默认」）⇒ 浏览器不会显示成空白。
+	 */
+	const makeSelect = (value, options, onChange, tip = '') => {
+		const sel = document.createElement('select');
+		sel.className = 'editor-select md-cell-select';
+		for (const [v, label] of options) {
+			const o = document.createElement('option');
+			o.value = v;
+			o.textContent = label;
+			sel.append(o);
+		}
+		if (!options.some(([v]) => v === value)) {
+			const o = document.createElement('option');
+			o.value = value;
+			o.textContent = '原样保留：' + value;
+			sel.append(o);
+		}
+		sel.value = value;
+		if (tip) sel.setAttribute('aria-label', tip);
+		sel.addEventListener('change', () => onChange(sel.value));
+		return sel;
+	};
+
 	/** 重建卡片头 */
 	const makeHead = (label, color) => {
 		head.replaceChildren(grip);
@@ -548,13 +585,19 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 				// 字段说明原来挂在 label 的 title 上（悬浮提示）；现在改挂到 input 的 aria-label（见下面的 makeField），
 				// 标签只剩「K」「beat」这种可见缩写，鼠标悬浮不再弹提示。
 				const row = rows.find((r) => spec.sameKey(r.key, key));
-				const input = makeField(row ? row.value : '', spec.placeholders?.[key] ?? key, (v) => {
+				const setValue = (v) => {
 					const entry = entryOf(key);
 					entry.value = v;
 					// 清空 = 这一行不写（"用不着的参数就留空嘛"）；原样没动过的行连 raw 都不换
 					entry.raw = v === '' ? null : `${entry.key}: ${v}`;
 					rebuild();
-				}, 'md-cell-input', tip);
+				};
+				// 「默认时值」这类值域固定的字段用下拉框（表在 spec.selects 里），其余仍是输入框。
+				// 「默认」那一项的值是空串 ⇒ 选中它等于把这一行删掉（回到渲染器的默认）。
+				const opts = spec.selects?.[key];
+				const input = opts
+					? makeSelect(row ? row.value : '', opts, setValue, tip)
+					: makeField(row ? row.value : '', spec.placeholders?.[key] ?? key, setValue, 'md-cell-input', tip);
 				cell.append(name, input);
 				grid.append(cell);
 			}

@@ -3404,10 +3404,11 @@ html[lang='en-US'] .cat-filter-btn {
     stroke: var(--jianpu-ink, var(--text-main));
 }
 /* 反复「小房子」里的 1./2. 标签：库给的是**无衬线**中文栈（SimHei / Microsoft YaHei / PingFang SC…），
-   跟谱面的衬线字不一致 → 换成和音符/歌词同一套（组内只有这一个 text，直接按分组选即可）。 */
+   跟谱面的衬线字不一致 → 换成和音符/歌词同一套（组内只有这一个 text，直接按分组选即可）。
+   直立不斜：与 abc 那边的房子序号、以及三连音上的 `3` 统一（谱面上的数字不写斜体）。 */
 .jianpu-score svg g[sn-tag^='section-repeat-'] text {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
-    font-style: italic;
+    font-style: normal;
 }
 /* 关闭库自带的音符交互：g[sn-tag="pointer"] 里是每个音符一个的命中矩形（note-index / note-data），
    库靠它做悬停高亮、点选、播放光标联动——静态阅读用不上。
@@ -3423,36 +3424,17 @@ html[lang='en-US'] .cat-filter-btn {
 .jianpu-score svg g[sn-tag='pointer'] {
     display: none;
 }
-/* 例外：标题行 + 信息行（调号 / 拍号 / 速度 / 作曲）保持**可选中**（用户要求）：
-   把命中与选择都开回来；其余分组（score / chord / tieline / beam…）继续继承上面的 none。 */
-.jianpu-score svg g[sn-tag='info'] {
-    pointer-events: auto;
-    user-select: text;
-    -webkit-user-select: text;
-}
-.jianpu-score svg g[sn-tag='info'] text,
-.jianpu-score svg g[sn-tag='info'] tspan {
-    user-select: text;
-    -webkit-user-select: text;
-}
-/* 选中态：与正文完全一致（SVG <text> 的字形颜色由 fill 决定，::selection 里必须直接写 fill，
-   全局 ::selection 的 color / -webkit-text-fill-color 管不到它 —— 与 .abc-score 同一套路）。
-   ⚠️ 分两步写：
-   ① **先把谱面里所有元素的选中样式清掉**。user-select:none 只管「能不能被选中」，管不了染色 ——
-     只要元素落在 Ctrl+A 的选区里，全局 ::selection 的蓝底白字（或下面那条 fill）照样会盖上去，
-      症状：全选时音符/歌词也变白。fill:inherit 让它回到自己本来的墨色（[fill='black'] 那条）；
-   ② 信息行（标题/调号/拍号/速度/作曲，唯一可选中的部分）再穿回和正文一样的选中配色。 */
+/* ⚠️ 2026-10-01：原来标题行 + 信息行（调号 / 拍号 / 速度 / 作曲）是个**可选中**的例外，用户反悔，
+   现在整块简谱（含标题）一律不可选中 —— 上面那条 user-select:none 不再有例外。 */
+/* 选中态：整块谱面不可选中之后，Ctrl+A 的选区仍然可能盖到 SVG 里的文字，而全局 ::selection 的
+   蓝底白字（以及下面那条 fill）照旧会盖上去 —— 症状：全选时音符 / 歌词 / 标题也变白。
+   所以这里把谱面里**所有**元素的选中样式清成透明，fill:inherit 让它回到自己本来的墨色
+   （SVG <text> 的字形颜色由 fill 决定，::selection 里必须直接写 fill —— 与 .abc-score 同一套路）。 */
 .jianpu-score svg ::selection {
     background: transparent;
     color: inherit;
     fill: inherit;
     -webkit-text-fill-color: inherit;
-}
-.jianpu-score svg g[sn-tag='info'] ::selection {
-    background: var(--primary-blue);
-    color: var(--on-primary);
-    fill: var(--on-primary);
-    -webkit-text-fill-color: var(--on-primary);
 }
 /* 谱面文字字体：库同样把字体写成 font-family="SimSun, STSong, …, KaiTi" 表现属性，
    表现属性优先级低于任何 CSS 规则，所以用属性选择器即可整体替换。
@@ -3558,10 +3540,13 @@ html[lang='en-US'] .cat-filter-btn {
     flex: none;
 }
 /* 关闭 abcjs 默认的「音符点选高亮/拖拽」交互（那套是给编辑器/播放联动用的，静态阅读用不上）。
-   谱面 SVG 设 pointer-events:none：鼠标点/拖不再高亮音符；
-   不影响文字选中（SVG 文字本就不能鼠标拖选，Ctrl+A 全选仍走 ::selection 规则变白） */
+   ① pointer-events:none → 鼠标点/拖不再高亮音符；
+   ② user-select:none → 整块谱面（含标题 / 作曲 / 房子序号）**不可选中**；pointer-events 只管鼠标命中，
+      Ctrl+A 全选照样会把 SVG 文字带走（与 .jianpu-score 同一口径，用户 2026-10-01 要求）。 */
 .abc-score svg {
     pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 /* 渲染前 / 无 JS 时的源码兜底：低调小号等宽块（优先级盖过通用 pre 代码块样式） */
 .abc-score .abc-source {
@@ -3618,20 +3603,34 @@ html.hero-lock .page-hero.has-hero-image.is-hero-ready {
     font-family: 'Source Serif 4', 'Noto Serif SC', serif;
     font-style: italic;
 }
+/* 🎼 歌词（`w:` 行）：样式与简谱那边的歌词对齐 —— 同一套衬线栈 + 600 字重 + 14px
+   （简谱见 `.jianpu-score svg g[sn-tag^='note-'] > text[font-size='14']`）。
+   abcjs 默认给歌词排 Times New Roman 17px（中文会掉到系统兜底字）⇒ 字体与字号都覆盖掉。 */
+.abc-score .abcjs-lyric {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-weight: 600;
+    font-size: 14px;
+}
 /* 🎼 三连音上的那个 `3`：abcjs 按雕版惯例排成**斜体**（Times italic，书写形态），
    用户看着别扭 → 改成直立。数字那个 <text> 自己没有 class，但它的父级是
    `g.abcjs-triplet`（abcjs 给每连音组加的分组），所以选择器走父级。 */
 .abc-score .abcjs-triplet text {
     font-style: normal;
 }
-/* 🎼 选中态文字颜色：SVG <text> 的字形颜色由 fill（而非 color）决定，全局 ::selection 的
-   color / -webkit-text-fill-color 都管不到它；实测(Chromium)只有 ::selection 里直接写 fill
-   才会重新着色。background 也一并带上，选中表现才和正文一致（亮=白字蓝底、暗=深字浅蓝底） */
+/* 🎼 反复「小房子」里的序号（1. / 2.）：abcjs 排成 Times（`noClass` ⇒ <text> 上连 class 都没有，
+   只有 font-family 表现属性），照三连音那招走父级 `g.abcjs-ending` 换成站内衬线栈。 */
+.abc-score .abcjs-ending text {
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    /* 显式直立：与简谱那边的房子序号、以及三连音上的 3 统一 */
+    font-style: normal;
+}
+/* 🎼 选中态：谱面已经整块不可选中，但 Ctrl+A 的选区仍可能盖到 SVG 里的文字 —— 把选中样式清成透明
+   （SVG <text> 的字形颜色由 fill 决定，::selection 里必须直接写 fill 才管得住，光写 color 没用）。 */
 .abc-score ::selection {
-    background: var(--primary-blue);
-    color: var(--on-primary);
-    fill: var(--on-primary);
-    -webkit-text-fill-color: var(--on-primary);
+    background: transparent;
+    color: inherit;
+    fill: inherit;
+    -webkit-text-fill-color: inherit;
 }
 
 /* ==========================================================================

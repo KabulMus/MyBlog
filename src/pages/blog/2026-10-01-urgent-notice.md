@@ -17,3 +17,18 @@ warning: []
 本频道正在筹划转型工作中，但目前我还没什么好的想法，所以如果你有一些主意，欢迎提供给我。如果对我有些失望，当然是可以取关的。虽然，我真的很舍不得你们...
 
 **无论如何，感谢你们曾经陪伴过我！！！**
+
+![](/images/2026-10-01-urgent-notice-2.webp){.img-md}
+*和光同尘*
+
+![](/images/2026-10-01-urgent-notice-3.webp){.img-md}
+*云裳羽衣曲*
+
+![](/images/2026-10-01-urgent-notice-1.webp){.img-md}
+*一路生花*
+
+![](/images/2026-10-01-urgent-notice-4.webp){.img-md}
+*战绩可查1*
+
+![](/images/2026-10-01-urgent-notice.webp){.img-md}
+*战绩可查2*
