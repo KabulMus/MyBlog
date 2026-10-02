@@ -253,8 +253,8 @@ function getLangSwitchHref(pathname: string) {
 		     （display=swap 本来就是这个行为）；关了 JS 由 <noscript> 里那份兜底。 -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
-		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
+		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wght@100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
 		<!-- Inter 官方可变字体（全字形 + optical size，替代 gfonts 的 Inter） -->
 		<link rel="preconnect" href="https://rsms.me/" />
 		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
@@ -779,6 +779,45 @@ function getLangSwitchHref(pathname: string) {
 			// 字体加载完成后重算：避免首次测量因 CJK/西文字体未就绪而误判“未超两行”
 			if (document.fonts && document.fonts.ready) {
 				document.fonts.ready.then(clampNavTitles);
+			}
+
+			// 主页那个站名标题（「Ethan's Blog」）：字号定死不缩，靠 Google Sans Flex 的宽度轴自动铺满标题区。
+			// font-stretch 就是 wdth 轴（25%–151%），文字宽度随它单调递增 ⇒ 二分几轮就贴近可用宽度；
+			// 顶到 151 还差一截就是到头了（保持 151），反过来顶到 25 还嫌宽就让它换行（不再硬撑，免得横向溢出）。
+			function fitHomeTitle() {
+				var h1 = document.querySelector('body:not(.is-article-page) .page-hero h1');
+				if (!h1 || !h1.parentElement) return;
+				var cs = window.getComputedStyle(h1);
+				// 留 1px 余量：贴着量到极限时会因为零点几像素的四舍五入翻到第二行
+				var avail = h1.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 1;
+				if (!(avail > 1)) return;
+				// 量的时候锁成不换行：换了行 Range 量出来的是整块宽度，二分就会一路往最宽跑
+				var prevWhiteSpace = h1.style.whiteSpace;
+				h1.style.whiteSpace = 'nowrap';
+				var range = document.createRange();
+				range.selectNodeContents(h1);
+				var lo = 25, hi = 151;
+				for (var i = 0; i < 8; i++) {
+					var mid = (lo + hi) / 2;
+					h1.style.fontStretch = mid + '%';
+					if (range.getBoundingClientRect().width > avail) {
+						hi = mid;
+					} else {
+						lo = mid;
+					}
+				}
+				h1.style.fontStretch = lo + '%';
+				h1.style.whiteSpace = prevWhiteSpace;
+			}
+
+			document.addEventListener('DOMContentLoaded', fitHomeTitle);
+			window.addEventListener('load', fitHomeTitle);
+			// ⚠️ resize 走一帧再量：这个事件有时早于布局更新，那时量到的还是旧宽度
+			//（量宽了就会把字号撑过头，窄屏上表现为标题莫名折成两行）
+			window.addEventListener('resize', function () { requestAnimationFrame(fitHomeTitle); });
+			// 换成 Google Sans Flex 后宽度会变 ⇒ 字体就绪后再量一次
+			if (document.fonts && document.fonts.ready) {
+				document.fonts.ready.then(fitHomeTitle);
 			}
 
 			// 代码块复制按钮（与语言标签合成统一工具栏）

@@ -88,23 +88,26 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     </Fragment>
 
     <div class="blog-list-wrapper" data-pagefind-ignore>
-        {rantPosts.length > 0 && (
-            <div class="rant-preview" data-pagefind-ignore>
-                <span class="rant-preview-title">一些碎碎念</span>
-                <a class="rant-preview-more" href="/rants">进入<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12L31 24L19 36"/></svg></a>
-                {/* 整块一个入口：鼠标点哪都进瀑布流（键盘走上面那枚「进入」链接） */}
-                <a class="rant-preview-enter" href="/rants" aria-hidden="true" tabindex="-1"></a>
-            </div>
-        )}
+        {/* 碎碎念入口跟搜索框并排一行（两块同高，免得像两条同宽横杠上下叠着）；窄屏由 CSS 还原成上下堆叠 */}
+        <div class="home-topbar">
+            {rantPosts.length > 0 && (
+                <div class="rant-preview" data-pagefind-ignore>
+                    <span class="rant-preview-title">碎碎念</span>
+                    <a class="rant-preview-more" href="/rants" aria-label="进入碎碎念"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12L31 24L19 36"/></svg></a>
+                    {/* 整块一个入口：鼠标点哪都进瀑布流（键盘走上面那枚箭头链接） */}
+                    <a class="rant-preview-enter" href="/rants" aria-hidden="true" tabindex="-1"></a>
+                </div>
+            )}
 
-        <div class="search-container">
-            {/* 占位壳：PagefindUI 挂上来之前先画一个一模一样的框，
-                免得先空一块、过一拍才冒出来（样式见 .search-skeleton） */}
-            <div class="search-skeleton" aria-hidden="true">
-                <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span>搜索博文……</span>
+            <div class="search-container">
+                {/* 占位壳：PagefindUI 挂上来之前先画一个一模一样的框，
+                    免得先空一块、过一拍才冒出来（样式见 .search-skeleton） */}
+                <div class="search-skeleton" aria-hidden="true">
+                    <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>搜索</span>
+                </div>
+                <div id="search"></div>
             </div>
-            <div id="search"></div>
         </div>
 
         <div class="cat-filter-bar" data-pagefind-ignore>
@@ -417,7 +420,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             new PagefindUI({
                 element: "#search",
                 showImages: false,
-                translations: { placeholder: "搜索博文……" },
+                translations: { placeholder: "搜索" },
                 processTerm: (term) => {
                     // 中文按精确短语匹配（配合 unigram 索引）：
                     // 索引端用零宽空格 U+200B 分隔汉字（显示无空格），
@@ -435,6 +438,18 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 });
             }
         }
+
+        // 搜索结果区要铺满整行，但搜索框只占右半（左边并着碎碎念）
+        // ⇒ 量一下左边那枚的宽度挂到 CSS 变量上（见 .pagefind-ui__drawer 那条规则）
+        var topbar = document.querySelector('.home-topbar');
+        var syncTopbarLeft = function () {
+            if (!topbar) return;
+            var pill = topbar.querySelector('.rant-preview');
+            topbar.style.setProperty('--topbar-left', (pill ? pill.getBoundingClientRect().width : 0) + 'px');
+        };
+        syncTopbarLeft();
+        window.addEventListener('resize', syncTopbarLeft);
+        document.fonts.ready.then(syncTopbarLeft);   // 换个字体就换个宽度，字体就绪后再量一次
 
         var initialPage = getPageFromUrl();
         sessionStorage.setItem('blogHomePage', String(initialPage));

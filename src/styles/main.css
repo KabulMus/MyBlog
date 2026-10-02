@@ -829,15 +829,25 @@ footer a:hover {
     background: none;
 }
 
-/* 主页标题：收缩到文字宽度，让渐变完整铺满文字（保持原有左对齐，仅主页，文章页不受影响） */
+/* 主页标题：收缩到文字宽度，让渐变完整铺满文字（保持原有左对齐，仅主页，文章页不受影响）。
+   字体换成 Google Sans Flex（只引了最粗的 1000），拉伸交给宽度轴：脚本 fitHomeTitle 把
+   font-stretch（= wdth 轴 25%–151%）调到刚好铺满标题区可用宽度，顶到 151 就到头。 */
 body:not(.is-article-page) .page-hero h1 {
     width: max-content;
     max-width: 100%;
+    font-family: 'Google Sans Flex', 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-weight: 1000;
+    font-stretch: 151%;   /* 脚本还没跑（或字体没到）就先按最宽摆，宽屏下本来就是这一档 */
+    margin-bottom: 0;     /* 主页标题下面没有日期行要拉开，那 8px 就只是白白多出来的一段空 */
 }
 
 @media (max-width: 768px) {
     .page-hero h1 {
         font-size: 2.2rem; /* 移动端适当缩小标题 */
+    }
+    /* 主页那个站名标题不缩：它的字号定死，铺多满交给宽度轴（见 fitHomeTitle 脚本） */
+    body:not(.is-article-page) .page-hero h1 {
+        font-size: 2.8rem;
     }
 }
 
@@ -2027,40 +2037,65 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
    吐槽（rants）：主页只放成篇的，吐槽另走走一条时间线
    -------------------------------------------------------------------------- */
 
-/* 主页顶部的吐槽入口：一行 —— 左边「吐槽碎碎念」、右边「进入 →」（卡片式条带，
-   跟正文引用块同一套视觉语言：左侧一条品牌蓝粗线）。
+/* 主页顶栏：吐槽（碎碎念）入口跟搜索框并排一行，两块同高 ⇒ 不再像两条同宽横杠叠着。
+   ⚠️ 行内对齐得用 flex-start 而不是 stretch：搜索出结果时 .search-container 会被撑高，
+      stretch 会顺手把旁边那枚也拉成一根长条（它的高度自己锁在 51.2）。
+   ⚠️ 搜索框那颗 flex 项必须 min-width: 0：flex 项默认最小宽度是内容宽度，不写压不下去。 */
+.home-topbar {
+    --topbar-gap: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--topbar-gap);
+    margin: 1rem 0;
+}
+
+.home-topbar .search-container {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* 结果区要跟整行一样宽（搜索框只占右半，左边并着碎碎念）：
+   往左拉出「碎碎念 + 间距」那么多、宽度再补回来 ⇒ 右缘不动，左缘顶到整行左缘。
+   ⚠️ --topbar-left 由页面脚本量出来挂在 .home-topbar 上（没渲染那枚时量不到 ⇒ 退化成 0）。 */
+#search .pagefind-ui .pagefind-ui__drawer {
+    width: calc(100% + var(--topbar-left, 0px) + var(--topbar-gap));
+    margin-left: calc(-1 * (var(--topbar-left, 0px) + var(--topbar-gap)));
+}
+
+/* 那枚碎碎念入口：一个标签后面跟着箭头（卡片式，跟正文引用块同一套视觉语言：左侧一条品牌蓝粗线）。
    整块是一个入口 ⇒ 靠下面的 .rant-preview-enter 铺满点击层，鼠标点哪里都进瀑布流；
-   右边那枚不是唯一的入口，键盘走它。
-   ⚠️ 上方留白得自己带：上面那条筛选栏收起时高度和 margin 都是 0，不写就跟上面贴上了。 */
+   那枚箭头不是唯一的入口，键盘走它。
+   高度锁 51.2、圆角取搜索框的 16 ⇒ 跟旁边那块齐平，挨在一起才不像临时拼的。 */
 .rant-preview {
     position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin: 1rem 0;
-    padding: 0.9rem 1.1rem;
+    gap: 0.25rem;
+    flex: 0 0 auto;
+    height: 51.2px;
+    padding: 0 1.1rem;
     background: var(--card-bg);
     border: 1px solid var(--item-border);
     border-left: 4px solid var(--primary-blue);
-    border-radius: var(--card-radius);
+    border-radius: 16px;
     box-shadow: var(--card-shadow);
     transition: box-shadow 0.2s ease;   /* 跟 .post-item 一个时长，悬停抬起来时两边手感一致 */
 }
 
 .rant-preview-title {
-    font-size: 0.9rem;
+    font-family: 'Barlow Condensed', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-size: 1.05rem;   /* 跟旁边搜索框的字号同号（两边一块儿看才不一大一小） */
     font-weight: 700;
     color: var(--text-main);
     transition: color 0.2s ease;
 }
 
-/* 「进入 →」：就是另一个可点的热区，长得跟其他文字一模一样，不给它单独的 hover 效果。
+/* 标题后面那枚箭头：就是另一个可点的热区，长得跟其他文字一模一样，不给它单独的 hover 效果。
    ⚠️ 权重得压过 `.typography-body a:not(.post-title-link)`（那条把正文里的链接染成品牌蓝、
       还塞了 1.5px 透明下边框，hover 时会变蓝 ⇒ 这里两样都得拔掉）。 */
 .typography-body .rant-preview .rant-preview-more {
     display: inline-flex;
     align-items: center;
-    gap: 0.15rem;
     font-size: 0.8rem;
     color: var(--text-sub);
     text-decoration: none;
@@ -2070,7 +2105,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     z-index: 2;
 }
 
-/* 「进入」右侧那枚箭头（尺寸与描边跟站内其他小箭头一致） */
+/* 标题后面那枚箭头（尺寸与描边跟站内其他小箭头一致） */
 .rant-preview-more svg {
     width: 12px;
     height: 12px;
@@ -2269,7 +2304,7 @@ body.is-home footer {
 
 @media (max-width: 700px) {
     .rant-preview {
-        padding: 0.8rem 0.9rem;
+        padding: 0 0.9rem;
     }
 }
 
@@ -2474,6 +2509,13 @@ html[lang='en-US'] .post-title-link {
     padding-left: 40px !important;             /* 4. 留出左侧放大镜图标的空间 */
     padding-right: 40px !important;            /* 5. 留出右侧清除按钮的空间 */
     box-sizing: border-box !important;        /* 6. 确保 border 不挤压内部高度 */
+}
+
+/* 空着的时候（placeholder 还在）右侧那枚叉号是 suppressed 的（opacity 0 + pointer-events none），
+   那 40px 就是白留 ⇒ 空态只留 20px，placeholder 不会因为窄屏被截掉（现在只剩「搜索」/「Search」
+   这么短，这一下就够宽裕了）。一旦开始输入，:placeholder-shown 不再匹配，padding 回到 40 给叉号让位。 */
+#search .pagefind-ui .pagefind-ui__search-input:placeholder-shown {
+    padding-right: 20px !important;
 }
 
 /* 2. ⚡️ 强行同步占位符（Placeholder）的行高与对齐方式 */

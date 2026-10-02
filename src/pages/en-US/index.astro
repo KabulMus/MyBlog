@@ -88,22 +88,25 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     </Fragment>
 
     <div class="blog-list-wrapper" data-pagefind-ignore>
-        {rantPosts.length > 0 && (
-            <div class="rant-preview" data-pagefind-ignore>
-                <span class="rant-preview-title">Some Ramblings</span>
-                <a class="rant-preview-more" href="/en-US/rants">Enter<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12L31 24L19 36"/></svg></a>
-                {/* One click layer over the whole block: any mouse click goes to the masonry */}
-                <a class="rant-preview-enter" href="/en-US/rants" aria-hidden="true" tabindex="-1"></a>
-            </div>
-        )}
+        {/* Ramblings entry beside the search box (same height, so it no longer looks like two identical bars stacked); CSS stacks them again on narrow screens */}
+        <div class="home-topbar">
+            {rantPosts.length > 0 && (
+                <div class="rant-preview" data-pagefind-ignore>
+                    <span class="rant-preview-title">Ramblings</span>
+                    <a class="rant-preview-more" href="/en-US/rants" aria-label="Enter ramblings"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12L31 24L19 36"/></svg></a>
+                    {/* One click layer over the whole block: any mouse click goes to the masonry (keyboard takes the arrow link above) */}
+                    <a class="rant-preview-enter" href="/en-US/rants" aria-hidden="true" tabindex="-1"></a>
+                </div>
+            )}
 
-        <div class="search-container">
-            {/* Placeholder shell: draws the very same box before PagefindUI mounts (see .search-skeleton) */}
-            <div class="search-skeleton" aria-hidden="true">
-                <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span>Search posts…</span>
+            <div class="search-container">
+                {/* Placeholder shell: draws the very same box before PagefindUI mounts (see .search-skeleton) */}
+                <div class="search-skeleton" aria-hidden="true">
+                    <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <span>Search</span>
+                </div>
+                <div id="search"></div>
             </div>
-            <div id="search"></div>
         </div>
 
         <div class="cat-filter-bar" data-pagefind-ignore>
@@ -415,7 +418,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             new PagefindUI({
                 element: '#search',
                 showImages: false,
-                translations: { placeholder: 'Search posts…' },
+                translations: { placeholder: 'Search' },
                 processTerm: (term) => {
                     // 中文片段按精确短语匹配（配合 unigram 索引）：
                     // 索引用零宽空格 U+200B 分隔，查询用普通空格分隔再包引号；
@@ -430,6 +433,18 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                 searchEl.querySelectorAll('[title]').forEach(el => el.removeAttribute('title'));
             }
         }
+
+        // The results pane should span the whole row, but the search box only takes the right half
+        // (the ramblings entry sits on the left), so measure that entry and hand the width to CSS.
+        var topbar = document.querySelector('.home-topbar');
+        var syncTopbarLeft = function () {
+            if (!topbar) return;
+            var pill = topbar.querySelector('.rant-preview');
+            topbar.style.setProperty('--topbar-left', (pill ? pill.getBoundingClientRect().width : 0) + 'px');
+        };
+        syncTopbarLeft();
+        window.addEventListener('resize', syncTopbarLeft);
+        document.fonts.ready.then(syncTopbarLeft);   // a different font means a different width: re-measure once fonts settle
 
     var initialPage = getPageFromUrl();
         sessionStorage.setItem('blogHomePage', String(initialPage));
