@@ -1750,6 +1750,9 @@ function getLangSwitchHref(pathname: string) {
 		const JIANPU_KEY_ACC_DY = -1.6; // 调号里升降号抬高多少（负 = 上抬）
 		const JIANPU_MOD_LIFT = 24; // 谱内转调标记抬到音符基线上方多少（画在行间，不占行内空间）
 		const JIANPU_MOD_SIZE = 16; // 谱内转调标记（`1 = X`）的字号：比信息区那行（JIANPU_INFO_SIZE）小一点（用户要求）
+		const JIANPU_MOD_GAP = 2; // 谱内转调标记与周围墨迹之间要留的净空（横向相交的元素才算障碍）
+		const JIANPU_MOD_DX = 0; // 谱内转调标记的**左右位置**：换调点那个音符的**墨迹左端** + 本值（负 = 往左）
+		const JIANPU_MOD_SHIFT = 10; // 上面那个位置**放不下**时最多再横着挪多少像素（改成 0 = 绝不横移，永远按 JIANPU_MOD_DX 摆）
 		//                              ⚠️ 谱宽 = SVG viewBox 宽，**随容器变**（436/636/696/736/800…）→ 不能写死绝对 x
 		const JIANPU_GRACE_GAP = 0; // 倚音墨迹右端距主数字墨迹左端的净空
 		const JIANPU_GRACE_ABOVE = 2; // 倚音墨迹底部距主数字墨迹顶部的净空
@@ -1787,17 +1790,26 @@ function getLangSwitchHref(pathname: string) {
 			const info: Record<string, string> = {};
 			const lyricLines: string[] = [];
 			// 正文行（每行带上「这一行的换调」：`K: X` 单独一行时挂到它后面第一个正文行上）
-			const bodyRows: { text: string; mod: string | null; inl: string | null }[] = [];
+			// `inlAt` = 行内那个换调记号落在这一行的第几个小节（−1 = 这一行没有行内换调）
+			const bodyRows: { text: string; mod: string | null; inl: string | null; inlAt: number }[] = [];
 			let pendingMod: string | null = null;
 			let bodyStarted = false;
-			/** 正文行 → 把行内的换调记号摘出来（方括号 `[K: G]` 与裸写的 `K: G` 都认）：这一行从中途起换调 */
+			/**
+			 * 正文行 → 把行内的换调记号摘出来（方括号 `[K: G]` 与裸写的 `K: G` 都认）：这一行从中途起换调。
+			 * ⚠️ 还要记下它前面有几条小节线（= 它在第几个小节）—— 标记要画在**换调点那个小节**上方，
+			 *    光知道「这一行要换调」不够（否则永远画在行首，用户实测报过「1 = F 怎么在行首了」）。
+			 */
 			const takeInlineMod = (line: string) => {
 				let key: string | null = null;
-				const text = line.replace(/\[\s*[Kk]:\s*([A-Ga-g](?:#|b|min)?)\s*\]|(^|[\s|])[Kk]:\s*([A-Ga-g](?:#|b|min)?)(?=\s|\||$)/g, (_all: string, k1: string, pre: string, k2: string) => {
-					if (!key) key = k1 || k2;
+				let at = -1;
+				const text = line.replace(/\[\s*[Kk]:\s*([A-Ga-g](?:#|b|min)?)\s*\]|(^|[\s|])[Kk]:\s*([A-Ga-g](?:#|b|min)?)(?=\s|\||$)/g, (_all: string, k1: string, pre: string, k2: string, offset: number, src: string) => {
+					if (!key) {
+						key = k1 || k2;
+						at = (src.slice(0, offset).match(/\|\]|\|\||\|/g) || []).length;
+					}
 					return pre || '';
 				});
-				return { text, key };
+				return { text, key, at };
 			};
 			/** 单字母别名 → 全称（对齐 abc：T 标题 / C 作曲 / K 调号 / M 拍号 / L 默认时值 / Q 速度 / W 歌词） */
 			const ALIAS: Record<string, string> = { t: 'title', c: 'composer', k: 'key', m: 'beat', l: 'len', q: 'tempo', w: 'lyric' };
@@ -1805,10 +1817,10 @@ function getLangSwitchHref(pathname: string) {
 			raw.split('\n').forEach((line) => {
 				const m = /^([A-Za-z]+)\s*[:：]\s*(.*)$/.exec(line.trim());
 				if (!m) {
-					const { text, key: inlineKey } = takeInlineMod(line);
+					const { text, key: inlineKey, at: inlineAt } = takeInlineMod(line);
 					if (text.trim()) {
 						bodyStarted = true;
-						bodyRows.push({ text, mod: pendingMod, inl: inlineKey });
+						bodyRows.push({ text, mod: pendingMod, inl: inlineKey, inlAt: inlineAt });
 						pendingMod = null;
 					}
 					return;
@@ -1817,8 +1829,8 @@ function getLangSwitchHref(pathname: string) {
 				const key = rawKey.length === 1 ? ALIAS[rawKey.toLowerCase()] ?? rawKey.toLowerCase() : rawKey.toLowerCase();
 				if (!KNOWN.includes(key)) {
 					bodyStarted = true;
-					const { text, key: inlineKey } = takeInlineMod(line);
-					bodyRows.push({ text, mod: pendingMod, inl: inlineKey }); // 认不出的键（`X:` / `R:` 之类）当正文，交给归一丢字符
+					const { text, key: inlineKey, at: inlineAt } = takeInlineMod(line);
+					bodyRows.push({ text, mod: pendingMod, inl: inlineKey, inlAt: inlineAt }); // 认不出的键（`X:` / `R:` 之类）当正文，交给归一丢字符
 					pendingMod = null;
 					return;
 				}
@@ -1832,8 +1844,8 @@ function getLangSwitchHref(pathname: string) {
 					return;
 				}
 				if (bodyStarted && key === 'key') {
-					const { text, key: inlineKey } = takeInlineMod(line);
-					bodyRows.push({ text, mod: pendingMod, inl: inlineKey });
+					const { text, key: inlineKey, at: inlineAt } = takeInlineMod(line);
+					bodyRows.push({ text, mod: pendingMod, inl: inlineKey, inlAt: inlineAt });
 					pendingMod = null;
 					return;
 				}
@@ -1915,7 +1927,7 @@ function getLangSwitchHref(pathname: string) {
 		 * ⚠️ **换调点不参与断行**（2026-10-02 用户要求删掉原先那条「带换调标记的小节强制开新行」）：带 `mod` / `inl`
 		 *    的小节照常按 `perLine` 折行，换调标记跟着那个小节走，位置由 `modAt`（该行里第几个小节）记下来。
 		 */
-		function planJianpuBars(rowsIn: { text: string; mod: string | null; inl: string | null }[], perLine: number) {
+		function planJianpuBars(rowsIn: { text: string; mod: string | null; inl: string | null; inlAt: number }[], perLine: number) {
 			const parsed = rowsIn
 				.map((r) => {
 					const measures: string[] = [];
@@ -1927,7 +1939,8 @@ function getLangSwitchHref(pathname: string) {
 						measures.push(body);
 						tokens.push(i + 1 < parts.length ? parts[i + 1] : null);
 					}
-					return { measures, tokens, mod: r.mod, inl: r.inl, modAt: 0 };
+					// 换调落在该行的第几个小节：`K: X` 单独一行的从行首起算（0），写在行内的用它记下的位置
+					return { measures, tokens, mod: r.mod, inl: r.inl, inlAt: r.inlAt, modAt: r.mod ? 0 : r.inlAt };
 				})
 				.filter((r) => r.measures.length);
 			// 手写换行处（= 乐句边界）没写记号的话补 `|`：换行本来就意味着有条线；最后一个不补
@@ -1939,7 +1952,7 @@ function getLangSwitchHref(pathname: string) {
 			// 把所有行拉平成一串（小节 + 记号 + 换调），再按 perLine 切行；换调只挂在它那一行的第一个小节上
 			const flat: { m: string; t: string | null; mod: string | null; inl: string | null }[] = [];
 			parsed.forEach((row) => {
-				row.measures.forEach((m, i) => flat.push({ m, t: row.tokens[i], mod: i === 0 ? row.mod : null, inl: i === 0 ? row.inl : null }));
+				row.measures.forEach((m, i) => flat.push({ m, t: row.tokens[i], mod: i === 0 ? row.mod : null, inl: i === row.inlAt ? row.inl : null }));
 			});
 			const rows: { measures: string[]; tokens: (string | null)[]; mod: string | null; inl: string | null; modAt: number }[] = [];
 			let at = 0;
@@ -3807,27 +3820,108 @@ function getLangSwitchHref(pathname: string) {
 				if (!Number.isFinite(base)) return;
 				const label = makeJianpuModLabel(host, entry.key);
 				if (!label) return;
-				const y = base - JIANPU_MOD_LIFT;
-				label.setAttribute('y', String(y));
-				stave.appendChild(label);
-				// 上一行可能带着歌词 / 低八度点 / 连音线探下来 —— 摆完再量**真实**墨迹，撞上就把整块
-				// 往下让到「上一行墨迹底 + 2px」（字体栈里全是中文衬线，ascent 估不准，只能量）。
-				// ⚠️ `getBBox()` 不含自身 transform，而 stave 没有 transform ⇒ 与上一行同一套坐标。
-				const prevStave = i > 0 ? (staves[i - 1] as SVGGraphicsElement) : null;
-				if (prevStave) {
-					try {
-						const mb = label.getBBox();
-						const pb = prevStave.getBBox();
-						const dy = pb.y + pb.height + 2 - mb.y;
-						if (mb.height > 0 && dy > 0) label.setAttribute('y', String(y + dy));
-					} catch {
-						/* 量不到就保持默认位置 */
-					}
-				}
-				// 横向对着那个音符的墨迹左端（拿不到就退回它的 x）
+				// 横向对着那个音符的墨迹左端（拿不到就退回它的 x；左右位置看 JIANPU_MOD_DX）
 				const ink = jianpuTextInkLR(anchor);
-				const x = (ink && Number.isFinite(ink.l) ? ink.l : parseFloat(anchor.getAttribute('x') || '0')) + 6;
+				const x = (ink && Number.isFinite(ink.l) ? ink.l : parseFloat(anchor.getAttribute('x') || '0')) + JIANPU_MOD_DX;
 				label.setAttribute('x', String(x));
+				const y0 = base - JIANPU_MOD_LIFT;
+				label.setAttribute('y', String(y0));
+				stave.appendChild(label);
+				// 行间这条缝未必放得下：上一行可能带歌词 / 低八度点探下来，本行音符上方又可能正好压着
+				// 圆滑线 / 三连音弧 / 小房子 —— 所以摆完先量自己的**真实**墨迹（ascent 估不准：中文衬线栈
+				// 实测 ≈1.09em），再在基线上方这段区间里逐 0.5px 扫一个「跟谁都挨不上」的位置：
+				// 优先离默认位置最近的那个（没有完全不撞的，就退而求其次取重叠量最小的）。
+				// ⚠️ 障碍只认**横向与自己相交**的元素（一行里别处探下来的东西挨不到标记）；
+				//    先用属性坐标粗筛行距、再量盒子，免得给全谱几百个元素都调 getBBox。
+				// ⚠️ `getBBox()` 不含自身 transform，而 stave / tieline 都没有 transform ⇒ 同一套坐标。
+				try {
+					// ⚠️ 量墨迹一律走「屏幕矩形 + CTM 逆变换」，**不用 `getBBox()`**：SVG 文本的 getBBox 是
+					//    字体行盒（比可见墨迹高一大截），而**空 tspan**（三连音标签那类）在 Chromium 里还会
+					//    返回一个荒唐的大框（实测 9.6×78.4）—— 拿它当障碍会把整条缝封死，标记无处可放。
+					const ctm = svg.getScreenCTM();
+					const inv = ctm && ctm.inverse();
+					if (!inv) return;
+					const local = (el: SVGElement, estimateText = false) => {
+						const r = el.getBoundingClientRect();
+						if (!r.width && !r.height) return null;
+						const a = new DOMPoint(r.left, r.top).matrixTransform(inv);
+						const b = new DOMPoint(r.right, r.bottom).matrixTransform(inv);
+						let y0 = Math.min(a.y, b.y);
+						let y1 = Math.max(a.y, b.y);
+						if (estimateText && el.tagName.toLowerCase() === 'text') {
+							// ⚠️ text 的矩形会被**子 tspan 的字形**撑坏（三连音标签那种：实测 9.6×78.4 ——
+							//    字形 tspan 的 y 与父 text 的不同、字体度量又拿不到）⇒ 纵向改用「基线 ± 字号」
+							//    估算，横向仍旧用矩形（宽度是可靠的）。
+							const ty = parseFloat(el.getAttribute('y') || 'NaN');
+							const fs = parseFloat(getComputedStyle(el).fontSize) || 12;
+							if (Number.isFinite(ty)) {
+								y0 = ty - fs * 0.9;
+								y1 = ty + fs * 0.3;
+							}
+						}
+						return { x0: Math.min(a.x, b.x), y0, x1: Math.max(a.x, b.x), y1 };
+					};
+					const mine = local(label);
+					if (!mine) return;
+					const asc = y0 - mine.y0;
+					const desc = mine.y1 - y0;
+					const width = mine.x1 - mine.x0;
+					// 障碍：横向先按「最远能挪到哪」放宽收集，纵向再逐个候选位置比
+					const boxes: { x0: number; x1: number; top: number; bottom: number }[] = [];
+					svg.querySelectorAll('text, circle, line, path').forEach((el) => {
+						if (label.contains(el)) return;
+						const ly = jianpuLayerY(el); // 粗筛用属性坐标（不触发排版），只有近处的才量矩形
+						if (!Number.isFinite(ly) || ly < base - 120 || ly > base + 8) return;
+						const b = local(el as SVGElement, true);
+						if (!b) return;
+						if (b.x1 <= mine.x0 - JIANPU_MOD_SHIFT || b.x0 >= mine.x1 + JIANPU_MOD_SHIFT) return;
+						boxes.push({ x0: b.x0, x1: b.x1, top: b.y0 - JIANPU_MOD_GAP, bottom: b.y1 + JIANPU_MOD_GAP });
+					});
+					// 横向优先（0 = 正对着换调点那个音），原地放不下才试着左右挪一点点；每个横向位置上再
+					// 从「贴着本行音符」往上一格格扫，取离默认高度最近的那个干净位置。
+					// ⚠️ 挪动幅度由 `JIANPU_MOD_SHIFT` 定（0 ⇒ 只有 0 这一个候选，绝不横移）。
+					const shifts = [0];
+					for (let step = 6; step <= JIANPU_MOD_SHIFT; step += 6) shifts.push(-step, step);
+					let pickX = x;
+					let pickY = y0;
+					let bestPen = Infinity;
+					for (const dx of shifts) {
+						const cx0 = mine.x0 + dx;
+						const cx1 = cx0 + width;
+						const near = boxes.filter((b) => b.x1 > cx0 && b.x0 < cx1);
+						const ok: number[] = [];
+						let fallback = y0;
+						let fallbackPen = Infinity;
+						for (let y = base - 4; y >= base - 90; y -= 0.5) {
+							const top = y - asc;
+							const bottom = y + desc;
+							let pen = 0;
+							near.forEach((b) => {
+								const o = Math.min(b.bottom, bottom) - Math.max(b.top, top);
+								if (o > 0) pen += o;
+							});
+							if (pen <= 0.01) ok.push(y);
+							else if (pen < fallbackPen) {
+								fallbackPen = pen;
+								fallback = y;
+							}
+						}
+						if (ok.length) {
+							pickX = x + dx;
+							pickY = ok.reduce((a, b) => (Math.abs(b - y0) < Math.abs(a - y0) ? b : a));
+							break;
+						}
+						if (fallbackPen < bestPen) {
+							bestPen = fallbackPen;
+							pickX = x + dx;
+							pickY = fallback;
+						}
+					}
+					if (Math.abs(pickX - x) > 0.01) label.setAttribute('x', String(pickX));
+					if (Math.abs(pickY - y0) > 0.01) label.setAttribute('y', String(pickY));
+				} catch {
+					/* 量不到就保持默认位置 */
+				}
 			});
 		}
 
