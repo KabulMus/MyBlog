@@ -253,11 +253,18 @@ function getLangSwitchHref(pathname: string) {
 		     （display=swap 本来就是这个行为）；关了 JS 由 <noscript> 里那份兜底。 -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
-		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=Encode+Sans:wght@100..900&family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
+		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
 		<!-- Inter 官方可变字体（全字形 + optical size，替代 gfonts 的 Inter） -->
 		<link rel="preconnect" href="https://rsms.me/" />
 		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+		{
+			/* 站名标题的字体（自建子集，19KB）：只有主页和碎碎念页用，别处不白拉。
+			   提前拉是为了缩短「标题先不画」的那一小段（见 fitHomeTitle）。 */
+			(isHome || isRantsRoute) && (
+				<link rel="preload" as="font" type="font/woff2" href="/fonts/GoogleSansFlex-title.woff2" crossorigin="anonymous" />
+			)
+		}
 		<meta name="generator" content={Astro.generator} />
 		<title>{pageTitle}</title>
 
@@ -781,210 +788,44 @@ function getLangSwitchHref(pathname: string) {
 				document.fonts.ready.then(clampNavTitles);
 			}
 
-			// 分类（cat）筛选按钮：靠宽度轴（wdth）让这几枚**永远挤在一行**。
-			// 三步：① 二分字宽 75–125%，找「还塞得进一行」的最宽值（够宽就顶到 125%，挤不下就压窄，
-			// 压到 75% 仍塞不下就放弃硬挤、让它自然换行）；② 在这个字宽下量各自的自然宽；
-			// ③ 按自然宽等比摊满整行（flex-basis = 自然宽 × k）——按钮之间原本的宽窄关系不变。
-			// 只动宽度轴，不碰字号（字号一变基准宽跟着变，就会跟摊开比例互相追）。
-			// ⚠️ 量之前必须关掉 transition：这几个按钮是 transition: all，宽度（含字宽）是过渡出来的，
-			//    不关会量到「上一轮摊开后的宽度」，比例一错就被固化下来。
-			// ⚠️ 水平内边距是 clamp(…vw…)，随视口变 ⇒ resize 必须重量。
-			function tileCatButtons() {
-				var bar = document.querySelector('.cat-filter-bar');
-				if (!bar) return;
-				var btns = Array.prototype.slice.call(bar.querySelectorAll('.cat-filter-btn'));
-				if (!btns.length) return;
-				btns.forEach(function (b) {
-					b.style.transition = 'none';
-					b.style.flex = '0 0 auto';
-					b.style.fontStretch = '';
-					b.style.letterSpacing = '';
-					b.style.paddingLeft = '';
-					// ⚠️ 上下留白也要清：不然每跑一轮（load / fonts.ready / resize 各一次）就再放大一轮，
-					//    几轮下来按钮会涨到几十像素高
-					b.style.paddingTop = '';
-					b.style.paddingBottom = '';
-				});
-
-				var gap = parseFloat(window.getComputedStyle(bar).columnGap) || 0;
-				// 留 0.5px 余量：刚好等于容器宽时会因四舍五入把最后一枚挤到第二行
-				// ⚠️ 这里只减 0.5，**不要**顺手把 gap 也减掉：下面算行宽时还要再按行减一次，
-				//    减重了整行就会短掉一个 gap（表现为按钮右边空一块）
-				var avail = bar.clientWidth - 0.5;
-				var setStretch = function (s) {
-					btns.forEach(function (b) { b.style.fontStretch = s + '%'; });
-				};
-				// 数当前布局有几行（垂直中心归组，6px 容差：基线对齐会让各元素差 1-3px）
-				var countRows = function () {
-					var cys = [];
-					btns.forEach(function (b) {
-						var r = b.getBoundingClientRect();
-						var cy = r.top + r.height / 2;
-						for (var i = 0; i < cys.length; i++) {
-							if (Math.abs(cys[i] - cy) < 6) return;
-						}
-						cys.push(cy);
-					});
-					return cys.length;
-				};
-
-				// 中文标签两字之间留一口气：letter-spacing（只有汉字标签加，拉丁那几枚不动）。
-				// ⚠️ letter-spacing 是「每个字后面」都加 ⇒ 最后一个字后头也多出一格，会把标签整体顶得偏左。
-				//    用**等量的左内边距**补回来（前导留白 = 尾部留白时才真居中）。
-				var CJK = /[\u3400-\u4dbf\u4e00-\u9fff]/;
-				var isCJK = btns.map(function (b) { return CJK.test(b.textContent || ''); });
-				var lsMax = 0.15;   // em
-				var padLeftBase = btns.map(function (b) { return parseFloat(window.getComputedStyle(b).paddingLeft) || 0; });
-				var setLS = function (factor) {
-					var lsPx = lsMax * factor * (parseFloat(window.getComputedStyle(btns[0]).fontSize) || 0);
-					btns.forEach(function (b, i) {
-						if (isCJK[i] && factor > 0) {
-							b.style.letterSpacing = (lsMax * factor).toFixed(3) + 'em';
-							b.style.paddingLeft = (padLeftBase[i] + lsPx).toFixed(2) + 'px';
-						} else {
-							b.style.letterSpacing = '';
-							b.style.paddingLeft = '';
-						}
-					});
-				};
-
-				// 最紧状态（字宽 75%、字距 0）下的最少行数
-				setStretch(75);
-				setLS(0);
-				var minRows = countRows();
-
-				// ① 先定字宽：字距先归零，让字形宽度尽量大（二分找「行数仍是 minRows」的最宽值）。
-				//    行数为 1 时就是「保住一行 + 字尽量宽」；真挤不成一行时，也让留下的那几行用最宽的字
-				//    （既然已经换行了，再压窄就白压了 —— 2026-10-03 用户指出）。
-				var lo = 75, hi = 125;
-				for (var i = 0; i < 6; i++) {
-					var mid = (lo + hi) / 2;
-					setStretch(mid);
-					if (countRows() > minRows) {
-						hi = mid;
-					} else {
-						lo = mid;
-					}
-				}
-				setStretch(lo.toFixed(1));
-
-				// ② 再定字距：从满到 0 逐档试，取「行数仍是 minRows」的最大档。
-				//    宽度一紧就**先**收这口气（比压字形宽度不伤字）。
-				for (var k = 5; k >= 0; k--) {
-					setLS(k / 5);
-					if (countRows() <= minRows) break;
-					if (k === 0) setLS(0);
-				}
-
-				// ② 量自然宽，并分出第一行（垂直中心 + 6px 容差：基线对齐会让各元素差 1-3px）
-				var widths = btns.map(function (b) { return b.getBoundingClientRect().width; });
-				var firstRow = [];
-				var firstCy = null;
-				btns.forEach(function (b, i) {
-					var r = b.getBoundingClientRect();
-					var cy = r.top + r.height / 2;
-					if (firstCy === null) {
-						firstCy = cy;
-					}
-					if (Math.abs(cy - firstCy) < 6) firstRow.push(i);
-				});
-
-				// ③ 第一行的摊开倍率，所有行共用：换行后的行按第一行的样式、左对齐，不硬铺满
-				var sum = 0;
-				firstRow.forEach(function (i) { sum += widths[i]; });
-				var rowAvail = avail - gap * Math.max(0, firstRow.length - 1);
-				// ⚠️ k 不小于 1：格子不能压到比内容还窄，否则标签会在格子里折行
-				//    （中文没有宽度轴、压不动时尤其明显）；真放不下就交给 flex-wrap 自然换行
-				var k = Math.max(1, sum > 0 ? rowAvail / sum : 1);
-
-				var padY = parseFloat(window.getComputedStyle(btns[0]).paddingTop) || 0;
-				// 上下留白随摊开倍率适度放大（平方根、上限 1.5 倍）：格子摊宽了还是一条窄条会显得瘪
-				var pad = padY * Math.min(1.5, Math.sqrt(k));
-				btns.forEach(function (b, n) {
-					b.style.flex = '0 0 ' + (widths[n] * k).toFixed(2) + 'px';
-					b.style.paddingTop = pad.toFixed(2) + 'px';
-					b.style.paddingBottom = pad.toFixed(2) + 'px';
-				});
-				requestAnimationFrame(function () {
-					btns.forEach(function (b) { b.style.transition = ''; });
-				});
-			}
-
-			document.addEventListener('DOMContentLoaded', tileCatButtons);
-			window.addEventListener('load', tileCatButtons);
-			window.addEventListener('resize', tileCatButtons);
-			// 字体就绪后再量一遍：字体一换文字宽度就变
-			if (document.fonts && document.fonts.ready) {
-				document.fonts.ready.then(tileCatButtons);
-			}
-
 			// 主页那个站名标题（「Ethan's Blog」）：靠 Google Sans Flex 的宽度轴 + 字号把标题区撑满。
-			// 一段一段来，前一段到头才动下一段：宽度轴 → 字号（放不下就从两头缩放）。
-			//   ① font-stretch 就是 wdth 轴（25%–151%），文字宽度随它单调递增 ⇒ 二分几轮贴近可用宽度；
-			//   ② 顶到 151 还差一截 ⇒ 二分放大字号继续撑；
-			//   ③ 顶到 25 还嫌宽 ⇒ 反过来二分缩字号（跟②同一套，只是往小里找）。
+			// 标题宽度：CSS 那一档（150% + clamp 字号）在常规宽度下正好铺满，所以脚本什么都不写 ——
+			// 宽屏下一个 inline 都不设，数值上零变化（连零点几像素的微调也没有）。
+			// 只有装不下时才动手：把宽度轴收窄到不溢出为止。
+			// 字体没就绪前不量：那时量的是后备字体的宽度，量了也是错的。
+			var homeTitleReady = false;
 			function fitHomeTitle() {
-				var h1 = document.querySelector('body:not(.is-article-page) .page-hero h1');
+				if (!homeTitleReady) return;
+				var h1 = document.querySelector('body:not(.is-article-page) .page-hero h1, body.is-rants-index .page-hero h1');
 				if (!h1 || !h1.parentElement) return;
-				// 每次从 CSS 的底子重来（不然 resize 时上一次的缩放会一层层叠上去）
+				// 先清掉上一次写的 inline，回到 CSS 的底子
 				h1.style.fontStretch = '';
 				h1.style.fontSize = '';
 				var cs = window.getComputedStyle(h1);
 				// 留 1px 余量：贴着量到极限时会因为零点几像素的四舍五入翻到第二行
 				var avail = h1.parentElement.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 1;
 				if (!(avail > 1)) return;
-				var baseSize = parseFloat(cs.fontSize);
 
-				// 量的时候锁成不换行：换了行 Range 量出来的是整块宽度，二分就会一路往最宽跑
+				// 量的时候锁成不换行：换了行 Range 量出来的是整块宽度
 				var prevWhiteSpace = h1.style.whiteSpace;
 				h1.style.whiteSpace = 'nowrap';
 				var range = document.createRange();
 				range.selectNodeContents(h1);
 				var textWidth = function () { return range.getBoundingClientRect().width; };
 
-				// ① 宽度轴
-				var lo = 25, hi = 151;
-				for (var i = 0; i < 8; i++) {
-					var mid = (lo + hi) / 2;
-					h1.style.fontStretch = mid + '%';
-					if (textWidth() > avail) {
-						hi = mid;
-					} else {
-						lo = mid;
-					}
-				}
-				h1.style.fontStretch = lo + '%';
-
-				if (lo >= 150 && textWidth() < avail - 0.5) {
-					// ② 宽度轴到头还铺不满 ⇒ 放大字号继续撑。还是二分，只是把变量换成字号：
-					//    宽度随字号单调增，但 opsz 会跟着变、不是严格线性 ⇒ 不能按比例一次算完
-					//    （那样会冲过头：字撑得太大，反而折成两行）。
-					//    上界取 6 倍基准字号：字号翻 N 倍宽度至少也涨 N 倍，这个区间一定包得住答案。
-					var sizeLo = baseSize, sizeHi = baseSize * 6;
-					for (var k = 0; k < 12; k++) {
-						var sizeMid = (sizeLo + sizeHi) / 2;
-						h1.style.fontSize = sizeMid + 'px';
+				if (textWidth() > avail) {
+					// 装不下（窄屏）：二分收窄宽度轴。上界就是 CSS 那一档，装得下就一次也不会进来
+					var lo = 25, hi = 150;
+					for (var i = 0; i < 8; i++) {
+						var mid = (lo + hi) / 2;
+						h1.style.fontStretch = mid + '%';
 						if (textWidth() > avail) {
-							sizeHi = sizeMid;
+							hi = mid;
 						} else {
-							sizeLo = sizeMid;
+							lo = mid;
 						}
 					}
-					h1.style.fontSize = sizeLo + 'px';
-				} else if (lo <= 26 && textWidth() > avail) {
-					// ③ 最窄都放不下 ⇒ 反过来缩字号。第二段同一套二分，只是往小里找：
-					//    下界取 1/6 基准字号（字号缩到 1/N，宽度至少也缩到 1/N，够兜住）。
-					var shrinkLo = baseSize / 6, shrinkHi = baseSize;
-					for (var j = 0; j < 12; j++) {
-						var shrinkMid = (shrinkLo + shrinkHi) / 2;
-						h1.style.fontSize = shrinkMid + 'px';
-						if (textWidth() > avail) {
-							shrinkHi = shrinkMid;
-						} else {
-							shrinkLo = shrinkMid;
-						}
-					}
-					h1.style.fontSize = shrinkLo + 'px';
+					h1.style.fontStretch = lo + '%';
 				}
 				h1.style.whiteSpace = prevWhiteSpace;
 			}
@@ -994,10 +835,111 @@ function getLangSwitchHref(pathname: string) {
 			// ⚠️ resize 走一帧再量：这个事件有时早于布局更新，那时量到的还是旧宽度
 			//（量宽了就会把字号撑过头，窄屏上表现为标题莫名折成两行）
 			window.addEventListener('resize', function () { requestAnimationFrame(fitHomeTitle); });
-			// 换成 Google Sans Flex 后宽度会变 ⇒ 字体就绪后再量一次
-			if (document.fonts && document.fonts.ready) {
-				document.fonts.ready.then(fitHomeTitle);
+			// 只等「站名」这一个字体：等全站的 document.fonts.ready 太慢（十几个家族几十个子集），
+			// 那期间标题会一直吊在最窄形态上。字体太慢或失败时由 800ms 兜底先放出来，
+			// 之后字体真到了再量一次（那一次没有动画，只做微调）。
+			function startTitleFit() {
+				if (homeTitleReady) return;
+				homeTitleReady = true;
+				// 量之前等一帧：字体刚可用时布局可能还没用上新字形，量出来会偏
+				requestAnimationFrame(fitHomeTitle);
 			}
+			// 探针：判断站名字体是不是真的带上了宽度轴。
+			// 字体没到位时要么用后备字体（没有 wdth 轴），要么用 100% 那个变体，
+			// 两种情况量出来 25% 和 150% 的宽度一样或差很少；真正可用时两者会拉开一倍以上。
+			// 只靠 document.fonts.load 判断不准：它 resolve 之后渲染还可能是后备字体，
+			// 那时候量下去会把字号撑成巨字（冷缓存时真能看到）。
+			function titleFontUsable() {
+				var probe = document.createElement('span');
+				probe.textContent = 'Ethan Blog';
+				probe.style.cssText = 'position:absolute;left:-9999px;top:0;white-space:nowrap;'
+					+ 'font-family:"Google Sans Flex",sans-serif;font-weight:1000;font-size:73.6px;';
+				document.body.appendChild(probe);
+				probe.style.fontStretch = '25%';
+				var narrow = probe.getBoundingClientRect().width;
+				probe.style.fontStretch = '150%';
+				var wide = probe.getBoundingClientRect().width;
+				probe.remove();
+				return wide - narrow > 40;
+			}
+			function pollTitleFont(deadline) {
+				if (homeTitleReady) return;
+				if (titleFontUsable()) { startTitleFit(); return; }
+				// 探不到就接着探，但别没完没了：真探不到时标题就留在 CSS 那一档（100% 宽），也不难看
+				if (performance.now() > deadline) return;
+				setTimeout(function () { pollTitleFont(deadline); }, 60);
+			}
+			// ⚠️ 不能只挂 DOMContentLoaded 启动：这段脚本本身就在 body 末尾跑，那时该事件已经过了
+			function bootTitlePoll() {
+				// 最多探 8 秒：冷缓存下站名字体一般几百毫秒到两秒就到位，走到上限说明网络很差，
+				// 那就保持 100% 宽的样子，不再折腾
+				pollTitleFont(performance.now() + 8000);
+			}
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', bootTitlePoll);
+			} else {
+				bootTitlePoll();
+			}
+
+			// 背景图案视差：这一层是 fixed 的，所以「滑动」其实是改 mask 的纵向偏移。
+			// 偏移量按两块 tile 各自的高度取模（1360 / 920），取多大都接得上。
+			var DOODLE_RATE = 0.35;
+			var DOODLE_TILES = [1360, 920];
+			function shiftDoodles() {
+				var body = document.body;
+				if (!body) return;
+				var y = (window.scrollY || window.pageYOffset || 0) * DOODLE_RATE;
+				body.style.setProperty('--bg-shift-a', (-(y % DOODLE_TILES[0])).toFixed(2) + 'px');
+				body.style.setProperty('--bg-shift-b', (-(y % DOODLE_TILES[1])).toFixed(2) + 'px');
+			}
+			// 不套 rAF：蹭上惯性滚动那类场景 rAF 会被暂停，图案会卡住不动
+			window.addEventListener('scroll', shiftDoodles, { passive: true });
+			shiftDoodles();
+
+			// 页脚「Charlie」连点三下的彩蛋：显示区域中央弹一颗米子星，三秒后收
+			function initCharlieEgg() {
+				var footer = document.querySelector('footer');
+				if (!footer) return;
+				var walker = document.createTreeWalker(footer, NodeFilter.SHOW_TEXT, null);
+				var node = null;
+				while ((node = walker.nextNode())) {
+					if (node.nodeValue.indexOf('Charlie') >= 0) break;
+				}
+				if (!node) return;
+				var at = node.nodeValue.indexOf('Charlie');
+				node.splitText(at + 7);
+				var mid = node.splitText(at);
+				var word = document.createElement('span');
+				word.className = 'charlie-word';
+				word.textContent = 'Charlie';
+				mid.parentNode.replaceChild(word, mid);
+
+				var star = document.createElement('div');
+				star.className = 'charlie-star';
+				star.setAttribute('aria-hidden', 'true');
+				// 米子星原坐标只占 0..24，viewBox 就按这个盒子留一点余量；填充用蓝→紫渐变（颜色见 CSS）
+				star.innerHTML = '<svg viewBox="-1 -1 26 26" fill="url(#charlieStarGrad)">'
+					+ '<defs><linearGradient id="charlieStarGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0"/><stop offset="1"/></linearGradient></defs>'
+					+ '<path d="M23.69,11.56l-6.44-2.24,1.05-3.39c.04-.14-.09-.28-.23-.23l-3.39,1.05L12.44.31c-.14-.41-.73-.41-.87,0l-2.24,6.44-3.39-1.05c-.14-.04-.28.09-.23.23l1.05,3.39L.31,11.56c-.41.14-.41.73,0,.87l6.44,2.24-1.05,3.39c-.04.14.09.28.23.23l3.39-1.05,2.24,6.44c.14.41.73.41.87,0l2.24-6.44,3.39,1.05c.14.04.28-.09.23-.23l-1.05-3.39,6.44-2.24c.41-.14.41-.73,0-.87Z"/></svg>';
+				document.body.appendChild(star);
+
+				var hits = 0, lastHit = 0;
+				word.addEventListener('click', function () {
+					var now = Date.now();
+					hits = now - lastHit > 1500 ? 1 : hits + 1;
+					lastHit = now;
+					if (hits < 3) return;
+					hits = 0;
+					star.classList.remove('is-on');
+					void star.offsetWidth;   // 强制一次重排，让动画能重新播
+					star.classList.add('is-on');
+				});
+				// 动画播完自己收场（出入场都在那条 keyframes 里，所以不用计时器）
+				star.addEventListener('animationend', function () {
+					star.classList.remove('is-on');
+				});
+			}
+			document.addEventListener('DOMContentLoaded', initCharlieEgg);
 
 			// 代码块复制按钮（与语言标签合成统一工具栏）
 			function addCopyButtons() {

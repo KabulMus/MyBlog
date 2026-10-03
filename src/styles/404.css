@@ -1,6 +1,6 @@
 /* ===== 404 页面（独立页：复用站内 main.css 的变量/body/footer/主题按钮样式，仅保留 404 特有部分） ===== */
 .content-section {
-    background-color: var(--bg-light);
+    /* 不铺底色：这层几乎占满整页，铺了就盖掉 body::before 的背景图案 */
     padding: 120px 20px 60px;
     text-align: left;
     min-height: 80vh;

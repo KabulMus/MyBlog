@@ -16,6 +16,19 @@
    ⚠️ @font-face 是惰性的：没用到就不会下载。
    ⚠️ font-display: block：字形没就绪时「先不画、就绪再画」，避免闪一下豆腐块。 */
 @font-face { font-family: 'Bravura-Digits'; src: url('/fonts/Bravura-Symbols.woff2') format('woff2'); font-display: block; }
+
+/* 主页大标题用的 Google Sans Flex，自建子集：只留「Ethan’s Blog」和「Ramblings」需要的 16 个字形
+   （含右单引号 U+2019，不是直角撇号 U+0027），222KB 缩到 19KB。自托管是为了不等 Google 那两跳
+   （得先取字体 CSS 才知道 woff2 在哪），放主样式表里能跟页面同时发请求。
+   ⚠️ 25% 150% 一定要写：不声明范围的话宽度轴不可变，整套拟合逻辑就废了。 */
+@font-face {
+    font-family: 'Google Sans Flex';
+    src: url('/fonts/GoogleSansFlex-title.woff2') format('woff2');
+    font-weight: 1000;
+    font-stretch: 25% 150%;
+    font-display: swap;
+}
+
 /* CatNotoSC - 分类（cat）筛选按钮专用的中文子集（作者自建，只有那几个字，~7.9 KB）。
    为什么需要它：`Encode Sans SC` 是拉丁 Small Caps 族、没有汉字，中文标签会一路回退到
    gfonts 的 `Noto Sans SC`，而那份**没有 wdth 轴** ⇒ 按钮上的字宽（font-stretch）对中文无效。
@@ -74,6 +87,9 @@
     --color-rose-bg: rgba(244, 63, 94, 0.1);
     --color-rose-border: rgba(244, 63, 94, 0.3);
     --mark-cyan: #2dd4bfa0;
+    /* 背景装饰的墨色（线稿小图形）。两档是按「看起来一样淡」配的：
+       亮底 ≈0.105 的品牌蓝 与 暗底 0.075 的亮蓝，感知亮度差接近（ΔL* 都 ≈5）。 */
+    --bg-doodle: rgba(30, 102, 198, 0.105);
 }
 
 /* 深色模式变量 */
@@ -116,6 +132,8 @@
     --color-rose-bg: rgba(251, 113, 133, 0.15);
     --color-rose-border: rgba(251, 113, 133, 0.3);
     --mark-cyan: #2dd4bf60;
+    /* 背景装饰：暗底对比低，给亮蓝并提高一档透明度 */
+    --bg-doodle: rgba(147, 197, 253, 0.075);
 }
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme='light']) {
@@ -157,6 +175,8 @@
         --color-rose-bg: rgba(251, 113, 133, 0.15);
         --color-rose-border: rgba(251, 113, 133, 0.3);
         --mark-cyan: #2dd4bf60;
+        /* 背景装饰：暗底对比低，给亮蓝并提高一档透明度 */
+        --bg-doodle: rgba(147, 197, 253, 0.075);
     }
 }
 
@@ -177,6 +197,39 @@ html {
 
 /* 确保表单元素继承页面字体 */
 button, input, select, textarea { font-family: inherit; }
+
+/* ------------------------------------------------------------------
+   页面背景装饰：四个字形（话筒 / 流星 / 米子星 / 音符）的线稿散在两块可平铺的 SVG 上
+   （public/images/bg-doodle-a.svg 大间距 1680×1360、bg-doodle-b.svg 小间距 1120×920）。
+   用 mask + background-color 上色：这样深浅两套主题各给一档墨色，不用把图案导两份。
+   ⚠️ 两块 tile 的尺寸错开（横向要 A 铺两块、B 铺三块才对齐，纵向 31280px 才重样）
+      ⇒ 屏幕上看不出「一块一块重复」。
+   ⚠️ 挂在 body::before 上（position: fixed + z-index: -1）：body 的底色会被传播到 canvas
+      （即最底那层），所以这一层在它之上、在所有内容之下；又因为 pointer-events: none，
+      完全不参与交互。卡片是不透明的，所以图案只在两边的空档里显形。
+   ------------------------------------------------------------------ */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-color: var(--bg-doodle);
+    -webkit-mask-image: url('/images/bg-doodle-a.svg'), url('/images/bg-doodle-b.svg');
+    mask-image: url('/images/bg-doodle-a.svg'), url('/images/bg-doodle-b.svg');
+    -webkit-mask-size: 1680px 1360px, 1120px 920px;
+    mask-size: 1680px 1360px, 1120px 920px;
+    -webkit-mask-repeat: repeat, repeat;
+    mask-repeat: repeat, repeat;
+    /* 视差：滚动时让图案慢慢往上走（见 Layout 里的 shiftDoodles）。偏移量是按各自
+       tile 高度取模后传进来的，所以取多大值图案都接得上，不会露出边缘。 */
+    -webkit-mask-position: 0 var(--bg-shift-a, 0px), 190px calc(110px + var(--bg-shift-b, 0px));
+    mask-position: 0 var(--bg-shift-a, 0px), 190px calc(110px + var(--bg-shift-b, 0px));
+}
+
+@media print {
+    body::before { display: none; }
+}
 
 body {
     font-size: 1rem;
@@ -550,6 +603,42 @@ footer a:hover {
     border-bottom-color: var(--primary-blue);
 }
 
+/* 页脚那颗「Charlie」彩蛋：连点三下，屏幕中央弹一颗米子星，三秒后收回去 */
+.charlie-word {
+    touch-action: manipulation;   /* 连着轻点不被当成双击缩放 */
+}
+
+.charlie-star {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    width: 132px;
+    height: 132px;
+    z-index: 1900;
+    pointer-events: none;
+    color: var(--primary-blue);
+    opacity: 0;
+    transform: translate(-50%, -50%);
+    will-change: transform, opacity;   /* 提前提升图层，缩放时描边不会一帧一帧重新光栅化 */
+}
+
+/* 出入场连成一条动画（0.45s 进 + 3s 停 + 0.45s 出）：两段各自带缓动，
+   比让它反向播同一条 transition 顺得多（反向播会先窜一下再缓，很涩）。 */
+.charlie-star.is-on {
+    animation: charlie-star-pop 3.9s both;
+}
+
+@keyframes charlie-star-pop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1); }
+    12%  { opacity: 1; transform: translate(-50%, -50%) scale(1); animation-timing-function: linear; }
+    88%  { opacity: 1; transform: translate(-50%, -50%) scale(1); animation-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.94); }
+}
+
+/* 填充色跟主页大标题同一套渐变（蓝 → 紫），深浅主题各取各的值 */
+.charlie-star stop:first-child { stop-color: var(--primary-blue); }
+.charlie-star stop:last-child { stop-color: var(--primary-purple); }
+
 /* --- 全局 Toast 通知 --- */
 .toast-notice {
     position: fixed;
@@ -605,6 +694,8 @@ footer a:hover {
     justify-content: center;
     width: 100%;
     max-width: 800px;
+    /* 尺寸查询容器：下面的标题用 100cqw 拿它到底有多宽（宽度轴固定 150，字号负责铺满） */
+    container-type: inline-size;
 }
 
 /* --- 文章题头图片（hero 横幅）---
@@ -843,13 +934,21 @@ footer a:hover {
 
 /* 主页标题：收缩到文字宽度，让渐变完整铺满文字（保持原有左对齐，仅主页，文章页不受影响）。
    字体换成 Google Sans Flex（只引了最粗的 1000），拉伸交给宽度轴：脚本 fitHomeTitle 把
-   font-stretch（= wdth 轴 25%–151%）调到刚好铺满标题区可用宽度，顶到 151 就到头。 */
-body:not(.is-article-page) .page-hero h1 {
+   font-stretch（= wdth 轴 25%–150%）调到刚好铺满标题区可用宽度，顶到 150 就到头。 */
+body:not(.is-article-page) .page-hero h1,
+/* 碎碎念板块的标题也走同一套：它的 body 带着 is-article-page，所以得单独列出来 */
+body.is-rants-index .page-hero h1 {
     width: max-content;
     max-width: 100%;
     font-family: 'Google Sans Flex', 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-weight: 1000;
-    font-stretch: 151%;   /* 脚本还没跑（或字体没到）就先按最宽摆，宽屏下本来就是这一档 */
+    /* 光学尺寸跟着字号走（opsz: auto，浏览器默认）：字形随字号变小而变粗、变松一点。
+       钉成 144 虽然能把下面两条直线变成定系数、算起来简单，但大标题会偏细，不划算。 */
+    font-optical-sizing: auto;
+    /* 这一档在常规宽度下正好铺满（文字 733 + 左右 padding 64 = 797，容器可用 800）⇒
+       它就是终态，脚本在宽屏下什么都不写。
+       150 就是宽度轴的名义上限（字体文件的 fvar 写的是 25–150）。 */
+    font-stretch: 150%;
     margin-bottom: 0;     /* 主页标题下面没有日期行要拉开，那 8px 就只是白白多出来的一段空 */
 }
 
@@ -857,10 +956,49 @@ body:not(.is-article-page) .page-hero h1 {
     .page-hero h1 {
         font-size: 2.2rem; /* 移动端适当缩小标题 */
     }
-    /* 主页那个站名标题不缩：它的字号定死，铺多满交给宽度轴（见 fitHomeTitle 脚本） */
-    body:not(.is-article-page) .page-hero h1 {
+    /* 非主页的那些标题不缩，字号定死，铺多满交给宽度轴（见 fitHomeTitle 脚本） */
+    body:not(.is-article-page) .page-hero h1,
+    body.is-rants-index .page-hero h1 {
         font-size: 2.8rem;
     }
+}
+
+/* 主页标题：铺满交给宽度轴，纯 CSS 算，首帧就是终态，脚本不用再改它。
+   opsz 跟着字号走，所以实测出来的两条「宽度轴 → 文字宽」直线，其系数本身也是字号的线性函数
+   （下表按每 100px 字号写，字号 f 单位 px；两段在 100% 处接上，拟合误差 < 0.01px/100px 字号）：
+       上段 100%–150%：文字宽 = ( (5.077886 + 0.0306622f)·宽度轴% + (149.859 − 3.484364f) ) × f / 100
+        下段  25%–100%：文字宽 = ( (1.7024651 + 0.0013018f)·宽度轴% + (487.4345 − 0.5487577f) ) × f / 100
+   目标宽 T = 100cqw − 67px（.hero-content 内容宽减 h1 左右 padding 64px 和 3px 余量）。
+   两个变量分三段接手（容器从 800 往下窄）：
+     ① 宽度轴定在 150，字号从 73.8px 一路缩到 44.8px（44.8px = 原来的移动端下限 2.8rem）；
+     ② 字号钉在 44.8px，宽度轴 150% → 25%；
+     ③ 宽度轴到底（25%）了，字号才继续缩（＝ T / 5.0935）。
+   ① 段的字号本来要解一元二次方程，这里用一条直线近似（误差 < 0.15px），差的那一丁点
+   由宽度轴吸收掉，宽度仍然是准的。
+   ⚠️ 必须放在上面那条 @media 后面：两边选择器同权重，靠源码顺序定输赢。 */
+body.is-home .page-hero h1,
+body.is-rants-index .page-hero h1 {
+    --title-w: calc(100cqw - 67px);
+    --title-fs: max(calc(3.6808693px + 0.0957945 * var(--title-w)), min(44.8px, calc(var(--title-w) / 5.0935)));
+    --title-fsn: calc(var(--title-fs) / 1px);
+    font-size: var(--title-fs);
+    font-stretch: clamp(25%, min(
+        calc((100 * var(--title-w) / var(--title-fs) - (149.859 - 3.484364 * var(--title-fsn))) / (5.077886 + 0.0306622 * var(--title-fsn)) * 1%),
+        calc((100 * var(--title-w) / var(--title-fs) - (487.4345 - 0.5487577 * var(--title-fsn))) / (1.7024651 + 0.0013018 * var(--title-fsn)) * 1%)
+    ), 150%);
+    white-space: nowrap;   /* 别折行，否则下方内容会跟着上下跳 */
+    overflow: hidden;
+}
+
+/* 碎碎念页的「Ramblings」比「Ethan's Blog」短：同一套三段，系数换成它自己那组，
+   ① 段字号上限相应抬到 85.5px。② 段阈值一样 44.8px，两个标题在手机上一样高。 */
+body.is-rants-index .page-hero h1 {
+    --title-fs: max(calc(4.4302799px + 0.1110258 * var(--title-w)), min(44.8px, calc(var(--title-w) / 4.4744)));
+    --title-fsn: calc(var(--title-fs) / 1px);
+    font-stretch: clamp(25%, min(
+        calc((100 * var(--title-w) / var(--title-fs) - (183.8165 - 3.09765 * var(--title-fsn))) / (3.9345612 + 0.027116 * var(--title-fsn)) * 1%),
+        calc((100 * var(--title-w) / var(--title-fs) - (433.9028 - 0.6151101 * var(--title-fsn))) / (1.4339239 + 0.002289 * var(--title-fsn)) * 1%)
+    ), 150%);
 }
 
 .page-hero .date {
@@ -2092,6 +2230,14 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     border-radius: 16px;
     box-shadow: var(--card-shadow);
     transition: box-shadow 0.2s ease;   /* 跟 .post-item 一个时长，悬停抬起来时两边手感一致 */
+    user-select: none;                  /* 整块是个入口，文字不参与选中 */
+    -webkit-user-select: none;
+}
+
+/* 主页大标题也是纯展示的，拖选照样会把站名一起选进去 ⇒ 一并禁选 */
+body.is-home .page-hero h1 {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .rant-preview-title {
@@ -3117,6 +3263,13 @@ html[lang='en-US'] .post-title-link {
 
 /* --- 分类筛选栏（一级） --- */
 .cat-filter-bar {
+    /* 栏自己就是尺寸查询容器：100cqw 即栏的内容宽（栏无内边距，所以就是它的宽度）。
+       下面的宽度轴和上下留白都拿它算，视口一变跟着变，不用脚本。
+       ⚠️ 栏不在 .hero-content 里（在正文容器里），不能靠 hero 那个容器 */
+    container-type: inline-size;
+    --cat-row: 100cqw;
+    /* 四枚按钮 + 三道空隙之外实际可用的宽 */
+    --cat-fit: calc(var(--cat-row) - 24px);
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -3125,11 +3278,29 @@ html[lang='en-US'] .post-title-link {
     position: relative;
     z-index: 1;
 }
+/* 分类按钮：宽度轴和上下留白全在 CSS 里算，没有脚本再改（原先靠 tileCatButtons 量完写 inline）。
+   实测（本语言四枚的自然宽合计）：自然宽 = 8×水平内边距 + P0 + P1×宽度轴%，
+   空隙 3×8px ⇒「刚好还是一行」的最宽值 = (--cat-fit − 8×水平内边距 − P0) / P1。
+   中文四枚都是两字、宽窄一模一样：P0 = 6.4px（不含字距，字距算在 --cat-ls 里），P1 = 1.344px/%。
+   ⚠️ P1 写成 1.344px 只是拿它当「除以 1.344」用（长度 ÷ 长度 = 数值，再 × 1% 得到百分比）。 */
 .cat-filter-btn {
+    --cat-padh: clamp(10px, 3.4vw, 16px);   /* 水平内边距随视口收缩（16px→10px），防止窄屏挤压 */
+    /* 摊开倍率 k = 可用宽 / 125% 宽度轴 + 满字距时的自然宽合计（上下留白要用它的平方根） */
+    --cat-k: calc(var(--cat-fit) / (8 * var(--cat-padh) + 204.64px));
     display: inline-flex;
     align-items: center;
     justify-content: center;   /* 被摊宽之后文字居中（宽度按比例分到各格，每格不一样宽） */
-    padding: 5px clamp(10px, 3.4vw, 16px);   /* 水平内边距随视口收缩（16px→10px），防止窄屏挤压 */
+    flex: 1 0 auto;            /* 摊满整行时按自然宽等比分（中文四枚等宽）；窄到装不下就自然换行，不硬挤 */
+    /* 每格上限 = 它在「换行后的第一行」里的份额（中文/英文都是前三枚）。
+       不换行时：这个上限比摊满结果宽松，不参与；
+       换行后：第一行靠它重新摊满，其余行按同一个 k（= 上限 ÷ 自然宽）留自然宽、左对齐，
+       不硬铺满 —— 跟原 JS 的 flex-basis = 自然宽 × k 同一个效果。 */
+    max-width: calc((var(--cat-row) - 16px) / 3);   /* 中文前三枚等宽 ⇒ 各 1/3 */
+    /* 先看宽度轴（按「字距已归零」反解）：字距还没收完时它算出来 ≥ 125%，被 clamp 顶在 125% 不动，
+       字距归零后才真开始往下压。留 1px 余量：刚好贴满时四舍五入会把最后一枚挤到第二行。 */
+    font-stretch: clamp(75%, calc((var(--cat-fit) - 1px - 8 * var(--cat-padh) - 6.4px) / 1.344px * 1%), 125%);
+    /* 上下留白随摊开倍率适度放大（5px × √k，上限 1.5 倍）：格子摊宽了还是一条窄条会显得瘪 */
+    padding: calc(5px * clamp(1, sqrt(var(--cat-k)), 1.5)) var(--cat-padh);
     border-radius: 999px;
     border: 1px solid var(--item-border);
     background: var(--card-bg);
@@ -3144,11 +3315,43 @@ html[lang='en-US'] .post-title-link {
     user-select: none;
 }
 html[lang='en-US'] .cat-filter-btn {
-    padding: 5px clamp(10px, 2.8vw, 16px);
+    --cat-padh: clamp(10px, 2.8vw, 16px);
+    /* 英文标签长短不一：P0 = 120.38px，P1 = 1.3032px/%（拉丁标签没有字距，不用分两段） */
+    --cat-k: calc(var(--cat-fit) / (8 * var(--cat-padh) + 283.28px));
+    font-stretch: clamp(75%, calc((var(--cat-fit) - 1px - 8 * var(--cat-padh) - 120.38px) / 1.3032px * 1%), 125%);
+}
+/* 英文四枚靠 flex-grow 按自然宽等比分；上限 = 它在「换行后第一行（前三枚）」里的份额（分母 259.5）。
+   四枚一行时这些上限都比摊满结果宽松，不会插手；换行后就是原 JS 的 k。 */
+html[lang='en-US'] .cat-filter-btn--music { flex-grow: 82.03; max-width: calc(0.31610 * (var(--cat-row) - 16px)); }
+html[lang='en-US'] .cat-filter-btn--studio { flex-grow: 90.16; max-width: calc(0.34744 * (var(--cat-row) - 16px)); }
+html[lang='en-US'] .cat-filter-btn--essays { flex-grow: 87.31; max-width: calc(0.33641 * (var(--cat-row) - 16px)); }
+html[lang='en-US'] .cat-filter-btn--achievements { flex-grow: 151.78; max-width: calc(0.58489 * (var(--cat-row) - 16px)); }
+/* 英文：栏宽 < 331px 时四枚（最小状态合计 8×水平内边距 + 218，再加三处空隙）就挤不下了 ⇒ 换行成「前三枚 + 成就」。
+   换行后第一行只剩三枚，约束松了 ⇒ 宽度轴按前三枚重算（前三枚 100–125% 的直线：P0 = 71px，P1 = 0.74px/%），
+   通常能放宽回 125%。这就是「第一行重新排」，其余行靠上面的 max-width 跟同一个 k 保持一致。
+   ⚠️ 331 = 门槛算到水平内边距也随视口变的那一档（视口约 394px 时两边相等）。 */
+@container (max-width: 331px) {
+    html[lang='en-US'] .cat-filter-btn {
+        font-stretch: clamp(75%, calc((var(--cat-row) - 16px - 6 * var(--cat-padh) - 71px) / 0.74px * 1%), 125%);
+    }
 }
 /* 中文那两个汉字在摊宽的格子里显得小 ⇒ 比拉丁那档大一号（跟旁边搜索框的字号同号） */
 html[lang='zh-CN'] .cat-filter-btn {
     font-size: 1.05rem;
+    /* 汉字之间留一口气。宽度不够时**先**收这口气（字距和跟它等量的左内边距一起收），
+       收到底才开始压宽度轴 —— 这口气比压字形宽不伤字。
+       实测：每 1em 字距给整行加 12 × 字号 px（4 枚 ×「单枚 2 个字距 + 1 段左内边距补偿」），
+       分式里减掉的 174.4px = 宽度轴 125% 时的基宽（6.4 + 1.344×125）。 */
+    --cat-ls: clamp(0em, calc((var(--cat-fit) - 8 * var(--cat-padh) - 174.4px) / (12 * 1.05rem) * 1em), 0.15em);
+    letter-spacing: var(--cat-ls);
+    padding-left: calc(var(--cat-padh) + var(--cat-ls));   /* 末尾那格字距会把标签顶偏左，等量补回来 */
+}
+/* 中文：栏宽 < 212px 时四枚（最小状态合计 187.2 + 24）挤不下 ⇒ 同样换行成「前三枚 + 第四枚」。
+   四枚文字一模一样 ⇒ 前三枚的直线就是四枚的 3/4：P0 = 4.72px，P1 = 1.0088px/%。 */
+@container (max-width: 212px) {
+    html[lang='zh-CN'] .cat-filter-btn {
+        font-stretch: clamp(75%, calc((var(--cat-row) - 16px - 6 * var(--cat-padh) - 4.72px) / 1.0088px * 1%), 125%);
+    }
 }
 @media (hover: hover) and (pointer: fine) {
     .cat-filter-btn:hover { transform: scale(1.05); box-shadow: var(--card-hover-shadow); }

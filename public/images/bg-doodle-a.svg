@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 1360" width="1680" height="1360">
+  <!-- 页面背景装饰（A 块，大间距 1680×1360，11 个图形，疏密约每 20.8 万 px² 一个）。字形都走线稿：fill:none + stroke，圆头圆角。
+       字形的中心都归到原点（translate(-24 -24)），所以 <use> 里 scale / rotate 都是绕自身中心。
+       这份只当 mask 用，颜色由 CSS 的 background-color 给，所以 stroke 用什么色都行。 -->
+  <defs>
+    <g id="mic" transform="translate(-24 -24)" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 24C21.5228 24 26 19.5228 26 14C26 8.47715 21.5228 4 16 4C10.4772 4 6 8.47715 6 14C6 19.5228 10.4772 24 16 24Z"/>
+      <path d="M26 15.202C26.0144 15.2163 30.7229 21.1376 40.1256 32.9656C40.4562 33.363 40.4295 33.9468 40.064 34.3124L35.9805 38.3959C35.615 38.7614 35.0311 38.7881 34.6338 38.4575L17.8222 24"/>
+      <path d="M26.4702 24.47L29.2986 27.2985"/>
+      <path d="M17 44.0864C18.9166 41.5881 21.2468 40.3389 23.9906 40.3389C28.1063 40.3389 32.9629 45.5097 37.1063 44.798C41.2496 44.0864 42.4355 40 39.8851 37.7375"/>
+    </g>
+    <g id="star5" transform="translate(-24 -24)" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23.9986 5L17.8856 17.4776L4 19.4911L14.0589 29.3251L11.6544 43L23.9986 36.4192L36.3454 43L33.9586 29.3251L44 19.4911L30.1913 17.4776L23.9986 5Z"/>
+    </g>
+    <g id="phones" transform="translate(-24 -24)" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M42 30V24.4615C42 14.2655 33.9411 6 24 6C14.0589 6 6 14.2655 6 24.4615V30"/>
+      <path d="M34 32C34 29.7909 35.7909 28 38 28H42V42H38C35.7909 42 34 40.2091 34 38V32Z"/>
+      <path d="M42 32H44C45.1046 32 46 32.8954 46 34V36C46 37.1046 45.1046 38 44 38H42V32Z"/>
+      <path d="M6 32H4C2.89543 32 2 32.8954 2 34V36C2 37.1046 2.89543 38 4 38H6V32Z"/>
+      <path d="M6 28H10C12.2091 28 14 29.7909 14 32V38C14 40.2091 12.2091 42 10 42H6V28Z"/>
+    </g>
+    <g id="sparkle" transform="translate(-24 -24) scale(2)" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M23.69,11.56l-6.44-2.24,1.05-3.39c.04-.14-.09-.28-.23-.23l-3.39,1.05L12.44.31c-.14-.41-.73-.41-.87,0l-2.24,6.44-3.39-1.05c-.14-.04-.28.09-.23.23l1.05,3.39L.31,11.56c-.41.14-.41.73,0,.87l6.44,2.24-1.05,3.39c-.04.14.09.28.23.23l3.39-1.05,2.24,6.44c.14.41.73.41.87,0l2.24-6.44,3.39,1.05c.14.04.28-.09.23-.23l-1.05-3.39,6.44-2.24c.41-.14.41-.73,0-.87Z"/>
+    </g>
+    <g id="note" transform="translate(-24 -24)" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M24 6V35"/>
+      <path d="M10 36.04C10 33.2565 12.2565 31 15.04 31H24V36.96C24 39.7435 21.7435 42 18.96 42H15.04C12.2565 42 10 39.7435 10 36.96V36.04Z"/>
+      <path d="M24 14.0664L36.8834 17.1215V9.01341L24 6.00002V14.0664Z"/>
+    </g>
+    <g id="heart" transform="translate(-24 -24)" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 8C8.92487 8 4 12.9249 4 19C4 30 17 40 24 42.3262C31 40 44 30 44 19C44 12.9249 39.0751 8 33 8C29.2797 8 25.9907 9.8469 24 12.6738C22.0093 9.8469 18.7203 8 15 8Z"/>
+    </g>
+  </defs>
+
+  <use href="#mic" transform="translate(265 185) scale(1.55) rotate(-10)"/>
+  <use href="#star5" transform="translate(1085 150) scale(1.30) rotate(16)"/>
+  <use href="#sparkle" transform="translate(1000 930) scale(1.35) rotate(24)"/>
+  <use href="#note" transform="translate(430 615) scale(1.80) rotate(-7)"/>
+  <use href="#phones" transform="translate(900 700) scale(1.10) rotate(12)"/>
+  <use href="#mic" transform="translate(1500 640) scale(1.25) rotate(-18)"/>
+  <use href="#phones" transform="translate(255 1160) scale(0.95) rotate(6)"/>
+  <use href="#star5" transform="translate(760 1245) scale(1.15) rotate(-22)"/>
+  <use href="#sparkle" transform="translate(1150 1110) scale(1.05) rotate(30)"/>
+  <use href="#note" transform="translate(1520 1265) scale(1.45) rotate(9)"/>
+  <use href="#heart" transform="translate(1360 320) scale(1.15) rotate(12)"/>
+</svg>
