@@ -16,6 +16,18 @@
    ⚠️ @font-face 是惰性的：没用到就不会下载。
    ⚠️ font-display: block：字形没就绪时「先不画、就绪再画」，避免闪一下豆腐块。 */
 @font-face { font-family: 'Bravura-Digits'; src: url('/fonts/Bravura-Symbols.woff2') format('woff2'); font-display: block; }
+/* CatNotoSC - 分类（cat）筛选按钮专用的中文子集（作者自建，只有那几个字，~7.9 KB）。
+   为什么需要它：`Encode Sans SC` 是拉丁 Small Caps 族、没有汉字，中文标签会一路回退到
+   gfonts 的 `Noto Sans SC`，而那份**没有 wdth 轴** ⇒ 按钮上的字宽（font-stretch）对中文无效。
+   把这份接在 Encode Sans SC 后面：拉丁仍走 Encode Sans SC，汉字落到它这里，就能一起调字宽了。
+   ⚠️ 声明带宽轴范围：没声明的轴浏览器不会去变（不是字体里有没有的问题）。 */
+@font-face {
+    font-family: 'CatNotoSC';
+    src: url('/fonts/CatNotoSC-VF.woff2') format('woff2');
+    font-weight: 100 900;
+    font-stretch: 75% 125%;
+    font-display: swap;
+}
 
 /* --- 2. 颜色变量 --- */
 :root {
@@ -3116,12 +3128,14 @@ html[lang='en-US'] .post-title-link {
 .cat-filter-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;   /* 被摊宽之后文字居中（宽度按比例分到各格，每格不一样宽） */
     padding: 5px clamp(10px, 3.4vw, 16px);   /* 水平内边距随视口收缩（16px→10px），防止窄屏挤压 */
     border-radius: 999px;
     border: 1px solid var(--item-border);
     background: var(--card-bg);
     color: var(--text-sub);
-    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    /* CatNotoSC 顶在 Encode Sans SC 后面：拉丁照旧走 Encode Sans SC，汉字用它（能一起调字宽） */
+    font-family: 'Encode Sans SC', 'CatNotoSC', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
@@ -3131,6 +3145,10 @@ html[lang='en-US'] .post-title-link {
 }
 html[lang='en-US'] .cat-filter-btn {
     padding: 5px clamp(10px, 2.8vw, 16px);
+}
+/* 中文那两个汉字在摊宽的格子里显得小 ⇒ 比拉丁那档大一号（跟旁边搜索框的字号同号） */
+html[lang='zh-CN'] .cat-filter-btn {
+    font-size: 1.05rem;
 }
 @media (hover: hover) and (pointer: fine) {
     .cat-filter-btn:hover { transform: scale(1.05); box-shadow: var(--card-hover-shadow); }
