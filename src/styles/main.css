@@ -2485,7 +2485,7 @@ body.is-home footer {
     font-weight: 700;
     color: var(--text-main);
     line-height: 1.4;
-    margin: 12px 0 6px 0;
+    margin: 10px 0 6px 0;
     transition: color 0.2s ease;
 }
 
