@@ -87,8 +87,8 @@ t3[21(1] 1*4) 0*2 || [K:F] 3*2 6*2 5{5/}6 53 | (7(6 6*4)) 0*2 |
 
 让我看看我粤拼猜对了吗...
 
-願似灣情共相連  
-Jyun⁶ ci⁵ waan¹ cing⁴ gung⁶ soeng¹ lin⁴
+> 願似灣情共相連  
+> Jyun⁶ ci⁵ waan¹ cing⁴ gung⁶ soeng¹ lin⁴
 
 🤔「灣」和「相連」猜错了（）
 
