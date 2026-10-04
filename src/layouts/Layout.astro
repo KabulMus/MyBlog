@@ -111,7 +111,7 @@ const ogDescription = description || (isEnglishRoute
     ? "Ethan's blog—music, creation, essays & achievements."
     : 'Ethan 的博客—音乐、创作、随笔与成就。');
 const ogImage = 'https://blog.ethan929.com/favicon.webp';
-const pageDate = formatDateHtml(frontmatter?.date || "");
+const pageDate = formatDate(frontmatter?.date || "");
 const pageTime = formatTime(frontmatter?.date || "");
 
 // 计算文章序号（时间正序）
@@ -175,13 +175,6 @@ function formatDate(dateStr: string) {
     return `${+y}年${+mo}月${+d}日`;
 }
 
-// 跟上面同格式，但把「年月日」包进 .date-cjk（那个类单独压一档字重，见 main.css）——
-// hero 上显示的日期用这份；pageTitle（<title> / og:title）必须用纯文本那份。
-function formatDateHtml(dateStr: string) {
-    const html = formatDate(dateStr).replace(/([年月日])/g, '<span class="date-cjk">$1</span>');
-    return html.includes('date-cjk') ? `<span class="date-text">${html}</span>` : html;
-}
-
 function formatTime(dateStr: string) {
     if (!dateStr) return '';
     // 时间部分：中文 24 小时制 14:32；英文 12 小时制 2:32 PM
@@ -192,9 +185,9 @@ function formatTime(dateStr: string) {
     if (isEnglishRoute) {
         const ampm = h >= 12 ? 'PM' : 'AM';
         const h12 = h % 12 === 0 ? 12 : h % 12;
-        return `<span class="time-value">${h12}<span class="time-colon">:</span>${mm} ${ampm}</span>`;
+        return `${h12}:${mm} ${ampm}`;
     }
-    return `<span class="time-value">${h}<span class="time-colon">:</span>${mm}</span>`;
+    return `${h}:${mm}`;
 }
 
 // 文章点赞：从路径取 slug（如 /blog/2026-07-01-hi → 2026-07-01-hi）
@@ -253,18 +246,14 @@ function getLangSwitchHref(pathname: string) {
 		     （display=swap 本来就是这个行为）；关了 JS 由 <noscript> 里那份兜底。 -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
-		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=Encode+Sans:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
+		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wdth,wght@75..125,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
 		<!-- Inter 官方可变字体（全字形 + optical size，替代 gfonts 的 Inter） -->
 		<link rel="preconnect" href="https://rsms.me/" />
 		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-		{
-			/* 站名标题的字体（自建子集，19KB）：只有主页和碎碎念页用，别处不白拉。
-			   提前拉是为了缩短「标题先不画」的那一小段（见 fitHomeTitle）。 */
-			(isHome || isRantsRoute) && (
-				<link rel="preload" as="font" type="font/woff2" href="/fonts/GoogleSansFlex-title.woff2" crossorigin="anonymous" />
-			)
-		}
+		<!-- Google Sans Flex 可变字体（opsz 6–144 / wdth 25–151 / wght 1–1000）：站名大标题用它。
+		     这份不是非阻塞加载：得先拿到它的 CSS 才知道 woff2 在哪，早一步挡住首帧反而让字形更早到位。 -->
+		<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1..1000&display=swap" rel="stylesheet" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{pageTitle}</title>
 
@@ -5236,11 +5225,6 @@ function getLangSwitchHref(pathname: string) {
 						continue;
 					}
 					if (!(child instanceof Element)) continue;
-					if (child.classList.contains('date-text')) {
-						// 日期自己把中西空隙画成定值了（见 main.css 的 .date-cjk）⇒ 这儿别再叠一层
-						current = null;
-						continue;
-					}
 					if (SKIP.has(child.tagName)) {
 						// 代码段那类：既断开 run，里面的字也压根不看
 						current = null;

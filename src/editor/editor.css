@@ -207,7 +207,7 @@
 	align-items: baseline;
 	gap: 0.45em;
 	padding: 6px 10px 4px;
-	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
 	font-size: 0.76rem;
 	font-weight: 500;
 	font-variant-numeric: tabular-nums;
@@ -1307,20 +1307,20 @@ html.is-card-dragging { user-select: none; }
    （`#np-slug` 那类新建弹窗里的输入框也在 .fm-row 里，一并吃到。） */
 .fm-row input::placeholder { color: var(--text-sub); opacity: 0.7; }
 
-/* 标题栏：英文用站点的 Montserrat（跟 .page-index / 站内数字/英文信息同一族），中文回落 Inter → Noto Sans SC。
+/* 标题栏：英文用站点的 Google Sans Flex（跟 .page-index / 站内数字/英文信息同一族），中文回落 Inter → Noto Sans SC。
    字重 600 与站点 .page-index 一致（表单控件默认是 400，正好容易被忽略）。
    ⚠️ 用类不用 id：新建文章弹窗里的中英标题框要同一套字体（那边共不了 id）。 */
 .fm-title {
-	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
 	font-weight: 600;
 }
 
-/* 日期栏：字重 400（跟普通输入框一致）；Montserrat + 等宽数字（照抄站点 .page-index 的写法：
+/* 日期栏：字重 400（跟普通输入框一致）；Google Sans Flex + 等宽数字（照抄站点 .page-index 的写法：
    font-variant-numeric: tabular-nums，这样秒/分/年月对齐，不会随数字宽度跳动）。
    分段选中高亮保留；原生日历按钮与那枚自绘日历图标都已删（原因见下面一段）。
    ⚠️ 选 `.fm-date-wrap > input` 而不是 `#fm-date`：新建文章弹窗里的日期框也在同构 wrapper 里。 */
 .fm-date-wrap > input {
-	font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
 	font-weight: 400;
 	font-variant-numeric: tabular-nums;
 }
@@ -2007,9 +2007,9 @@ body .editor-prose h6 {
 	}
 
 	/* 行首那一格：序号 + 日期。同样是 disabled（选不中），但**不要**那条 0.55 的淡化
-	   —— 它是行标签，淡下去整行看着像坏了。字体跟日期栏同一套：Montserrat + 等宽数字。 */
+	   —— 它是行标签，淡下去整行看着像坏了。字体跟日期栏同一套：Google Sans Flex + 等宽数字。 */
 	.editor-select option.pick-head {
-		font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+		font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
 		font-weight: 500;
 		font-size: 0.76rem;
 		font-variant-numeric: tabular-nums;

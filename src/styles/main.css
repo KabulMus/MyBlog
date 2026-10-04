@@ -17,17 +17,6 @@
    ⚠️ font-display: block：字形没就绪时「先不画、就绪再画」，避免闪一下豆腐块。 */
 @font-face { font-family: 'Bravura-Digits'; src: url('/fonts/Bravura-Symbols.woff2') format('woff2'); font-display: block; }
 
-/* 主页大标题用的 Google Sans Flex，自建子集：只留「Ethan’s Blog」和「Ramblings」需要的 16 个字形
-   （含右单引号 U+2019，不是直角撇号 U+0027），222KB 缩到 19KB。自托管是为了不等 Google 那两跳
-   （得先取字体 CSS 才知道 woff2 在哪），放主样式表里能跟页面同时发请求。
-   ⚠️ 25% 150% 一定要写：不声明范围的话宽度轴不可变，整套拟合逻辑就废了。 */
-@font-face {
-    font-family: 'Google Sans Flex';
-    src: url('/fonts/GoogleSansFlex-title.woff2') format('woff2');
-    font-weight: 1000;
-    font-stretch: 25% 150%;
-    font-display: swap;
-}
 
 /* CatNotoSC - 分类（cat）筛选按钮专用的中文子集（作者自建，只有那几个字，~7.9 KB）。
    为什么需要它：`Encode Sans SC` 是拉丁 Small Caps 族、没有汉字，中文标签会一路回退到
@@ -883,10 +872,9 @@ footer a:hover {
 
 .page-index {
     display: inline;
-    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 1rem;
     font-weight: 600;
-    font-variant-numeric: tabular-nums;
     color: var(--text-sub);
     margin-right: 16px;
     user-select: none;          /* 序号不可选中 */
@@ -916,7 +904,7 @@ footer a:hover {
 .page-hero h1 {
     font-size: 2.8rem;
     font-weight: 800;
-    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -940,7 +928,7 @@ body:not(.is-article-page) .page-hero h1,
 body.is-rants-index .page-hero h1 {
     width: max-content;
     max-width: 100%;
-    font-family: 'Google Sans Flex', 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-weight: 1000;
     /* 光学尺寸跟着字号走（opsz: auto，浏览器默认）：字形随字号变小而变粗、变松一点。
        钉成 144 虽然能把下面两条直线变成定系数、算起来简单，但大标题会偏细，不划算。 */
@@ -1011,39 +999,15 @@ body.is-rants-index .page-hero h1 {
     color: var(--text-sub);
     margin-top: 6px;
     padding: 0 32px;
-    font-weight: 500;
-    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
-    font-variant-numeric: tabular-nums;
+    font-weight: 450;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     user-select: none;          /* 日期/时间不可选中 */
-}
-
-/* 日期里的「年月日」：汉字字形本来就比 Montserrat 的数字压得满，同一个字重下看着更粗
-   ⇒ 这三个字单独压一档（Noto Sans SC 是可变字体，可以直接给 wght；数字不能受影响，
-   所以只能包一层，不能整块调）。嫌粗就调小、嫌细就调大。
-   ⚠️ 这个 span 由 formatDate 生成，外面永远跟着一层 .date-text 把整个日期裹成一个整体
-   （不然每个 span 都成了 flex item，被容器 gap 撑出缝）。 */
-.date-cjk {
-    font-variation-settings: 'wght' 450;
-    /* 中西之间的那 1/8em 空隙由这里自己让（左右各一半，合计一格）：
-       数字 → 汉字的那半格在 margin-left，汉字 → 数字的那半格在 margin-right。
-       末尾（最后一个汉字之后）不再让，免得把日期右缘撑宽、把组间距挤大。 */
-    margin-left: 0.125em;
-}
-.date-cjk:not(:last-child) {
-    margin-right: 0.125em;
-}
-
-/* 日期整块不参与 text-autospace：内核各自对被 span 切开的「年月日」处理不一致
-   （Safari 只在汉字前让空、数字前那半格不让 ⇒ 渲染成「2026 年9 月9 日」），
-   上面的 .date-cjk 已经把那几格空隙变成定值，这儿把自动的关掉，三种内核才能一致。 */
-.date-text {
-    text-autospace: no-autospace;
 }
 
 /* 日期行分组：序号 / 日期 / 时间 三组，组内 4px、组间 12px，换行时整组移动不拆散 */
 .page-hero .date .date-group {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 4px;
 }
 .page-hero .date .date-group .time-icon {
@@ -1147,7 +1111,7 @@ html[lang='zh-CN'] .typography-body i {
     left: -1.4rem; 
     color: var(--primary-blue);
     font-weight: 700; 
-    font-family: 'Montserrat', 'Inter Var', sans-serif; 
+    font-family: 'Google Sans Flex', 'Inter Var', sans-serif; 
     opacity: 0; 
     transition: opacity 0.2s ease; /* 纯粹的不透明度缓动 */
 }
@@ -1703,7 +1667,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
 
 /* 1. ⌨️ 键盘按键（<kbd>）：做出拟真的实体键帽感 */
 .typography-body kbd {
-    font-family: 'Encode Sans', monospace;
+    font-family: 'Google Sans Flex', 'JetBrains Mono', monospace;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-main);
@@ -1772,7 +1736,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
 .pagination-end {
     display: inline-flex;
     align-items: center;
-    font-family: 'Montserrat', 'Inter Var', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
     font-size: 1rem;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
@@ -1796,7 +1760,8 @@ html[lang='en-US'] .typography-body .footnotes::before {
     justify-content: center;
     width: 2.4rem;
     height: 2.4rem;
-    font-family: 'Barlow Condensed', 'Inter Var', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-stretch: 50%;
     font-size: 1.2rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -1914,17 +1879,16 @@ html[lang='en-US'] .typography-body .footnotes::before {
     position: absolute;
     z-index: 0;
     right: 24px;
-    bottom: -30px;
-    font-family: 'Barlow Condensed', 'Inter Var', sans-serif;
+    bottom: -40px;
+    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-stretch: 25%;
     font-size: 10rem;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
+    font-weight: 700;
     color: var(--text-sub);
     opacity: 0.1;
     line-height: 1;
     pointer-events: none;
     user-select: none;
-    letter-spacing: -0.05em;
 }
 
 .post-list {
@@ -2015,10 +1979,11 @@ html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
 
 .post-nav-index {
     position: absolute;
-    bottom: -10px;
-    font-family: 'Barlow Condensed', 'Inter Var', sans-serif;
+    bottom: -20px;
+    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-stretch: 25%;
     font-size: 4.6rem;
-    font-weight: 900;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--text-sub);
     opacity: 0.1;
@@ -2088,15 +2053,15 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
 /* 裸爱心按钮：无框无底，纯图标 + 数字 */
 .like-btn {
     display: inline-flex;
-    align-items: center;
+    align-items: center;   /* 这颗心比 1em 大（1.35em），基线对齐会把按钮顶高 4px ⇒ 保持居中，靠下面 translate 微调 */
     gap: 8px;
     padding: 4px 0;
     border: none;
     background: transparent;
     color: var(--text-sub);
-    font-family: 'Encode Sans', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-weight: 500;
     font-size: 1rem;
-    font-weight: 600;
     cursor: pointer;
     transition: color 0.25s ease, transform 0.25s ease;
     user-select: none;
@@ -2111,6 +2076,9 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     stroke-linecap: round;
     stroke-linejoin: round;
     --pop-end: 1;        /* 动画结束帧缩放（非 hover） */
+    /* 居中之后心形比数字的视觉中心（字高中心）低 0.5px（13.33px 字号实测，GSF）⇒ 提上来。
+       ⚠️ 用 translate 而不是 transform：transform 得留给 hover / likePop 的 scale()。 */
+    translate: 0 -0.038em;
     transition: transform 0.25s ease, fill 0.2s ease;
 }
 
@@ -2124,8 +2092,8 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
 /* 点赞数：等宽数字，左对齐 */
 .like-count {
     font-variant-numeric: tabular-nums;
-    font-weight: 500;
     text-align: left;
+    font-stretch: 75%;
 }
 
 /* 已点赞：心形实心红（复用 tag-red 红，亮暗自动适配） */
@@ -2241,7 +2209,8 @@ body.is-home .page-hero h1 {
 }
 
 .rant-preview-title {
-    font-family: 'Barlow Condensed', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-stretch: 50%;
     font-size: 1.05rem;   /* 跟旁边搜索框的字号同号（两边一块儿看才不一大一小） */
     font-weight: 700;
     color: var(--text-main);
@@ -2349,23 +2318,35 @@ body.is-home footer {
     align-items: center;
     gap: 2px 10px;
     padding-right: 40px;   /* 给右上角那枚「原文」按钮腾位 */
-    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 0.9rem;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
+    font-weight: 450;
     color: var(--text-sub);
     user-select: none;
 }
 
 .rant-card .date-group {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 4px;
 }
 
 /* 钟表图标不再额外左偏移（组间距由 .rant-card-meta 的 gap 提供） */
 .rant-card .date .date-group .time-icon {
     margin-left: 0;
+}
+
+/* 图标与文字的垂直对齐（GSF 换上来后暴露的）：GSF 的升部/降部不对称，align-items: center 对的是
+   行盒（含半行距），图标就比文字的视觉中心偏低 —— 16px 字号下实测日期组低 1.4px、时间组低 0.9px。
+   改成基线对齐 + 把图标中心抬到「字高中心」（cap/2 在基线之上）：cap 是字体自己的字高单位，
+   换字体不用重调；比 1em 高的图标（文章点赞那颗 1.35em）按它自己的半高算。
+   ⚠️ 每组第一条是 cap 单位不被支持时的退路（按 cap ≈ 0.7em 估）。
+   ⚠️ 点赞那颗用 translate 而不是 transform：那条 transform 还得留给 hover / likePop 动画的 scale()。 */
+.date svg.date-icon,
+.post-meta-item svg.date-icon,
+.post-meta-item .like-heart {
+    translate: 0 0.15em;
+    translate: 0 calc(0.5em - 0.5cap);
 }
 
 /* AI 标紧跟在时间后面，不推到行尾 */
@@ -2504,7 +2485,7 @@ body.is-home footer {
     font-weight: 700;
     color: var(--text-main);
     line-height: 1.4;
-    margin: 12px 0 10px 0;
+    margin: 12px 0 6px 0;
     transition: color 0.2s ease;
 }
 
@@ -2530,19 +2511,17 @@ body.is-home footer {
     align-items: center;
     gap: 8px 14px;            /* 换行后的行间距 8px；组间横向间距 14px */
     font-size: 0.875rem;
-    font-weight: 500;
+    font-weight: 450;
     color: var(--text-sub);
     line-height: 1;
-    font-family: 'Montserrat', 'Inter Var', 'Noto Sans SC', sans-serif;
-    font-variant-numeric: tabular-nums;
-    font-feature-settings: "ss11";
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     user-select: none;
 }
 
 /* 日期与点赞共用一个条目类：改此处 CSS，两者同步生效 */
 .post-meta-item {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: 4px;
 }
 /* 图标必须显式锁定尺寸（1em 随字号）：SVG 一旦失去显式宽高，
@@ -2575,13 +2554,6 @@ body.is-home footer {
    （AI 徽标 absolute 在 right:24 bottom:20，宽约 45px；预留 56px 内容右缘与 AI 左缘留 ~11px 间距） */
 .post-item:has(.ai-badge) .post-meta {
     padding-right: 56px;
-}
-
-/* 时间冒号垂直居中于数字高度中央（保持 inline：top 对 relative inline 同样生效，且不产生左右额外间距） */
-.time-colon {
-    position: relative;
-    top: -0.05em;
-    margin: 0 0.1em;
 }
 
 .post-like-meta.is-liked {

@@ -13,12 +13,9 @@ export function formatDate(dateStr: string, lang: Lang): string {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
         return `${months[+mo - 1]} ${+d}, ${+y}`;
     }
-    // 中文日期：2020年8月2日（月日不补零）。
-    // ⚠️ 这里返回的是 HTML，调用处请用 <Fragment set:html={formatDate(...)} />。
-    // ⚠️ 外面那层 .date-text 不能省：日期容器（.post-meta-item / .date-group）是 inline-flex + gap，
-    //    里头的元素全会被当成 flex item 而撑出 4px 缝；包成一个整体才只剩图标与日期之间那一处 4px。
-    // ⚠️ 里头的 .date-cjk 给「年月日」单独压一档字重（汉字字形比 Montserrat 的数字压得满）。
-    return `<span class="date-text">${+y}<span class="date-cjk">年</span>${+mo}<span class="date-cjk">月</span>${+d}<span class="date-cjk">日</span></span>`;
+    // 中文日期：2020年8月2日（月日不补零），纯文本。中西之间的那点空隙交给浏览器
+    // （原生 text-autospace，或者 Layout 里 cjk-latin-gap 那套），跟正文一致。
+    return `${+y}年${+mo}月${+d}日`;
 }
 
 export function formatTime(dateStr: string, lang: Lang): string {
@@ -30,10 +27,10 @@ export function formatTime(dateStr: string, lang: Lang): string {
         const h = +m[1];
         const ampm = h >= 12 ? 'PM' : 'AM';
         const h12 = h % 12 === 0 ? 12 : h % 12;
-        return `<span class="time-value">${h12}<span class="time-colon">:</span>${m[2]} ${ampm}</span>`;
+        return `${h12}:${m[2]} ${ampm}`;
     }
-    // 中文时间：24 小时制 14:32
-    return `<span class="time-value">${+m[1]}<span class="time-colon">:</span>${m[2]}</span>`;
+    // 中文时间：24 小时制 14:32，纯文本（冒号的位置交给字体的上下文替换）
+    return `${+m[1]}:${m[2]}`;
 }
 
 export function smartQuotes(text: string): string {
