@@ -872,7 +872,6 @@ footer a:hover {
 
 .page-index {
     display: inline;
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
     font-size: 1rem;
     font-weight: 600;
     color: var(--text-sub);
@@ -1000,7 +999,7 @@ body.is-rants-index .page-hero h1 {
     margin-top: 6px;
     padding: 0 32px;
     font-weight: 450;
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-variant-numeric: tabular-nums;  /* 日期/时间数字等宽，避免换行时跳动 */
     user-select: none;          /* 日期/时间不可选中 */
 }
 
@@ -1736,7 +1735,6 @@ html[lang='en-US'] .typography-body .footnotes::before {
 .pagination-end {
     display: inline-flex;
     align-items: center;
-    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
     font-size: 1rem;
     font-weight: 400;
     font-variant-numeric: tabular-nums;
@@ -1881,9 +1879,10 @@ html[lang='en-US'] .typography-body .footnotes::before {
     right: 24px;
     bottom: -40px;
     font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-variant-numeric: tabular-nums;
     font-stretch: 25%;
     font-size: 10rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--text-sub);
     opacity: 0.1;
     line-height: 1;
@@ -1981,9 +1980,10 @@ html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
     position: absolute;
     bottom: -20px;
     font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-variant-numeric: tabular-nums;
     font-stretch: 25%;
     font-size: 4.6rem;
-    font-weight: 700;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
     color: var(--text-sub);
     opacity: 0.1;
@@ -2318,7 +2318,7 @@ body.is-home footer {
     align-items: center;
     gap: 2px 10px;
     padding-right: 40px;   /* 给右上角那枚「原文」按钮腾位 */
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-variant-numeric: tabular-nums;
     font-size: 0.9rem;
     font-weight: 450;
     color: var(--text-sub);
@@ -2485,8 +2485,9 @@ body.is-home footer {
     font-weight: 700;
     color: var(--text-main);
     line-height: 1.4;
-    margin: 10px 0 6px 0;
+    margin: 12px 0 6px 0;
     transition: color 0.2s ease;
+    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
 }
 
 /* ⚡️ 核心黑魔法：利用标题链接的 ::before 生成一个隐形幕布，彻底平铺满整张卡片 */
@@ -2514,7 +2515,7 @@ body.is-home footer {
     font-weight: 450;
     color: var(--text-sub);
     line-height: 1;
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-variant-numeric: tabular-nums;
     user-select: none;
 }
 

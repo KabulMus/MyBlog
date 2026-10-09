@@ -35,7 +35,18 @@
 | 自习 | study hall |
 | (农历)X月Y | the Y'th day of the X'th lunar month |
 | 第一中学 | No.1 High School（**`No.` 后面不留空格**，不要写成 No. 1） |
+| 沃土计划 | Fertile Soil Program |
+| 培优部 | Honors Program / honors class |
+| 普通版（与培优部相对应） | regular class |
 | 音高测量(名词性) / 音测(名词性) / 测音(动词性) | vocal pitch analysis (名词性, 音高分析) / analyze vocal pitch (动词性，分析音高) |
+
+一些网梗/流行语：
+| 中文 | 意义 | 翻译建议 |
+| --- | --- | --- |
+| 棍母（谐音作滚木、棍木等） | 通常是网友们对电棍 otto 的母亲的称谓，而由于其早期极为极端的抽象直播风格、高强度的嘴臭攻击等，使得网友们认为电棍 otto「没有母亲」。故在各类二创中，「棍母」常被设定为虚无、不存在、不可观测等。在评论区常有人将棍母与空白或不存在的东西相互换，以达到玩梗的目的。不过，网上所流传的「棍母」照片是一位普通的环卫工人。 | 可以对应英文世界 John Cena 的同类梗「你看不见我」，即将其译为 John Cena; nothingness (本意，即虚无) |
+| 得（dé）吃 | 含贬义，指通过不正当手段、钻空子或德不配位地获得了本不属于自己的荣誉或好处。注意辨析，普通句子「你得吃饭了」中可不是这个意思。 | cheated their way to it; scammed their way into... |
+| 我 chovy | 源于网络主播嘎子在直播带货时爆粗口的一句话，被网友空耳听成了英雄联盟职业选手 Chovy（超威）的名字。原话带有不文明用语，网友们便用“我Chovy”作为谐音替代，演变成了一句万能的网络感叹词（类似于“我靠”、“我勒个去”）。 | Holy crap; Holy cow; What the hell; Oh my god; What the f*ck |
+| 唐 | 源于先天性疾病“唐氏综合征”的简称，在网络语境中被异化为一个形容词，用来形容一个人愚笨、脑子反应迟钝、行为怪异、滑稽或荒诞。含冒犯意。 | dumbf*ck; brain-dead; goofy |
 
 ## 三、语气与用词偏好
 
