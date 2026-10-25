@@ -10,12 +10,15 @@
  *   3. CSS 的 content: 值（伪元素上的字也是字）
  * 覆盖范围从产物里真实的 unicode-range 声明读（不是写死的白名单）。
  * Emoji 永远走系统彩色字体，按区间白名单剔除（含变体选择符 / ZWJ / tag 序列）。
- * 另外校验自建子集字体（CatNotoSC / Bravura-Digits）确实含有它该管的那些字 —— 用 fonttools 读 cmap，
- * 避免手写 WOFF2 表目录解析（解压后无 4 字节对齐、自定义 tag 顺序是先 flags 再 tag 再 origLength）。
+ * 另外校验自建子集字体（CatNotoSC / Bravura-Symbols / Musical）确实含有它该管的那些字。
+ * cmap 由本文件自己解 WOFF2 读出，**不依赖 python / fonttools**：部署机没有它，
+ * 之前正是这个自检在 CI 上静默跳过，把乐谱符号（U+ED60… / U+E080… / U+1D15F…）误判成缺字。
+ * 两个 WOFF2 坑：自定义 tag 顺序是 flags → tag(4B) → origLength → [transformLength]（写反会全表错位）；
+ * brotli 解压后各表紧排、无 4 字节对齐填充。
  *
  * 用法：node scripts/check-font-coverage.mjs   （在 astro build 之后跑）
  */
-import { execFileSync } from 'node:child_process';
+import { brotliDecompressSync } from 'node:zlib';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -178,22 +181,128 @@ for (const f of cssFiles) {
 }
 sources.cssContent += extractCssContentValues(sources.allCss);
 
-// ---- 自建本地字体：用真实 cmap 说话（也并进覆盖集合） ----
-function cmapOf(relPath) {
-  const py = `from fontTools.ttLib import TTFont\nf=TTFont(r"${join(ROOT, relPath)}")\nprint(",".join(str(c) for c in sorted((f.getBestCmap() or {}).keys())))`;
-  const out = execFileSync('python', ['-c', py], { encoding: 'utf8' }).trim();
-  return new Set(out ? out.split(',').map(Number) : []);
+// ---- 自建本地字体：直接解 WOFF2 的 cmap（纯 Node，无外部依赖） ----
+//
+// WOFF2 的两个坑（本文件踩过一次，别再踩）：
+//   1. 表目录里「自定义 tag」的顺序是 flags → tag(4B) → origLength → [transformLength]，
+//      写反会让后面所有表错位。
+//   2. brotli 解压后各表是**紧排**的，没有 4 字节对齐填充；按 origLength 顺序累加偏移即可。
+// 另：glyf / loca 在 WOFF2 里是变换过的，但我们只要 cmap（从不变换），所以不用管重建。
+const WOFF2_SIG = 0x774f4632;
+
+function readWoff2Cmap(buf) {
+  if (buf.readUInt32BE(0) !== WOFF2_SIG) throw new Error('不是 WOFF2');
+  const numTables = buf.readUInt16BE(12);
+  const totalCompressedSize = buf.readUInt32BE(20);
+  const KNOWN = ['cmap','head','hhea','hmtx','maxp','name','OS/2','post','cvt ','fpgm','glyf','loca','prep','CFF ','VORG','EBDT','EBLC','gasp','hdmx','kern','LTSH','PCLT','VDMX','vhea','vmtx','BASE','GDEF','GPOS','GSUB','EBSC','JSTF','MATH','CBDT','CBLC','COLR','CPAL','SVG ','sbix','acnt','avar','bdat','bloc','bsln','cvar','fdsc','feat','fmtx','fvar','gvar','hsty','just','lcar','mort','morx','opbd','prop','trak','Zapf','Silf','Glat','Gloc','Feat','Sill'];
+  const tags = [];
+  let off = 48;
+  for (let n = 0; n < numTables; n++) {
+    const flags = buf.readUInt8(off++);
+    const idx = flags & 0x3f;
+    let tag;
+    if (idx === 0x3f) {
+      tag = buf.toString('latin1', off, off + 4);
+      off += 4;
+    } else {
+      tag = KNOWN[idx];
+      if (!tag) throw new Error('未知的表 tag 索引 ' + idx);
+    }
+    // UIntBase128
+    let origLength = 0;
+    for (let k = 0; k < 5; k++) {
+      const byte = buf.readUInt8(off++);
+      origLength = (origLength << 7) | (byte & 0x7f);
+      if ((byte & 0x80) === 0) break;
+    }
+    let storedLength = origLength;
+    if (tag === 'glyf' || tag === 'loca') {
+      // 变换版本：还有一个 transformLength
+      let tl = 0;
+      for (let k = 0; k < 5; k++) {
+        const byte = buf.readUInt8(off++);
+        tl = (tl << 7) | (byte & 0x7f);
+        if ((byte & 0x80) === 0) break;
+      }
+      storedLength = tl;
+    }
+    tags.push({ tag, offset: 0, length: storedLength, origLength });
+  }
+  const raw = brotliDecompressSync(buf.subarray(off, off + totalCompressedSize));
+  let cursor = 0;
+  for (const t of tags) { t.offset = cursor; cursor += t.length; }
+  const cmapEntry = tags.find((t) => t.tag === 'cmap');
+  if (!cmapEntry) throw new Error('没有 cmap 表');
+  return parseCmap(raw.subarray(cmapEntry.offset, cmapEntry.offset + cmapEntry.length));
 }
 
-/** python/fonttools 不在时不要让构建挂掉：降级为「只查 unicode-range」，并明确喊一声 */
+/** 解析 cmap 表：只认 Unicode 子表（platform 0，或 platform 3 的 enc 1/10），format 4 / 12 */
+function parseCmap(cm) {
+  const out = new Set();
+  const numTables = cm.readUInt16BE(2);
+  const subtables = [];
+  for (let i = 0; i < numTables; i++) {
+    const rec = 4 + i * 8;
+    const platform = cm.readUInt16BE(rec);
+    const encoding = cm.readUInt16BE(rec + 2);
+    const offset = cm.readUInt32BE(rec + 4);
+    const unicode = platform === 0 || (platform === 3 && (encoding === 1 || encoding === 10));
+    if (unicode) subtables.push(offset);
+  }
+  for (const off of new Set(subtables)) {
+    const format = cm.readUInt16BE(off);
+    if (format === 4) {
+      const segCountX2 = cm.readUInt16BE(off + 6);
+      const segCount = segCountX2 / 2;
+      const endOff = off + 14;
+      const startOff = endOff + segCountX2 + 2;
+      const deltaOff = startOff + segCountX2;
+      const rangeOff = deltaOff + segCountX2;
+      for (let s = 0; s < segCount; s++) {
+        const end = cm.readUInt16BE(endOff + s * 2);
+        const start = cm.readUInt16BE(startOff + s * 2);
+        const delta = cm.readInt16BE(deltaOff + s * 2);
+        const rangeOffset = cm.readUInt16BE(rangeOff + s * 2);
+        if (start === 0xffff) continue;
+        for (let cp = start; cp <= end; cp++) {
+          let glyphId;
+          if (rangeOffset === 0) {
+            glyphId = (cp + delta) & 0xffff;
+          } else {
+            // 按规范：glyphIdAddress = idRangeOffset 所在位置 + idRangeOffset + 2*(cp - start)
+            const addr = rangeOff + s * 2 + rangeOffset + 2 * (cp - start);
+            if (addr + 1 >= cm.length) continue;
+            glyphId = cm.readUInt16BE(addr);
+            if (glyphId !== 0) glyphId = (glyphId + delta) & 0xffff;
+          }
+          // glyphId 0 = .notdef（没有这个字形），不能算覆盖
+          if (glyphId !== 0) out.add(cp);
+        }
+      }
+    } else if (format === 12) {
+      const nGroups = cm.readUInt32BE(off + 12);
+      for (let g = 0; g < nGroups; g++) {
+        const rec = off + 16 + g * 12;
+        const startChar = cm.readUInt32BE(rec);
+        const endChar = cm.readUInt32BE(rec + 4);
+        for (let cp = startChar; cp <= endChar; cp++) out.add(cp);
+      }
+    }
+  }
+  return out;
+}
+
+function cmapOf(relPath) {
+  return readWoff2Cmap(readFileSync(join(ROOT, relPath)));
+}
+
+/** 读不出来就让构建**明确失败**：静默跳过等于把闸门关掉（CI 上就是这么漏的） */
 function tryCmap(relPath) {
   try {
     return cmapOf(relPath);
-  } catch {
-    if (!globalThis.__cmapWarned) {
-      console.log('⚠️  读不到 fonttools（需要 python3 + fonttools + brotli）：本次跳过自建子集字体的 cmap 自检');
-      globalThis.__cmapWarned = true;
-    }
+  } catch (err) {
+    console.log(`✗ 读不出 ${relPath} 的 cmap：${err.message}`);
+    process.exitCode = 1;
     return null;
   }
 }
