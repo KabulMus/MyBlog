@@ -1,4 +1,5 @@
 import rss from '@astrojs/rss';
+import { titleToText } from '../lib/posts';
 
 // 中文 RSS：/rss.xml（只含中文文章）
 export async function GET(context) {
@@ -15,7 +16,8 @@ export async function GET(context) {
     description: 'Ethan 的博客—音乐、创作、随笔与成就。',
     site: context.site,
     items: posts.map((post) => ({
-      title: post.frontmatter.title || String(post.frontmatter.date || '').slice(0, 10),
+      // RSS 只吃纯文本：标题里的行内标记（<i> 等）要剥掉，否则阅读器会显示字面标签
+      title: titleToText(post.frontmatter.title) || String(post.frontmatter.date || '').slice(0, 10),
       pubDate: new Date(post.frontmatter.date),
       description: post.frontmatter.description || '',
       link: post.url,

@@ -1,0 +1,190 @@
+/* ==========================================================================
+   📄 Archives：按年份分组的文章列表
+   分类、日期、标题和序号共用 subgrid，窄屏时将标题和序号换到第二行。
+   ========================================================================== */
+.posts-index {
+    margin: 1rem 0 3rem;
+}
+
+body.is-posts-index .posts-index {
+    max-width: 640px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+body.is-posts-index .page-hero section.hero-content {
+    width: calc(100% - 64px);
+    max-width: 640px;
+}
+
+.posts-year + .posts-year {
+    margin-top: 2.2rem;
+}
+
+.typography-body .posts-index h2.posts-year-title {
+    font-size: 1.6rem;
+    font-weight: 1000;
+    color: var(--text-sub);
+    margin: 0 0 0.35rem;
+}
+
+.posts-year-label {
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
+    font-stretch: 125%;
+}
+
+.typography-body .posts-index .posts-year-count {
+    position: relative;
+    top: -0.5em;
+    margin-left: 0.35em;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
+    font-size: 0.65em;
+    font-stretch: 50%;
+    font-weight: 700;
+    line-height: 0;
+    color: var(--text-sub);
+}
+
+.typography-body .posts-index h2.posts-year-title::before {
+    content: none;
+}
+
+body.is-posts-index .page-hero h1,
+body.is-posts-index .page-hero h1 *,
+.typography-body .posts-index .posts-year-title,
+.typography-body .posts-index .posts-year-title *,
+.typography-body .posts-index .posts-row-title {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.typography-body .posts-index .posts-rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+    column-gap: 1rem;
+}
+
+.posts-rows > li {
+    display: contents;
+}
+
+.typography-body .posts-index a.posts-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+    padding: 0.4rem 0.6rem;
+    margin: 0 -0.6rem;
+    border-radius: 10px;
+    border-bottom: none;
+    text-decoration: none;
+    color: var(--text-main);
+}
+
+.typography-body .posts-index a.posts-row:hover {
+    border-bottom-color: transparent;
+    color: var(--text-main);
+}
+
+.posts-row-cats {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.posts-row-date {
+    font-size: 0.9rem;
+    color: var(--text-sub);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.posts-row-title {
+    min-width: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.45;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
+    overflow-wrap: anywhere;
+    transition: color 0.2s ease;
+}
+
+.posts-row-index {
+    justify-self: end;
+    color: var(--text-sub);
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
+    font-size: 0.9rem;
+    font-stretch: 75%;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+@media (min-width: 561px) {
+    .posts-row-title {
+        transform: translateY(1px);
+    }
+}
+
+.posts-row:hover .posts-row-title {
+    color: var(--primary-blue);
+}
+
+html[lang='en-US'] .posts-row-title {
+    text-align: left;
+}
+
+.posts-empty {
+    color: var(--text-sub);
+    text-align: center;
+    margin-top: 4rem;
+}
+
+body.is-posts-index .posts-row-cats .cat-tag {
+    font-size: 0.84rem;
+}
+
+html[lang='en-US'] body.is-posts-index .posts-row-cats .cat-tag {
+    font-stretch: 125%;
+}
+
+html[lang='en-US'] body.is-posts-index .posts-row-cats .cat-tag.cat-achievements {
+    font-stretch: 75%;
+}
+
+html[lang='en-US'] body.is-posts-index .posts-row-cats .cat-tag.cat-studio {
+    font-stretch: 113.5%;
+}
+
+html[lang='en-US'] body.is-posts-index .posts-row-cats .cat-tag.cat-music {
+    letter-spacing: 0.96px;
+    margin-right: -0.96px;
+}
+
+@media (max-width: 560px) {
+    .typography-body .posts-index .posts-rows {
+        grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+        column-gap: 0.5rem;
+    }
+
+    .typography-body .posts-index a.posts-row {
+        row-gap: 0.5rem;
+    }
+
+    .posts-row-title {
+        grid-column: 1 / 4;
+        grid-row: 2;
+    }
+
+    .posts-row-index {
+        grid-column: 4;
+        grid-row: 2;
+        align-self: start;
+    }
+}

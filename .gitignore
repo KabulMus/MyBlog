@@ -33,15 +33,19 @@ pnpm-debug.log*
 src/pages/blog/drafts/
 src/pages/blog/en-US/drafts/
 
-# 字体构建产物（scripts/build-fonts.mjs 生成：中文字体分片 + 分片样式表 + 清单）
+# ── 构建产物（CI 可现算，不入库）────────────────────────────
+# 中文字体分片 + 分片样式表 + 清单（scripts/build-fonts.mjs）
 .cache/fonts/
 public/fonts/cjk/
 src/generated/cjk-fonts.json
 
-# KaTeX ���йܲ��scripts/build-fonts.mjs �� node_modules �������
+# KaTeX 自托管产物（scripts/build-fonts.mjs 从 node_modules/katex 搬过来）
 public/katex/
 src/generated/katex.json
 
-# GSF б�壨scripts/build-fonts.mjs ���ɣ��� slnt ��� latin �Ӽ���
-public/fonts/gsf/
-src/generated/gsf-italic.json
+# 字体重新生成时的中间文件
+.cache/
+
+# ⚠️ GSF 斜体**故意不忽略**：它是烘焙产物（slnt 冻结为 -10、ss01 并入 ccmp），
+#    CI 没有 python 无法现算 ⇒ public/fonts/gsf/ 与 src/generated/gsf-italic.json 必须提交。
+#    重新生成：node scripts/rebuild-gsf-italic.mjs

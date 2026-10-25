@@ -11,6 +11,109 @@ const API = '/__editor/api';
 export const UPLOAD_ICON =
 	'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 24.0083V42H42V24" /><path d="M33 15L24 6L15 15" /><path d="M23.9917 32V6" /></svg>';
 
+let imageNameDialog;
+let imageNameInput;
+let imageNameSubmit;
+let imageNameResolve;
+
+function finishImageNameDialog(name) {
+	imageNameDialog.hidden = true;
+	const resolve = imageNameResolve;
+	imageNameResolve = null;
+	resolve?.(name);
+}
+
+function ensureImageNameDialog() {
+	if (imageNameDialog) return;
+
+	imageNameDialog = document.createElement('div');
+	imageNameDialog.className = 'editor-modal editor-image-name-modal';
+	imageNameDialog.hidden = true;
+
+	const card = document.createElement('div');
+	card.className = 'editor-modal-card';
+	card.setAttribute('role', 'dialog');
+	card.setAttribute('aria-modal', 'true');
+	card.setAttribute('aria-labelledby', 'image-name-title');
+
+	const title = document.createElement('h3');
+	title.className = 'editor-modal-title';
+	title.id = 'image-name-title';
+	title.textContent = '图片文件名';
+
+	const description = document.createElement('p');
+	description.className = 'editor-modal-text';
+	description.textContent = '可以自定义保存名称。扩展名会按图片格式添加（普通图片转为 WebP，GIF 保持原格式）。';
+
+	imageNameInput = document.createElement('input');
+	imageNameInput.className = 'editor-image-name-input';
+	imageNameInput.type = 'text';
+	imageNameInput.autocomplete = 'off';
+	imageNameInput.spellcheck = false;
+	imageNameInput.setAttribute('aria-label', '图片文件名（不含扩展名）');
+	imageNameInput.placeholder = '文件名（不含扩展名）';
+
+	const buttons = document.createElement('div');
+	buttons.className = 'editor-modal-btns';
+
+	const cancel = document.createElement('button');
+	cancel.type = 'button';
+	cancel.textContent = '取消';
+	cancel.addEventListener('click', () => finishImageNameDialog(null));
+
+	imageNameSubmit = document.createElement('button');
+	imageNameSubmit.type = 'button';
+	imageNameSubmit.className = 'is-primary';
+	imageNameSubmit.textContent = '上传';
+	imageNameSubmit.addEventListener('click', () => {
+		if (!imageNameInput.value.trim()) {
+			imageNameInput.focus();
+			imageNameInput.setAttribute('aria-invalid', 'true');
+			return;
+		}
+		finishImageNameDialog(imageNameInput.value.trim());
+	});
+
+	imageNameInput.addEventListener('input', () => {
+		imageNameInput.removeAttribute('aria-invalid');
+		imageNameSubmit.disabled = !imageNameInput.value.trim();
+	});
+	imageNameDialog.addEventListener('pointerdown', (event) => {
+		if (event.target === imageNameDialog) finishImageNameDialog(null);
+	});
+	imageNameDialog.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			finishImageNameDialog(null);
+		} else if (event.key === 'Enter' && event.target === imageNameInput) {
+			event.preventDefault();
+			imageNameSubmit.click();
+		}
+	});
+
+	buttons.append(cancel, imageNameSubmit);
+	card.append(title, description, imageNameInput, buttons);
+	imageNameDialog.append(card);
+	document.body.append(imageNameDialog);
+}
+
+/** 弹出编辑器内的文件名对话框，取消时返回 null。 */
+export function requestImageName(name) {
+	ensureImageNameDialog();
+	if (imageNameResolve) finishImageNameDialog(null);
+	const base = String(name || 'image')
+		.replace(/^.*[\\/]/, '')
+		.replace(/\.[a-z0-9]+$/i, '')
+		.trim();
+	imageNameInput.value = base || 'image';
+	imageNameInput.removeAttribute('aria-invalid');
+	imageNameSubmit.disabled = false;
+	imageNameDialog.hidden = false;
+	imageNameInput.focus();
+	imageNameInput.select();
+	return new Promise((resolve) => { imageNameResolve = resolve; });
+}
+
 /**
  * 把文件转成要上传的二进制。返回 `{ blob, ext }`。
  * 顺带把超宽图缩到 ≤1600px（题图/正文都用不上更宽的），质量 0.9。

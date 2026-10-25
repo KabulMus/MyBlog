@@ -3,7 +3,8 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import sitemap from '@astrojs/sitemap';
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync } from 'node:fs';
+import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 // ⚠️ 这两个模块必须**静态导入**，不要写成 `await import('./scripts/lib/xxx.mjs')`：
@@ -649,6 +650,42 @@ function blogEditorApi() {
     name: 'blog-editor-api',
     apply: 'serve',
     configureServer(server) {
+      const imageDir = resolve(server.config.publicDir, 'images');
+      const imageTypes = {
+        '.gif': 'image/gif',
+        '.jpeg': 'image/jpeg',
+        '.jpg': 'image/jpeg',
+        '.png': 'image/png',
+        '.webp': 'image/webp',
+      };
+      server.middlewares.use((req, res, next) => {
+        if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+        let pathname;
+        try {
+          pathname = decodeURIComponent(new URL(req.url || '/', 'http://localhost').pathname);
+        } catch {
+          res.statusCode = 400;
+          return res.end('Bad image URL');
+        }
+        const match = pathname.match(/^\/images\/([^/]+)$/);
+        if (!match || match[1].includes('\\')) return next();
+        const file = resolve(imageDir, match[1]);
+        if (!file.startsWith(imageDir + sep) || !existsSync(file)) return next();
+        res.setHeader('content-type', imageTypes[extname(file).toLowerCase()] || 'application/octet-stream');
+        res.setHeader('cache-control', 'no-cache');
+        if (req.method === 'HEAD') return res.end();
+        const stream = createReadStream(file);
+        stream.on('error', (error) => {
+          server.config.logger.error(`Failed to serve image ${file}: ${error.message}`);
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.end('Failed to read image');
+          } else {
+            res.destroy(error);
+          }
+        });
+        stream.pipe(res);
+      });
       server.middlewares.use('/__editor/api', async (req, res) => {
         const send = (code, data) => {
           res.statusCode = code;
@@ -923,6 +960,11 @@ export default defineConfig({
   },
   vite: {
     plugins: [jianpuBravuraFont(), blogEditorApi(), inlineSvgMask()],
+    server: {
+      watch: {
+        ignored: ['**/public/images/**'],
+      },
+    },
     optimizeDeps: {
       // ⚡️ 简谱库必须走普通 transform（见上面 jianpuBravuraFont），不能被 esbuild 预打包绕过
       exclude: ['simple-notation'],

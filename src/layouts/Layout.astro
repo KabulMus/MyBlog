@@ -7,6 +7,7 @@ import { tagNamesZh, tagNamesEn, tagCats, groupTagsByCat } from '../config/tags'
 import { getImage } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import { getCategoryName, toCatArray } from '../config/categories';
+import { renderTitleHtml, titleToText } from '../lib/posts';
 
 interface Props {
 	title?: string;
@@ -27,11 +28,26 @@ const resolvedBrandUrl = brandUrl || (isEnglishRoute ? '/en-US' : '/');
 const langSwitchHref = getLangSwitchHref(currentPath);
 const langSwitchLabel = isEnglishRoute ? '切换到中文' : 'Switch to English';
 const navLabels = isEnglishRoute
-    ? { blog: 'Blog', channels: 'Channels', toolkit: 'Toolkit', support: 'Support', charlie: 'About Charlie' }
-    : { blog: '博客', channels: '频道列表', toolkit: '工具箱', support: '联系支持', charlie: '关于周深' };
+    ? { blog: 'Blog', posts: 'Archives', ramblings: 'Ramblings', search: 'Search' }
+    : { blog: '博客', posts: '文章', ramblings: 'Ramblings', search: '搜索' };
 // 吐槽那条线（/rants、/en-US/rants）：正文页的返回按钮要用
 const rantsHref = isEnglishRoute ? '/en-US/rants' : '/rants';
 const isRantsRoute = currentPath === rantsHref;
+const navHrefs = {
+    blog: isEnglishRoute ? '/en-US' : '/',
+    posts: isEnglishRoute ? '/en-US/posts' : '/posts',
+    ramblings: rantsHref,
+    search: isEnglishRoute ? '/en-US/search' : '/search',
+};
+// 导航高亮：文章页（/blog/*）算「帖文」，吐槽正文算「Ramblings」
+const navSection = currentPath === navHrefs.blog ? 'blog'
+    : currentPath === navHrefs.posts ? 'posts'
+    : currentPath === navHrefs.search ? 'search'
+    : (currentPath === navHrefs.ramblings || currentPath.includes('/rants/')) ? 'ramblings'
+    : currentPath.startsWith('/blog') ? 'posts'
+    : '';
+// 这些是「导航类」页面，本身不进 pagefind 索引（搜索只该命中具体文章页）
+const isListingPage = isHome || isRantsRoute || currentPath === navHrefs.posts || currentPath === navHrefs.search;
 const menuAriaLabel = isEnglishRoute ? 'Menu' : '菜单';
 const themeAriaLabel = isEnglishRoute ? 'Toggle theme' : '切换亮暗模式';
 
@@ -48,70 +64,12 @@ function warningLabel(w: string, lang: 'zh' | 'en'): string {
     };
     return map[w]?.[lang] || w;
 }
-function smartQuotes(text: string): string {
-    // 双引号对：标准处理
-    text = text.replace(/"([^"\n]*)"/g, '\u201C$1\u201D');
-    const chars = text.split('');
-    const positions: number[] = [];
-    for (let i = 0; i < chars.length; i++) {
-        if (chars[i] === "'") positions.push(i);
-    }
-    if (positions.length === 0) return text;
-    const isAlnum = (ch: string) => /[A-Za-z0-9]/.test(ch);
-    // 状态机：inQuote 表示当前是否处于开引号内部。
-    // 规则：
-    //   不在引号内：前是字母 → 撇号（it's）；否则 → 开引号 ‘
-    //   在引号内：后是字母 → 撇号；后是空白/结尾 → 闭引号 ’
-    //   在引号内后跟标点：若后面还有 ' → 是撇号（如 somethin'.' 中间那个），否则是闭引号
-    let inQuote = false;
-    for (let i = 0; i < chars.length; i++) {
-        if (chars[i] !== "'") continue;
-        const prev = i > 0 ? chars[i - 1] : '';
-        const next = i < chars.length - 1 ? chars[i + 1] : '';
-        if (inQuote) {
-            if (isAlnum(next)) {
-                chars[i] = '\u2019'; // 后是字母 → 撇号（it's）
-            } else if (next === '' || /\s/.test(next)) {
-                chars[i] = '\u2019'; // 后是空白/结尾 → 闭引号
-                inQuote = false;
-            } else {
-                // 后是标点：若后面还有 ' → 当前是撇号（最后那个才是闭引号）
-                if (positions.some((p) => p > i)) {
-                    chars[i] = '\u2019';
-                } else {
-                    chars[i] = '\u2019'; // 闭引号
-                    inQuote = false;
-                }
-            }
-        } else {
-            if (isAlnum(prev)) {
-                chars[i] = '\u2019'; // 前是字母 → 撇号（it's）
-            } else {
-                // 候选开引号：只有后面存在“闭引号候选”（某个 ' 后是非字母/结尾）才当开引号，
-                // 否则是开头撇号缩写（'cause / 'Twas / 'em / 'til）
-                const hasClosing = positions.some(
-                    (j) => j > i && (j === chars.length - 1 || !isAlnum(chars[j + 1]))
-                );
-                if (hasClosing) {
-                    chars[i] = '\u2018'; // 开引号
-                    inQuote = true;
-                } else {
-                    chars[i] = '\u2019'; // 开头撇号（'cause 等）
-                }
-            }
-        }
-    }
-    return chars.join('');
-}
-
-function renderTitle(text: string): string {
-    const quoted = smartQuotes(text);
-    // 仅将 emoji 单独包 span 以重置颜色，不分割渐变
-    const emojiRanges = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}]/gu;
-    return quoted.replace(emojiRanges, '<span class="emoji">$&</span>');
-}
+// 标题的引号/emoji 处理统一走 src/lib/posts.ts 的 renderTitleHtml（列表卡片与文章页共用同一套，
+// 免得再出现「内文页能渲染 <i>、卡片上显示字面标签」这种两边不一致）。
 const pageTitle = frontmatter?.title || (frontmatter?.date ? formatDate(frontmatter.date) : '') || title || (isEnglishRoute ? 'My Blog' : '我的博客');
-const renderedTitle = renderTitle(pageTitle);
+// 标题允许行内标记（<i> 等）⇒ 渲染用 renderTitleHtml，元信息用 titleToText（剥标签）
+const renderedTitle = renderTitleHtml(pageTitle);
+const pageTitleText = titleToText(pageTitle);
 const ogDescription = description || (isEnglishRoute
     ? "Ethan's blog—music, creation, essays & achievements."
     : 'Ethan 的博客—音乐、创作、随笔与成就。');
@@ -238,6 +196,10 @@ function getLangSwitchHref(pathname: string) {
     if (normalized === "/blog/en-US") return "/blog";
     if (normalized === "/rants") return "/en-US/rants";
     if (normalized === "/en-US/rants") return "/rants";
+    if (normalized === "/posts") return "/en-US/posts";
+    if (normalized === "/en-US/posts") return "/posts";
+    if (normalized === "/search") return "/en-US/search";
+    if (normalized === "/en-US/search") return "/search";
 
     if (normalized.includes('/en-US')) {
         return normalized.replace('/en-US', '');
@@ -253,7 +215,7 @@ function getLangSwitchHref(pathname: string) {
 
 ---
 <!doctype html>
-<html lang={htmlLang} data-pagefind-ignore={frontmatter?.draft || isHome || isRantArticle || isRantsRoute ? '' : undefined}> 
+<html lang={htmlLang} data-pagefind-ignore={frontmatter?.draft || isListingPage || isRantArticle ? '' : undefined}> 
 	<head>
 		<script is:inline>
 		(function () {
@@ -283,11 +245,11 @@ function getLangSwitchHref(pathname: string) {
 		     自托管后 preconnect 指向的源已经没人用了，只会白占连接槽。 -->
 		<FontFaces preload />
 		<meta name="generator" content={Astro.generator} />
-		<title>{pageTitle}</title>
+		<title>{pageTitleText}</title>
 
 		<!-- Open Graph / 社交分享卡片 -->
 		<meta property="og:site_name" content={isEnglishRoute ? "Ethan's Blog" : 'Ethan 的博客'} />
-		<meta property="og:title" content={pageTitle} />
+		<meta property="og:title" content={pageTitleText} />
 		<meta property="og:type" content={frontmatter?.date ? 'article' : 'website'} />
 		<meta property="og:url" content={Astro.url.href} />
 		<meta property="og:image" content={ogImage} />
@@ -295,7 +257,7 @@ function getLangSwitchHref(pathname: string) {
 		<meta property="og:locale" content={isEnglishRoute ? 'en_US' : 'zh_CN'} />
 		<meta property="og:locale:alternate" content={isEnglishRoute ? 'zh_CN' : 'en_US'} />
 		<meta name="twitter:card" content="summary" />
-		<meta name="twitter:title" content={pageTitle} />
+		<meta name="twitter:title" content={pageTitleText} />
 		<meta name="twitter:description" content={ogDescription} />
 		<meta name="twitter:image" content={ogImage} />
 
@@ -306,9 +268,12 @@ function getLangSwitchHref(pathname: string) {
 	<body class={[
 		currentPath.startsWith('/blog') || isRantsRoute ? 'is-article-page' : '',
 		isRantsRoute ? 'is-rants-index' : '',
+		currentPath === navHrefs.posts ? 'is-posts-index' : '',
+		currentPath === navHrefs.search ? 'is-search-page' : '',
 		isHome ? 'is-home' : '',
+		isListingPage ? 'is-listing-page' : '',
 	].filter(Boolean).join(' ')}>
-		{(currentPath.startsWith('/blog') || isRantsRoute) && (
+		{currentPath.startsWith('/blog') && (
 			<a class="article-back-btn" id="article-back-btn" href={backHref} aria-label={isEnglishRoute ? 'Back' : '返回'}>
 				<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M31 36L19 24L31 12"/></svg>
 			</a>
@@ -329,16 +294,19 @@ function getLangSwitchHref(pathname: string) {
                 </a>
 				
 				<div class="nav-links desktop-only">
-					<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-nav-link rss-link" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} data-text="RSS">RSS</a>
+					<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-nav-link rss-link" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} aria-label={isEnglishRoute ? 'Copy RSS feed link' : '复制 RSS 订阅链接'} title="RSS">
+						<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="2" fill="currentColor" stroke="none"/></g></svg>
+					</a>
 					<span class="nav-divider" aria-hidden="true"></span>
-					<a href={isEnglishRoute ? '/en-US' : '/'} data-text={navLabels.blog} class="active">{navLabels.blog}</a>
-					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/channels/' : 'https://www.ethan929.com/channels/'} data-text={navLabels.channels}>{navLabels.channels}</a>
-					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/toolkit/' : 'https://www.ethan929.com/toolkit/'} data-text={navLabels.toolkit}>{navLabels.toolkit}</a>
-					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/support/' : 'https://www.ethan929.com/support/'} data-text={navLabels.support}>{navLabels.support}</a>
-					<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/charlie/' : 'https://www.ethan929.com/charlie/'} data-text={navLabels.charlie}>{navLabels.charlie}</a>
+					<a href={navHrefs.blog} data-text={navLabels.blog} class={navSection === 'blog' ? 'active' : undefined}>{navLabels.blog}</a>
+					<a href={navHrefs.posts} data-text={navLabels.posts} class={navSection === 'posts' ? 'active' : undefined}>{navLabels.posts}</a>
+					<a href={navHrefs.ramblings} data-text={navLabels.ramblings} class={navSection === 'ramblings' ? 'active' : undefined}>{navLabels.ramblings}</a>
+					<a href={navHrefs.search} data-text={navLabels.search} class={navSection === 'search' ? 'active' : undefined}>{navLabels.search}</a>
 				</div>
 
-				<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-link mobile-rss mobile-only" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} data-text="RSS">RSS</a>
+				<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-link mobile-rss mobile-only" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} aria-label={isEnglishRoute ? 'Copy RSS feed link' : '复制 RSS 订阅链接'} title="RSS">
+					<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="2" fill="currentColor" stroke="none"/></g></svg>
+				</a>
 				<span class="mobile-rss-divider mobile-only" aria-hidden="true"></span>
 				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label={menuAriaLabel}>
 					<svg width="24" height="24" viewBox="0 0 48 48" fill="none"><path d="M7.94971 11.9497H39.9497"/><path d="M7.94971 23.9497H39.9497"/><path d="M7.94971 35.9497H39.9497"/></svg>
@@ -346,11 +314,10 @@ function getLangSwitchHref(pathname: string) {
 			</div>
 
 			<div class="nav-dropdown" id="nav-dropdown">
-				<a href={isEnglishRoute ? '/en-US' : '/'} onclick="toggleMenu(false)" data-text={navLabels.blog} class="active">{navLabels.blog}</a>
-				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/channels/' : 'https://www.ethan929.com/channels/'} onclick="toggleMenu(false)" data-text={navLabels.channels}>{navLabels.channels}</a>
-				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/toolkit/' : 'https://www.ethan929.com/toolkit/'} onclick="toggleMenu(false)" data-text={navLabels.toolkit}>{navLabels.toolkit}</a>
-				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/support/' : 'https://www.ethan929.com/support/'} onclick="toggleMenu(false)" data-text={navLabels.support}>{navLabels.support}</a>
-				<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/charlie/' : 'https://www.ethan929.com/charlie/'} onclick="toggleMenu(false)" data-text={navLabels.charlie}>{navLabels.charlie}</a>
+				<a href={navHrefs.blog} onclick="toggleMenu(false)" data-text={navLabels.blog} class={navSection === 'blog' ? 'active' : undefined}>{navLabels.blog}</a>
+				<a href={navHrefs.posts} onclick="toggleMenu(false)" data-text={navLabels.posts} class={navSection === 'posts' ? 'active' : undefined}>{navLabels.posts}</a>
+				<a href={navHrefs.ramblings} onclick="toggleMenu(false)" data-text={navLabels.ramblings} class={navSection === 'ramblings' ? 'active' : undefined}>{navLabels.ramblings}</a>
+				<a href={navHrefs.search} onclick="toggleMenu(false)" data-text={navLabels.search} class={navSection === 'search' ? 'active' : undefined}>{navLabels.search}</a>
 			</div>
 		</nav>
 
@@ -565,7 +532,7 @@ function getLangSwitchHref(pathname: string) {
 							<svg viewBox="0 0 48 48" aria-hidden="true" class="post-nav-arrow"><path d="M31 36L19 24L31 12"/></svg>
 							{isEnglishRoute ? 'Previous' : '上一篇'}
 						</span>
-						<span class="post-nav-title">{smartQuotes(prevPost.title)}</span>
+						<span class="post-nav-title" set:html={renderTitleHtml(prevPost.title)}></span>
 					</a>
 				) : (
 					<div class="post-nav-link prev is-disabled">
@@ -583,7 +550,7 @@ function getLangSwitchHref(pathname: string) {
 							{isEnglishRoute ? 'Next' : '下一篇'}
 							<svg viewBox="0 0 48 48" aria-hidden="true" class="post-nav-arrow"><path d="M19 12L31 24L19 36"/></svg>
 						</span>
-						<span class="post-nav-title">{smartQuotes(nextPost.title)}</span>
+						<span class="post-nav-title" set:html={renderTitleHtml(nextPost.title)}></span>
 					</a>
 				) : (
 					<div class="post-nav-link next is-disabled">

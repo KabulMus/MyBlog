@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import { tagNamesZh, tagCats, groupTagsByCat, tagOrder } from '../config/tags';
 import { categories, categoryNamesZh as categoryNames, catOrder, toCatArray } from '../config/categories';
-import { formatDate, formatTime, smartQuotes, getPostUrl, type Lang } from '../lib/posts';
+import { formatDate, formatTime, renderTitleHtml, getPostUrl, type Lang } from '../lib/posts';
 
 const LANG: Lang = 'zh';
 const postsPerPage = 8;
@@ -45,7 +45,6 @@ const sortedPosts = allPosts.sort((a, b) => {
 
 // 目录就是体裁：blog/*.md 是成篇的，blog/rants/*.md 是吐槽（另走 /rants 那条线）
 const homePosts = sortedPosts.filter((p: any) => !rantModules.has(p));
-const rantPosts = sortedPosts.filter((p: any) => rantModules.has(p));
 // 卡片上的 #N 是「成篇的」那串里的顺序号（吐槽不参与序号编排，跟文章页头部一致）
 const rankByUrl: Record<string, number> = {};
 homePosts.forEach((p: any, i: number) => { rankByUrl[getPostUrl(p, LANG)] = homePosts.length - i; });
@@ -88,36 +87,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     brandUrl="https://www.ethan929.com/" 
     brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
 >
-    <Fragment slot="head">
-        {/* ⚠️ 这两行原来放在页面最末尾（`</Layout>` 之后）：那张样式表会卡住首屏绘制，
-            脚本还会阻塞解析 ⇒ build 后搜索框总要等一拍才冒出来。提到 <head> 里就没这回事了。 */}
-        <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
-        <script src="/pagefind/pagefind-ui.js" defer is:inline></script>
-    </Fragment>
-
     <div class="blog-list-wrapper" data-pagefind-ignore>
-        {/* 碎碎念入口跟搜索框并排一行（两块同高，免得像两条同宽横杠上下叠着）；窄屏由 CSS 还原成上下堆叠 */}
-        <div class="home-topbar">
-            {rantPosts.length > 0 && (
-                <div class="rant-preview" data-pagefind-ignore>
-                    <span class="rant-preview-title">Ramblings</span>
-                    <a class="rant-preview-more" href="/rants" aria-label="进入碎碎念"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M19 12L31 24L19 36"/></svg></a>
-                    {/* 整块一个入口：鼠标点哪都进瀑布流（键盘走上面那枚箭头链接） */}
-                    <a class="rant-preview-enter" href="/rants" aria-hidden="true" tabindex="-1"></a>
-                </div>
-            )}
-
-            <div class="search-container">
-                {/* 占位壳：PagefindUI 挂上来之前先画一个一模一样的框，
-                    免得先空一块、过一拍才冒出来（样式见 .search-skeleton） */}
-                <div class="search-skeleton" aria-hidden="true">
-                    <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    <span>搜索</span>
-                </div>
-                <div id="search"></div>
-            </div>
-        </div>
-
         <div class="cat-filter-bar" data-pagefind-ignore>
             {categories.map((cat: any) => (
                 <button class={`cat-filter-btn cat-filter-btn--${cat.id}`} data-cat={cat.id}>{cat.zh}</button>
@@ -191,7 +161,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                             );
                         })()}
                         <a href={postUrl} class="post-title-link">
-                            <h3>{smartQuotes(post.frontmatter?.title || '未命名文章')}</h3>
+                            <h3 set:html={renderTitleHtml(post.frontmatter?.title || '未命名文章')}></h3>
                         </a>
                         {post.frontmatter?.date && (
                             <div class="post-meta" data-pagefind-ignore>
@@ -431,41 +401,6 @@ const nextPage = Math.min(totalPages, currentPage + 1);
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        if (typeof PagefindUI !== 'undefined') {
-            new PagefindUI({
-                element: "#search",
-                showImages: false,
-                translations: { placeholder: "搜索" },
-                processTerm: (term) => {
-                    // 中文按精确短语匹配（配合 unigram 索引）：
-                    // 索引端用零宽空格 U+200B 分隔汉字（显示无空格），
-                    // 但 Pagefind 查询端只认普通空格，故查询用「字 间 空 格」
-                    // 包引号成精确短语（阿拉伯 → "阿 拉 伯"），匹配相邻字符
-                    return term.replace(/[\u4e00-\u9fff\u3400-\u4dbf]+/g, function(m) { return '"' + m.split('').join(' ') + '"'; });
-                }
-            });
-
-            const searchEl = document.querySelector("#search");
-            if (searchEl) {
-                searchEl.removeAttribute('title');
-                searchEl.querySelectorAll('[title]').forEach(el => {
-                    el.removeAttribute('title');
-                });
-            }
-        }
-
-        // 搜索结果区要铺满整行，但搜索框只占右半（左边并着碎碎念）
-        // ⇒ 量一下左边那枚的宽度挂到 CSS 变量上（见 .pagefind-ui__drawer 那条规则）
-        var topbar = document.querySelector('.home-topbar');
-        var syncTopbarLeft = function () {
-            if (!topbar) return;
-            var pill = topbar.querySelector('.rant-preview');
-            topbar.style.setProperty('--topbar-left', (pill ? pill.getBoundingClientRect().width : 0) + 'px');
-        };
-        syncTopbarLeft();
-        window.addEventListener('resize', syncTopbarLeft);
-        document.fonts.ready.then(syncTopbarLeft);   // 换个字体就换个宽度，字体就绪后再量一次
-
         var initialPage = getPageFromUrl();
         sessionStorage.setItem('blogHomePage', String(initialPage));
         repaginate();

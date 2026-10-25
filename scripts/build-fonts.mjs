@@ -165,40 +165,52 @@ writeFileSync(
 console.log(`✓ KaTeX ${katexVersion} 自托管：${katexFonts} 个 woff2 / ${(katexBytes / 1024).toFixed(0)} KB → /katex/${katexVersion}/`);
 
 // ---------------------------------------------------------------------------
-// Google Sans Flex 的斜体面。
-// GSF 没有 italic，只有一个 slnt 轴（-10..0）。只声明正体的话，`font-style: italic` 选不中任何
-// @font-face，浏览器会自己把正体倾斜（假斜体）。这里单独拉一份带 slnt 轴的文件，
-// 由 FontFaces.astro 声明成 font-style: italic，并用 variation-settings 把 slnt 压到 -10。
+// ---------------------------------------------------------------------------
+// Google Sans Flex 的斜体面 —— **已烘焙好的产物，构建期只做校验，不再下载/改写**。
 //
-// ⚠️ 只在页面真的渲染了斜体 GSF 时才会下载（FontFaces 里那份 @font-face 带 unicode-range）。
-// ⚠️ 体积：带 slnt 的 latin 子集约 626 KB，比正体那份（359 KB）大。这是 slnt 轴的固有代价。
-//    若哪天斜体用得多，可以改成用 fontTools 把 slnt 实例化到 -10（约 390 KB），
-//    代价是构建多一个 python/fonttools 依赖。
-const GSF_ITALIC_QUERY = 'Google+Sans+Flex:opsz,slnt,wdth,wght@6..144,-10..0,25..151,1..1000';
-
+// 为什么改到这个形态（原先是「带 slnt 轴的文件 + CSS font-variation-settings:slnt -10」）：
+//   1. `font-variation-settings` 是**作者级轴锁定** —— 写上它，wdth/opsz/wght 的 CSS 表现
+//      （font-stretch / font-optical-sizing / font-weight）全被压住。实测斜体下
+//      font-stretch:100% 与 125% 宽度完全相同（385 vs 385），即宽度轴失效。
+//   2. `font-feature-settings:ss01` 只在 CSS 排版路径生效，canvas 的 measureText / 导出位图
+//      拿不到，两边不一致。
+// 现在：slnt 用 fontTools 冻结到 -10（字体文件里就是斜体字形），ss01 的 lookup 并入 ccmp
+//      （所有 shaper 默认应用）⇒ @font-face 只需要 font-style: italic，不需要任何
+//      variation-settings / feature-settings，font-stretch 也恢复正常。
+//   体积 626 KB → 390 KB。
+//
+// ⚠️ 为什么把它做成**提交进仓库的产物**而不是每次构建现算：
+//    冻结轴要跑 fontTools（python + brotli），而 CI（Cloudflare Pages）没有 python ——
+//    之前字体覆盖校验就是因为依赖 python 在 CI 上静默跳过而误报缺字。
+//    所以：产物 + 清单（src/generated/gsf-italic.json）一起提交，构建期只校验存在性与哈希。
+//    需要重新生成时跑 `node scripts/rebuild-gsf-italic.mjs`（本机需 python3 + fonttools + brotli）。
 const GSF_ITALIC_DIR = join(ROOT, 'public/fonts/gsf');
+const GSF_ITALIC_MANIFEST = join(ROOT, 'src/generated/gsf-italic.json');
 
-async function buildGsfItalic() {
-  const css = await fetchText(`https://fonts.googleapis.com/css2?family=${GSF_ITALIC_QUERY}&display=block`);
-  // 只取 latin 那一片（含 U+0000-00FF），和正体保持同一个 unicode-range
-  const group = css.split('@font-face').find((g) => /U\+0000-00FF/.test(g));
-  if (!group) throw new Error('GSF 斜体：css2 里没找到 latin 子集');
-  const url = /url\((https:[^)]+)\)/.exec(group)?.[1];
-  const range = /unicode-range:\s*([^;}]+)/.exec(group)?.[1]?.trim();
-  if (!url || !range) throw new Error('GSF 斜体：css2 里的 url / unicode-range 解析失败');
-
-  const { key, data } = await download(url);
-  mkdirSync(GSF_ITALIC_DIR, { recursive: true });
-  for (const name of readdirSync(GSF_ITALIC_DIR)) rmSync(join(GSF_ITALIC_DIR, name));
-  const file = `gsf-italic.${key}.woff2`;
-  writeFileSync(join(GSF_ITALIC_DIR, file), data);
-
-  writeFileSync(
-    join(ROOT, 'src/generated/gsf-italic.json'),
-    JSON.stringify({ url: `/fonts/gsf/${file}`, unicodeRange: range, slnt: -10 }, null, 2) + '\n'
-  );
-  console.log(`✓ GSF 斜体（slnt −10 映射到 italic）：${(data.length / 1024).toFixed(0)} KB → /fonts/gsf/${file}`);
+function ensureGsfItalic() {
+  if (!existsSync(GSF_ITALIC_MANIFEST)) {
+    throw new Error('缺 src/generated/gsf-italic.json：先跑 node scripts/rebuild-gsf-italic.mjs');
+  }
+  // 容忍 BOM：Windows 上用某些编辑器/PowerShell 保存会带上
+  const manifest = JSON.parse(readFileSync(GSF_ITALIC_MANIFEST, 'utf8').replace(/^\uFEFF/, ''));
+  const file = join(ROOT, 'public' + manifest.url);
+  if (!existsSync(file)) {
+    throw new Error(`缺 GSF 斜体文件 ${manifest.url}：先跑 node scripts/rebuild-gsf-italic.mjs`);
+  }
+  const bytes = readFileSync(file);
+  const expect = /gsf-italic\.([0-9a-f]{12})\.woff2$/.exec(manifest.url)?.[1];
+  const actual = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+  if (expect && expect !== actual) {
+    throw new Error(
+      `GSF 斜体文件名与内容哈希不符（名 ${expect} / 实 ${actual}）—— ` +
+      '文件名带哈希是为了能 immutable 缓存，请重跑 node scripts/rebuild-gsf-italic.mjs'
+    );
+  }
+  if (!manifest.slntFrozen) {
+    console.log('⚠️  GSF 斜体清单标记 slntFrozen=false：这份还是带 slnt 轴的旧产物，' +
+      '需要在 FontFaces 里额外写 font-variation-settings。建议重跑 rebuild-gsf-italic.mjs');
+  }
+  console.log(`✓ GSF 斜体（slnt 已冻结 + ss01 并入 ccmp）：${(bytes.length / 1024).toFixed(0)} KB → ${manifest.url}`);
 }
 
-await buildGsfItalic();
-
+ensureGsfItalic();

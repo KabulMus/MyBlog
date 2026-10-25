@@ -1,0 +1,62 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import '../../styles/search.css';
+---
+
+<Layout
+    title="Search"
+    description="Search the blog by keyword."
+    brandUrl="https://www.ethan929.com/en-US/"
+    brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
+>
+    <Fragment slot="head">
+        <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+        <script src="/pagefind/pagefind-ui.js" defer is:inline></script>
+    </Fragment>
+
+    <div class="search-page" data-pagefind-ignore>
+        <div class="search-container">
+            {/* Placeholder shell: draws the very same box before PagefindUI mounts (see .search-skeleton) */}
+            <div class="search-skeleton" aria-hidden="true">
+                <svg class="search-skeleton-icon" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M21 38C30.3888 38 38 30.3888 38 21C38 11.6112 30.3888 4 21 4C11.6112 4 4 11.6112 4 21C4 30.3888 11.6112 38 21 38Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/><path d="M26.657 14.3431C25.2093 12.8954 23.2093 12 21.0001 12C18.791 12 16.791 12.8954 15.3433 14.3431" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33.2216 33.2217L41.7069 41.707" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-short-placeholder="Search">Type keywords to search</span>
+            </div>
+            <div id="search"></div>
+        </div>
+    </div>
+
+    <script is:inline>
+        window.addEventListener('DOMContentLoaded', function () {
+            if (typeof PagefindUI === 'undefined') return;
+            new PagefindUI({
+                element: "#search",
+                showImages: false,
+                translations: { placeholder: "Type keywords to search" },
+                processTerm: function (term) {
+                    // Chinese goes through quoted phrase matching (pairs with the unigram index)
+                    return term.replace(/[\u4e00-\u9fff\u3400-\u4dbf]+/g, function (m) {
+                        return '"' + m.split('').join(' ') + '"';
+                    });
+                }
+            });
+
+            var searchEl = document.querySelector("#search");
+            if (searchEl) {
+                searchEl.removeAttribute('title');
+                searchEl.querySelectorAll('[title]').forEach(function (el) { el.removeAttribute('title'); });
+            }
+
+            // Reaching this page means the user wants to search: focus the field unless a query arrived with the URL
+            var input = document.querySelector('#search .pagefind-ui__search-input');
+            var syncSearchPlaceholder = function () {
+                if (!input) return;
+                input.placeholder = window.matchMedia('(max-width: 349.98px)').matches
+                    ? 'Search'
+                    : 'Type keywords to search';
+            };
+            syncSearchPlaceholder();
+            window.addEventListener('resize', syncSearchPlaceholder);
+            if (input && !input.value) input.focus();
+        });
+    </script>
+</Layout>

@@ -1,0 +1,79 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/archives.css';
+import { categoryNamesZh, toCatArray } from '../config/categories';
+import { formatDate, getPostUrl, renderTitleHtml, type Lang } from '../lib/posts';
+
+const LANG: Lang = 'zh';
+// 只收成篇的（blog/ 平铺目录）：吐槽住在 blog/rants/ 下，走 /rants 那条线
+const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
+
+const posts = Object.values(markdownFiles)
+    .filter((p: any) => !p.frontmatter?.draft)
+    .sort((a: any, b: any) => new Date(b.frontmatter?.date || 0).getTime() - new Date(a.frontmatter?.date || 0).getTime());
+
+// 按年分组（年份倒序，年内也倒序）：直接读日期字符串，免得时区把跨年那几篇挪到隔壁
+const years: { year: string; posts: any[] }[] = [];
+for (const post of posts) {
+    const year = String(post.frontmatter?.date || '').slice(0, 4) || '——';
+    if (years.length === 0 || years[years.length - 1].year !== year) {
+        years.push({ year, posts: [] });
+    }
+    years[years.length - 1].posts.push(post);
+}
+
+// 年份已经挂在分组标题上，行内日期就不再重复
+function monthDay(dateStr: string) {
+    const full = formatDate(dateStr, LANG);
+    const stripped = full.replace(/^\d{4}年/, '');
+    return stripped === full ? full : stripped;
+}
+
+let articleIndex = posts.length;
+const rows = years.map((group) => ({
+    year: group.year,
+    posts: group.posts.map((post: any) => ({
+        index: articleIndex--,
+        url: getPostUrl(post, LANG),
+        iso: String(post.frontmatter?.date || ''),
+        date: monthDay(post.frontmatter?.date || ''),
+        cats: toCatArray(post.frontmatter?.category),
+        title: renderTitleHtml(post.frontmatter?.title || '未命名文章'),
+    })),
+}));
+---
+
+<Layout
+    title="Archives"
+    description="全部文章，按年份排列。"
+    brandUrl="https://www.ethan929.com/"
+    brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
+>
+    <div class="posts-index" data-pagefind-ignore>
+        {rows.map((group) => (
+            <section class="posts-year">
+                <h2 class="posts-year-title" id={String(group.year)}>
+                    <span class="posts-year-label">{group.year}</span>
+                    <sup class="posts-year-count" aria-label={`${group.posts.length} 篇文章`}>{group.posts.length}</sup>
+                </h2>
+                <ul class="posts-rows">
+                    {group.posts.map((post: any) => (
+                        <li>
+                            <a class="posts-row" href={post.url}>
+                                <span class="posts-row-cats">
+                                    {post.cats.map((cat: string) => (
+                                        <span class={`tag cat-tag cat-${cat}`}>{categoryNamesZh[cat] || cat}</span>
+                                    ))}
+                                </span>
+                                <time class="posts-row-date" datetime={post.iso}>{post.date}</time>
+                                <span class="posts-row-title" set:html={post.title}></span>
+                                <span class="posts-row-index" aria-label={`第 ${post.index} 篇文章`}>#{post.index}</span>
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </section>
+        ))}
+        {rows.length === 0 && <p class="posts-empty">还没有文章。</p>}
+    </div>
+</Layout>

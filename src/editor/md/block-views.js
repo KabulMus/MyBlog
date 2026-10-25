@@ -9,7 +9,7 @@
 // 乐谱头部（abc 的 X/T/C/M/L/Q/K、简谱的 title/key/beat/time/…）不让人手写：
 // 摆成小表单，空着就是不写这一行（"用不着的参数就留空"）。
 
-import { UPLOAD_ICON, uploadImage } from './upload-image.js';
+import { UPLOAD_ICON, requestImageName, uploadImage } from './upload-image.js';
 
 /** 卡片里没有 toast（那是编辑器外壳的），用事件把它叫出来（index.astro 接了这条） */
 const tellEditor = (msg, kind = 'ok') => document.dispatchEvent(new CustomEvent('editor-toast', { detail: { msg, kind } }));
@@ -708,10 +708,12 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 			const picked = uploadFile.files?.[0];
 			uploadFile.value = ''; // 清掉才能「同一个文件再选一次也触发 change」
 			if (!picked) return;
-			thumb.dataset.state = 'loading';
-			tellEditor('图片转码上传中…');
 			try {
-				const out = await uploadImage(picked);
+				const name = await requestImageName(picked.name);
+				if (name === null) return;
+				thumb.dataset.state = 'loading';
+				tellEditor('图片转码上传中…');
+				const out = await uploadImage(picked, name);
 				srcInput.value = out.url;
 				// 走一遍输入框自己的回调：info.src / 缩略图 / 源码 都在那一处更新，别在这兒再抄一遍
 				srcInput.dispatchEvent(new Event('input', { bubbles: true }));

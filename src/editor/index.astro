@@ -357,7 +357,7 @@ const editorConfig = {
 			import { loadBody, dumpBody } from './md/markdown-io.js';
 			import { editorExtensions } from './md/extensions.js';
 			// 图片转码 + 上传（正文粘贴/拖入、题图上传、图片卡片里的按钮共用这一份）
-			import { uploadImage } from './md/upload-image.js';
+			import { requestImageName, uploadImage } from './md/upload-image.js';
 
 			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; rant: boolean; ai: boolean; date: string; title: string; bytes: number; index?: number };
 			type PostDetail = { path: string; url: string; raw: string; body: string; frontmatter: Record<string, unknown> };
@@ -937,8 +937,10 @@ const editorConfig = {
 				// 文件名用当前文章的 slug（`日期-slug.webp`，跟现有几张题图一个路子）
 				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
 				try {
+					const name = await requestImageName(slug);
+					if (name === null) return;
 					toast('题图转码上传中…');
-					const out = await uploadImage(file, slug);
+					const out = await uploadImage(file, name);
 					imageInput.value = out.url;
 					frontmatter.image = out.url;
 					syncCreditRow();
@@ -1223,8 +1225,10 @@ const editorConfig = {
 				// 文件名用当前文章的 slug（跟现有 `2026-08-26-police-laughing.webp` 一个路子），重名中间件会补 -1、-2
 				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
 				try {
+					const name = await requestImageName(slug);
+					if (name === null) return;
 					toast('图片转码上传中…');
-					const out = await uploadImage(file, slug);
+					const out = await uploadImage(file, name);
 					const sel = editor.state.selection;
 					const pos = sel.empty ? sel.from : sel.to;
 					editor.chain().focus().insertContentAt(pos, { type: 'rawBlock', attrs: { source: `![](${out.url})`, kind: 'image' } }).run();

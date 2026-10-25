@@ -2321,6 +2321,24 @@ body .editor-prose h6 {
 	color: var(--text-sub);
 }
 
+.editor-image-name-input {
+	display: block;
+	width: 100%;
+	margin-top: 12px;
+	padding: 6px 9px;
+	font: inherit;
+	font-size: 0.82rem;
+	color: var(--text-main);
+	background: var(--card-bg);
+	border: 1px solid var(--item-border);
+	border-radius: 6px;
+	outline: none;
+	transition: border-color 0.2s ease;
+}
+
+.editor-image-name-input:focus { border-color: var(--primary-blue); }
+.editor-modal-btns > button:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .editor-modal-btns {
 	display: flex;
 	justify-content: flex-end;

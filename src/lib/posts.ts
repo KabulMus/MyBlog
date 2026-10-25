@@ -89,6 +89,59 @@ export function smartQuotes(text: string): string {
     return chars.join('');
 }
 
+/**
+ * 标题里的「行内标记」支持。
+ *
+ * 为什么需要：frontmatter.title 里可能写 `<i>xxx</i>` 这类行内标记（中文斜体、强调等）。
+ * 之前内文页的 <h1> 走 set:html 能渲染出来，而主页卡片用 {title} 插值（会自动转义），
+ * 同一份标题在两边表现不同 —— 卡片上会直接显示成 `<i>soaa</i>` 这串字面文本。
+ *
+ * 现在两边都走 renderTitleHtml()，并且：
+ *   - 只放行少量**行内**标签（白名单），其余尖括号一律转义，避免误写的 `<` 破版；
+ *   - smartQuotes / emoji 包 span 只作用在**文本片段**上（不碰标签本身，避免改坏属性里的引号）。
+ *
+ * 需要**纯文本**的场合（<title>、og:title / twitter:title、RSS、aria-label）请用 titleToText()，
+ * 否则标签会原样出现在浏览器标签页、搜索结果和分享卡片里。
+ */
+const TITLE_INLINE_TAGS = new Set([
+    'i', 'em', 'b', 'strong', 'u', 's', 'del', 'ins', 'mark', 'small',
+    'sup', 'sub', 'code', 'kbd', 'br', 'span', 'abbr', 'cite', 'q',
+]);
+// 与 Layout 的标题渲染保持一致（emoji 单独包 span 以重置颜色，不分割渐变）
+const TITLE_EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}]/gu;
+
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function renderTitleHtml(raw: string): string {
+    const text = String(raw ?? '');
+    const emitText = (seg: string) =>
+        seg ? smartQuotes(seg).replace(TITLE_EMOJI, '<span class="emoji">$&</span>') : '';
+    let out = '';
+    let last = 0;
+    const tagRe = /<\/?([a-zA-Z][\w-]*)\b[^>]*>/g;
+    let m: RegExpExecArray | null;
+    while ((m = tagRe.exec(text))) {
+        out += emitText(text.slice(last, m.index));
+        out += TITLE_INLINE_TAGS.has(m[1].toLowerCase()) ? m[0] : escapeHtml(m[0]);
+        last = m.index + m[0].length;
+    }
+    return out + emitText(text.slice(last));
+}
+
+/** 剥掉行内标签，给 <title> / og:title / RSS / aria-label 用 */
+export function titleToText(raw: string): string {
+    return String(raw ?? '')
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 // 文章链接：优先用 Astro 给的 url，兜底按文件路径拼（blog/ 下的层级原样保留，rants 也在里面）
 export function getPostUrl(post: any, lang: Lang): string {
     if (post?.url) return post.url;

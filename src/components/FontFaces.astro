@@ -11,6 +11,9 @@
  *    ⚠️ 拉丁族的 `fallbacks` 配成 []：var() 展开是「族名, 系统兜底, generic」，
  *       自带 generic 的话它会排在后面那个中文字族**前面**，汉字就落到系统宋体/黑体了。
  *
+ * 1b) GSF 的**斜体面**是单独一份烘焙产物（slnt 冻结 + ss01 并入 ccmp），见下面那段注释。
+ *     它只在这条链路里出现，不进 Fonts API 的 fonts 配置。
+ *
  * 2) 中文两族（Noto Sans SC / Noto Serif SC）走 scripts/build-fonts.mjs 生成的
  *    /fonts/cjk/<hash>.css（全站共用、可 immutable 缓存）。
  *    原因见那个脚本的注释：Fonts API 会把 196 条 unicode-range 规则内联进**每个**页面，
@@ -45,11 +48,15 @@ const { preload = false } = Astro.props;
 
 // ⚡️ Google Sans Flex 的斜体面。
 // GSF 没有 italic，只有 slnt 轴（-10..0）；只声明正体的话，`font-style: italic` 没有可选的
-// @font-face，浏览器就自己把正体倾斜（假斜体）。这里补一个 font-style: italic 的面，
-// 指向 scripts/build-fonts.mjs 生成的那份带 slnt 的文件，并把 slnt 压到 -10。
+// @font-face，浏览器就自己把正体倾斜（假斜体）。
+// 这里指向 scripts/rebuild-gsf-italic.mjs 烘焙好的那份：**slnt 已冻结进字体文件**，
+// 单层 a（ss01）已并入 ccmp（字体默认生效）。所以 CSS 只需要 font-style: italic：
+//   ⚠️ 不要在这里加 font-variation-settings:"slnt" -10 —— 它是作者级轴锁定，
+//      会把 wdth/opsz/wght 的 CSS 表现一起压住（实测斜体 + font-stretch 会失效）。
+//   ⚠️ 也不要加 font-feature-settings:"ss01" —— 已在字体里，加了反而让 canvas 与 CSS 不一致。
+// ⚠️ font-display: swap（不是 block）：这一面**不 preload**，block 会让斜体文字在最坏情况下
+//    3 秒不可见；swap 至少立刻有兜底斜体可读。block 只用在被 preload 的标题族上。
 // 族名必须和 Astro 生成的正体**完全一致**（它带内容哈希），所以从 Fonts API 的虚拟模块里读出来。
-// ⚠️ ss01 = 单层 a（GSF 的样式集）。写在 @font-face 描述符里即可：
-//    实测它不会被 body 上继承的 font-feature-settings 覆盖；元素上显式写 ss01:0 仍能关掉。
 // ⚠️ 正则要容忍冒号后的空白：build 的 CSS 是压缩过的（`font-family:"X"`），
 //    dev 下没压缩（`font-family: "X"`），写死不带空格会让 dev 里静默拿不到族名。
 const gsfFamily = /font-family:\s*"([^"]+)"/.exec(
@@ -60,12 +67,10 @@ const gsfItalicCss =
   `@font-face{` +
     `font-family:"${gsfFamily}";` +
     `src:url("${gsfItalic.url}") format("woff2");` +
-    `font-display:block;` +
+    `font-display:swap;` +
     `unicode-range:${gsfItalic.unicodeRange};` +
     `font-weight:1 1000;` +
     `font-style:italic;` +
-    `font-feature-settings:"ss01" 1;` +
-    `font-variation-settings:"slnt" ${gsfItalic.slnt};` +
     `}`;
 ---
 
