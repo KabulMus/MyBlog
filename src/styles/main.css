@@ -79,6 +79,7 @@
     /* 背景装饰的墨色（线稿小图形）。两档是按「看起来一样淡」配的：
        亮底 ≈0.105 的品牌蓝 与 暗底 0.075 的亮蓝，感知亮度差接近（ΔL* 都 ≈5）。 */
     --bg-doodle: rgba(30, 102, 198, 0.105);
+    --selection-bg: #1e67c640;
 }
 
 /* 深色模式变量 */
@@ -123,6 +124,7 @@
     --mark-cyan: #2dd4bf60;
     /* 背景装饰：暗底对比低，给亮蓝并提高一档透明度 */
     --bg-doodle: rgba(147, 197, 253, 0.075);
+    --selection-bg: #93c5fd80;
 }
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme='light']) {
@@ -166,6 +168,7 @@
         --mark-cyan: #2dd4bf60;
         /* 背景装饰：暗底对比低，给亮蓝并提高一档透明度 */
         --bg-doodle: rgba(147, 197, 253, 0.075);
+        --selection-bg: #93c5fd80;
     }
 }
 
@@ -189,8 +192,12 @@ button, input, select, textarea { font-family: inherit; }
 
 /* ------------------------------------------------------------------
    页面背景装饰：四个字形（话筒 / 流星 / 米子星 / 音符）的线稿散在两块可平铺的 SVG 上
-   （public/images/bg-doodle-a.svg 大间距 1680×1360、bg-doodle-b.svg 小间距 1120×920）。
+   （src/assets/mask/bg-doodle-a.svg 大间距 1680×1360、bg-doodle-b.svg 小间距 1120×920）。
    用 mask + background-color 上色：这样深浅两套主题各给一档墨色，不用把图案导两份。
+   ⚠️ 两张 SVG 由 astro.config.mjs 的 inlineSvgMask() 内联成 data: URI（写法 __inline-svg:文件名）。
+      **不要**改回 url('/images/...')：mask 资源是绘制时才请求的，preload 匹配不上，
+      外链会让浏览器为这两个图案各多发一次请求（实测 2 个请求 / 2 个 RTT）。
+      内联前会自动去注释、压空白、编码 # < > "。
    ⚠️ 两块 tile 的尺寸错开（横向要 A 铺两块、B 铺三块才对齐，纵向 31280px 才重样）
       ⇒ 屏幕上看不出「一块一块重复」。
    ⚠️ 挂在 body::before 上（position: fixed + z-index: -1）：body 的底色会被传播到 canvas
@@ -204,8 +211,8 @@ body::before {
     z-index: -1;
     pointer-events: none;
     background-color: var(--bg-doodle);
-    -webkit-mask-image: url('/images/bg-doodle-a.svg'), url('/images/bg-doodle-b.svg');
-    mask-image: url('/images/bg-doodle-a.svg'), url('/images/bg-doodle-b.svg');
+    -webkit-mask-image: url('__inline-svg:bg-doodle-a.svg'), url('__inline-svg:bg-doodle-b.svg');
+    mask-image: url('__inline-svg:bg-doodle-a.svg'), url('__inline-svg:bg-doodle-b.svg');
     -webkit-mask-size: 1680px 1360px, 1120px 920px;
     mask-size: 1680px 1360px, 1120px 920px;
     -webkit-mask-repeat: repeat, repeat;
@@ -222,7 +229,7 @@ body::before {
 
 body {
     font-size: 1rem;
-    font-family: 'Inter Var', 'Noto Sans SC', -apple-system, sans-serif;
+    font-family: var(--font-inter), 'Noto Sans SC', -apple-system, sans-serif;
     font-optical-sizing: auto;
     font-synthesis: none; /* 禁止浏览器合成伪斜体/伪粗体 */
     text-align: justify;
@@ -283,8 +290,7 @@ body {
 
 /* --- 选中文字颜色 --- */
 ::selection {
-    background: var(--primary-blue);
-    color: var(--on-primary);
+    background: var(--selection-bg);
 }
 
 .navbar {
@@ -903,7 +909,7 @@ footer a:hover {
 .page-hero h1 {
     font-size: 2.8rem;
     font-weight: 800;
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
     background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%);
     -webkit-background-clip: text;
     background-clip: text;
@@ -927,7 +933,7 @@ body:not(.is-article-page) .page-hero h1,
 body.is-rants-index .page-hero h1 {
     width: max-content;
     max-width: 100%;
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-weight: 1000;
     /* 光学尺寸跟着字号走（opsz: auto，浏览器默认）：字形随字号变小而变粗、变松一点。
        钉成 144 虽然能把下面两条直线变成定系数、算起来简单，但大标题会偏细，不划算。 */
@@ -1110,7 +1116,7 @@ html[lang='zh-CN'] .typography-body i {
     left: -1.4rem; 
     color: var(--primary-blue);
     font-weight: 700; 
-    font-family: 'Google Sans Flex', 'Inter Var', sans-serif; 
+    font-family: var(--font-google-sans-flex), var(--font-inter), sans-serif; 
     opacity: 0; 
     transition: opacity 0.2s ease; /* 纯粹的不透明度缓动 */
 }
@@ -1230,7 +1236,7 @@ html[lang='zh-CN'] .typography-body i {
     background: var(--item-border);
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
-    font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+    font-family: var(--font-jetbrains-mono), 'Noto Sans SC', monospace;
     font-size: 0.9em;
 }
 /* ==========================================================================
@@ -1272,7 +1278,7 @@ html[lang='zh-CN'] .typography-body i {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'JetBrains Mono', 'Noto Sans SC', monospace;
+    font-family: var(--font-jetbrains-mono), 'Noto Sans SC', monospace;
     font-size: 0.78rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -1318,7 +1324,7 @@ html[lang='zh-CN'] .typography-body i {
     padding: 28px 32px;       /* ⚡️ 把顶部 Padding 稍微加大（由 18px 变 28px），防止第一行代码和语言标签撞车 */
     
     /* 中文回落思源黑体（Noto Sans SC）：不写的话代码里的汉字会掉到系统默认等宽中文（Windows 上基本就是宋体） */
-    font-family: 'JetBrains Mono', 'Fira Code', 'Inter Var', 'Noto Sans SC', monospace;
+    font-family: var(--font-jetbrains-mono), 'Fira Code', var(--font-inter), 'Noto Sans SC', monospace;
     font-size: 0.92rem;
     line-height: 1.6;
     color: #e3e3e6;
@@ -1568,7 +1574,7 @@ html[lang='zh-CN'] .typography-body i {
     font-size: 0.8em;                  /* 注音约半个字高 */
     font-weight: 500;
     color: var(--text-sub);             /* 弱化灰色，不抢正文 */
-    font-family: 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-inter), 'Noto Sans SC', sans-serif;
     line-height: 0;
     user-select: none;                  /* 注音不参与选中复制 */
 }
@@ -1621,7 +1627,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
-    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
     margin-bottom: 1.2rem;             /* 稍微拉开一点和下面列表的间距 */
     color: var(--text-sub);
     opacity: 0.6;
@@ -1666,7 +1672,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
 
 /* 1. ⌨️ 键盘按键（<kbd>）：做出拟真的实体键帽感 */
 .typography-body kbd {
-    font-family: 'Google Sans Flex', 'JetBrains Mono', monospace;
+    font-family: var(--font-google-sans-flex), var(--font-jetbrains-mono), monospace;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-main);
@@ -1758,7 +1764,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     justify-content: center;
     width: 2.4rem;
     height: 2.4rem;
-    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), sans-serif;
     font-stretch: 50%;
     font-size: 1.2rem;
     font-weight: 600;
@@ -1878,7 +1884,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     z-index: 0;
     right: 24px;
     bottom: -40px;
-    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), sans-serif;
     font-variant-numeric: tabular-nums;
     font-stretch: 25%;
     font-size: 10rem;
@@ -1959,7 +1965,7 @@ html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
 .post-nav-label {
     font-size: 0.8rem;
     font-weight: 500;
-    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
     color: var(--primary-blue);
     display: inline-flex;
     align-items: center;
@@ -1979,7 +1985,7 @@ html[lang='zh-CN'] .post-nav-link.is-disabled .post-nav-title {
 .post-nav-index {
     position: absolute;
     bottom: -20px;
-    font-family: 'Google Sans Flex', 'Inter Var', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), sans-serif;
     font-variant-numeric: tabular-nums;
     font-stretch: 25%;
     font-size: 4.6rem;
@@ -2059,7 +2065,7 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     border: none;
     background: transparent;
     color: var(--text-sub);
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-weight: 500;
     font-size: 1rem;
     cursor: pointer;
@@ -2209,7 +2215,7 @@ body.is-home .page-hero h1 {
 }
 
 .rant-preview-title {
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-stretch: 50%;
     font-size: 1.05rem;   /* 跟旁边搜索框的字号同号（两边一块儿看才不一大一小） */
     font-weight: 700;
@@ -2487,7 +2493,7 @@ body.is-home footer {
     line-height: 1.4;
     margin: 12px 0 6px 0;
     transition: color 0.2s ease;
-    font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
 }
 
 /* ⚡️ 核心黑魔法：利用标题链接的 ::before 生成一个隐形幕布，彻底平铺满整张卡片 */
@@ -2765,7 +2771,7 @@ html[lang='en-US'] .post-title-link {
 #search .pagefind-ui__result-excerpt,
 #search .pagefind-ui__message,
 #search .pagefind-ui__button {
-    font-family: 'Inter Var', 'Noto Sans SC', sans-serif !important;
+    font-family: var(--font-inter), 'Noto Sans SC', sans-serif !important;
 }
 
 /* ==========================================================================
@@ -2921,7 +2927,7 @@ html[lang='en-US'] .post-title-link {
 .tag {
     z-index: 1;
     display: inline;
-    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-size: 0.78rem;
     font-weight: 500;
     line-height: 1.2;
@@ -3214,7 +3220,7 @@ html[lang='en-US'] .post-title-link {
     border: none;
     background: transparent;
     color: var(--text-sub);
-    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
@@ -3279,7 +3285,7 @@ html[lang='en-US'] .post-title-link {
     background: var(--card-bg);
     color: var(--text-sub);
     /* CatNotoSC 顶在 Encode Sans SC 后面：拉丁照旧走 Encode Sans SC，汉字用它（能一起调字宽） */
-    font-family: 'Encode Sans SC', 'CatNotoSC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-encode-sans-sc), 'CatNotoSC', var(--font-inter), 'Noto Sans SC', sans-serif;
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
@@ -3350,7 +3356,7 @@ html[lang='zh-CN'] .cat-filter-btn {
 
 .toc-title {
     /* 复用正文注脚「注释/Notes」标题的样式 */
-    font-family: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-sub);

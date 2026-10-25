@@ -13,8 +13,8 @@
    · --ed-font-mono：代码行（源码块、源码视图、diff）。
    ⚠️ 变量漏定义时 `var()` 会让属性静默回退成 inherit（不报错），很难查。 */
 :root {
-	--ed-font-ui: 'Encode Sans SC', 'Inter Var', 'Noto Sans SC', sans-serif;
-	--ed-font-mono: 'JetBrains Mono', 'Fira Code', 'Inter Var', 'Noto Sans SC', monospace;
+	--ed-font-ui: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
+	--ed-font-mono: var(--font-jetbrains-mono), 'Fira Code', var(--font-inter), 'Noto Sans SC', monospace;
 	/* 最底层那个「壳」的底色：把正文色掺一点进页面底 ⇒ 亮色下比页面灰一档、暗色下比页面亮一档。
 	   编辑区用的是 --bg-light（跟预览里的真页面同一个底色），壳跟它拉开一截才看得出两张面板的边界。 */
 	--ed-bg-shell: color-mix(in srgb, var(--text-main) 8%, var(--bg-light));
@@ -1310,7 +1310,7 @@ html.is-card-dragging { user-select: none; }
    字重 600 与站点 .page-index 一致（表单控件默认是 400，正好容易被忽略）。
    ⚠️ 用类不用 id：新建文章弹窗里的中英标题框要同一套字体（那边共不了 id）。 */
 .fm-title {
-	font-family: 'Google Sans Flex', 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
 	font-weight: 600;
 }
 
@@ -1319,7 +1319,7 @@ html.is-card-dragging { user-select: none; }
    分段选中高亮保留；原生日历按钮与那枚自绘日历图标都已删（原因见下面一段）。
    ⚠️ 选 `.fm-date-wrap > input` 而不是 `#fm-date`：新建文章弹窗里的日期框也在同构 wrapper 里。 */
 .fm-date-wrap > input {
-	font-family: 'Inter Var', 'Noto Sans SC', sans-serif;
+	font-family: var(--font-inter), 'Noto Sans SC', sans-serif;
 	font-weight: 400;
 	font-variant-numeric: tabular-nums;
 }

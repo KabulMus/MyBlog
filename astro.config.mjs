@@ -1,8 +1,55 @@
-import { defineConfig } from 'astro/config';
+import { defineConfig, fontProviders } from 'astro/config';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import sitemap from '@astrojs/sitemap';
+import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
+// ⚠️ 这两个模块必须**静态导入**，不要写成 `await import('./scripts/lib/xxx.mjs')`：
+//    astro.config.mjs 由 Vite 用 ModuleRunner 求值，dev server 起来后那个 runner 已经关闭，
+//    处理器里再动态 import 会抛 `Vite module runner has been closed` ⇒ /__editor/api/* 全部 500，
+//    编辑器「正在读取文章列表…」永远转圈（实测就是这么坏的）。
+//    它们只依赖 node:fs / node:path，静态导入没有额外代价。
+import * as io from './scripts/lib/post-io.mjs';
+import * as tr from './scripts/lib/translate.mjs';
 import { SENTENCE_END, BOUNDARY, keepsFullWidth } from './src/lib/punct-width.mjs';
+
+// ⚡️ 把「只当 mask 用的小 SVG」内联成 CSS 里的 data: URI。
+// 为什么必须内联、不能用 preload 提速：浏览器对 mask 资源是「绘制时才发请求」，
+// 既不匹配 <link rel=preload> 的缓存条目，也不会和隐藏 <img> 的请求合并 ⇒ 实测会下载两次。
+// 这些图案全站必用、只有几 KB，内联后请求数 2 → 0。
+// 写法：CSS 里写 url('__inline-svg:文件名')，构建/dev 时由本插件替换成编码后的 data: URI。
+// 源文件放 src/assets/mask/（不放 public/，否则会同时被复制进 dist）。
+function inlineSvgMask() {
+  const cache = new Map();
+  const readSvg = (file) => {
+    if (cache.has(file)) return cache.get(file);
+    const svg = readFileSync(fileURLToPath(new URL(`./src/assets/mask/${file}`, import.meta.url)), 'utf8');
+    const encoded = svg
+      .replace(/<!--[\s\S]*?-->/g, '')     // 去注释
+      .replace(/>\s+</g, '><')             // 标签间空白
+      .replace(/\s{2,}/g, ' ')             // 连续空白压成一个
+      .trim()
+      .replace(/"/g, "'")
+      .replace(/%/g, '%25')                // 必须先编码 %，否则后面编码出的 %XX 会被二次编码
+      .replace(/#/g, '%23')                // url(#id) / stroke="#000" 的 # 不编码会当成 URL fragment
+      .replace(/</g, '%3C')
+      .replace(/>/g, '%3E');
+    const uri = `data:image/svg+xml,${encoded}`;
+    cache.set(file, uri);
+    return uri;
+  };
+  return {
+    name: 'inline-svg-mask',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!/\.(css|scss|astro)\b/.test(id.replace(/\?.*$/, ''))) return null;
+      if (!code.includes('__inline-svg:')) return null;
+      return code.replace(/url\((['"]?)__inline-svg:([\w.-]+)\1\)/g, (_m, _q, file) => `url("${readSvg(file)}")`);
+    },
+  };
+}
 
 // ⚡️ 智能引号状态机（与 Layout.astro 的 smartQuotes 完全同一套逻辑，等长替换 1:1）。
 // 不依赖任何硬编码单词列表：只靠结构（前后字符 + 是否存在配对的闭引号）判断开引号 / 闭引号 / 撇号。
@@ -584,7 +631,6 @@ function blogEditorApi() {
   const runTask = async (task) => {
     const entry = TASKS[task];
     if (!entry) return { code: -1, output: '未知任务：' + task };
-    const { spawn } = await import('node:child_process');
     return new Promise((resolve) => {
       const child = spawn(process.execPath, [entry], { cwd: process.cwd(), env: { ...process.env, NO_COLOR: '1' } });
       let out = '';
@@ -611,7 +657,6 @@ function blogEditorApi() {
           res.end(JSON.stringify(data));
         };
         try {
-          const io = await import('./scripts/lib/post-io.mjs');
           const url = new URL(req.url || '/', 'http://localhost');
           const route = url.pathname.replace(/\/+$/, '') || '/';
           if (req.method === 'GET' && route === '/posts') return send(200, io.listPosts());
@@ -658,12 +703,10 @@ function blogEditorApi() {
           // ⚠️ key 不落进代码：读项目根目录的 .env（DEEPSEEK_API_KEY，可选 DEEPSEEK_MODEL / DEEPSEEK_BASE_URL）。
           if (req.method === 'POST' && route === '/translate') {
             const body = await readBody(req);
-            const tr = await import('./scripts/lib/translate.mjs');
             const detail = io.readPost(body.path);
             // 方向由源文件语言定：中文原文 → 英文那份，英文原文 → 中文那份
             const direction = io.langOfPath(detail.path) === 'en' ? 'en2zh' : 'zh2en';
             const target = io.counterpartPath(detail.path);
-            const { loadEnv } = await import('vite');
             const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
             const apiKey = env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY || '';
             if (!apiKey) {
@@ -706,8 +749,6 @@ function blogEditorApi() {
             const body = await readBody(req);
             const title = String(body.title || '').trim();
             if (!title) return send(400, { error: '标题是空的' });
-            const tr = await import('./scripts/lib/translate.mjs');
-            const { loadEnv } = await import('vite');
             const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd(), '');
             const apiKey = env.DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY || '';
             if (!apiKey) {
@@ -731,6 +772,7 @@ function blogEditorApi() {
           }
           return send(404, { error: '未知接口：' + req.method + ' ' + route });
         } catch (err) {
+
           // 已经开始流式吐字的场合，响应头早发出去了 ⇒ 这里不能再补 JSON，直接掐断
           if (res.headersSent) {
             try {
@@ -745,11 +787,131 @@ function blogEditorApi() {
   };
 }
 
+// ⚡️ 正文图片：默认懒加载 + **补上 width/height**。
+// 为什么必须补宽高：`.typography-body p:has(img)` 是 flex 列容器，图只写了 max-width:100% + height:auto，
+// 加载前没有任何确定尺寸 ⇒ 占位 0×0，图片一到位整页往下窜（实测 CLS 就是这么来的）。
+// 有了 width/height 属性，浏览器先按属性算出的宽高比留位，尺寸到了再填。
+// 尺寸从 public/images 里的真实文件读（只读一次，进程内缓存），不是写死的表。
+import { imageSize } from 'image-size';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const imageDimCache = new Map();
+function readImageSize(src) {
+  if (imageDimCache.has(src)) return imageDimCache.get(src);
+  let dim = null;
+  if (typeof src === 'string' && src.startsWith('/images/')) {
+    try {
+      const file = fileURLToPath(new URL(`./public${src}`, import.meta.url));
+      const { width, height } = imageSize(readFileSync(file));
+      if (width && height) dim = { width, height };
+    } catch {
+      // 图不在了就跳过（不阻断构建）
+    }
+  }
+  imageDimCache.set(src, dim);
+  return dim;
+}
+
+function rehypeLazyImages() {
+  return (tree) => {
+    const markImages = (node) => {
+      if (node.type === 'element' && node.tagName === 'img') {
+        node.properties ??= {};
+        node.properties.loading ??= 'lazy';
+        node.properties.decoding ??= 'async';
+        const dim = readImageSize(node.properties.src);
+        if (dim) {
+          node.properties.width ??= dim.width;
+          node.properties.height ??= dim.height;
+        }
+      }
+      for (const child of node.children ?? []) markImages(child);
+    };
+    markImages(tree);
+  };
+}
+
 export default defineConfig({
   site: 'https://blog.ethan929.com',
+  // ⚡️ 字体：由 Astro 的 Fonts API 自托管（构建时从 Google Fonts 取 woff2 落到 /_astro/fonts/），
+  //    页面里不再出现 fonts.googleapis.com / fonts.gstatic.com / rsms.me。
+  //    ⚠️ 族名会被 Astro 加上内容哈希（防缓存串味）⇒ CSS 里**不要**再写 'Noto Sans SC' 这类字面名，
+  //       一律用 var(--font-xxx)（见 main.css 顶部注释）。
+  //    ⚠️ 拉丁族一律 `fallbacks: []`：var() 展开成「族名, 系统兜底, generic」，
+  //       若拉丁族自带 generic，它就会排在后面那个中文字族**前面**，
+  //       汉字会落到系统宋体/黑体而不是 Noto —— 中文排版静默变味（本地实测就是这么翻的车）。
+  //       栈尾的 generic 由 CSS 自己写（main.css 的 font-family 列表末尾本来就有）。
+  //    ⚠️ 中文两族保留默认 fallbacks：它们是栈里最后一档，度量匹配的兜底字面正好用在加载期。
+  //    Source Serif 4 不在这个列表里：它带 `size-adjust: 105%`（正文排版按这个调过），
+  //    Fonts API 没有暴露 size-adjust ⇒ 改为本地自托管（src/styles/fonts/，@font-face 在 source-serif-4.css）。
+  fonts: [
+    {
+      provider: fontProviders.google(),
+      name: 'Inter',
+      cssVariable: '--font-inter',
+      weights: ['100 900'],
+      styles: ['normal', 'italic'],
+      subsets: ['latin', 'latin-ext'],
+      fallbacks: [],
+      options: { experimental: { variableAxis: { opsz: ['14', '32'] } } },
+    },
+    {
+      provider: fontProviders.google(),
+      name: 'Encode Sans SC',
+      cssVariable: '--font-encode-sans-sc',
+      weights: ['100 900'],
+      subsets: ['latin'],
+      fallbacks: [],
+      // 宽度轴：分类按钮的 font-stretch 靠它
+      options: { experimental: { variableAxis: { wdth: ['75', '125'] } } },
+    },
+    {
+      provider: fontProviders.google(),
+      name: 'JetBrains Mono',
+      cssVariable: '--font-jetbrains-mono',
+      weights: ['100 800'],
+      styles: ['normal', 'italic'],
+      subsets: ['latin', 'latin-ext'],
+      fallbacks: [],
+    },
+    {
+      provider: fontProviders.google(),
+      name: 'Google Sans Flex',
+      cssVariable: '--font-google-sans-flex',
+      weights: ['1 1000'],
+      subsets: ['latin'],
+      fallbacks: [],
+      // ⚠️ font-display: block（只给这一族）：
+      //    swap 的语义是「先用兜底字形画，字体到了再换」⇒ 冷缓存下必然先闪一下 Inter，
+      //    而这一族是站名/大标题用的，换字非常扎眼。
+      //    block 则是「字形没到就先不画」，绝不会出现「错误字形 → 正确字形」的跳变。
+      //    真拿不到时浏览器的 block 期（约 3 s）过后会自动落到 Inter，不会永远空着。
+      // ⚠️ 代价：极慢网络下标题文字会晚到（标题当 LCP 元素时 LCP 被推迟）。
+      //    若更在意 LCP 而不是字形一致性，把这里换成 display: 'optional'
+      //    （首访直接定格 Inter、永不换字；缓存命中后才用 GSF）。
+      display: 'block',
+      // ⚠️ 轴：**opsz / wdth / wght 三个都必须保留**（用户明确要求 opsz 不能去掉）。
+      //    - opsz：`font-optical-sizing: auto` 靠它，大字号下的字形是按 opsz 设计过的；
+      //            实测 73.6px 处带 opsz 与不带 opsz 宽度差 4%（461.61 vs 480.8）。
+      //    - wdth：首页标题 fitHomeTitle 二分 font-stretch 撑满靠它。
+      //    - wght：最粗 1000 的站名标题靠它。
+      //    代价：这一族是站上最大的单个字体（实测 368 KB）。**不要**为了省体积砍轴或按字符裁剪 ——
+      //    砍 opsz 会改变字形、按字符裁剪会让标题里的生僻拉丁字母静默回退到 Inter。
+      //    「不闪」这件事交给下面的 font-display: block + FontFaces 里的 preload 解决，
+      //    不再靠缩体积。
+      options: { experimental: { variableAxis: { opsz: ['6', '144'], wdth: ['25', '151'] } } },
+    },
+    // ⚠️ 中文两族（Noto Sans SC / Noto Serif SC）**不**在这里：Fonts API 会把 @font-face 内联进每个
+    //    页面的 <head>，两族共 196 条 unicode-range 规则 ≈ 188 KB（gzip 63 KB）**每页**重下一遍
+    //    （实测 71 个页面 HTML 从 4 MB 涨到 16.6 MB，单页 gzip 19 → 83 KB）。
+    //    改由 scripts/build-fonts.mjs 生成一份带内容哈希的一等公民 CSS（/fonts/cjk-fonts.<hash>.css，
+    //    全站共用一份、可 immutable 缓存、按 unicode-range 分片、零第三方请求），
+    //    族名保持 'Noto Sans SC' / 'Noto Serif SC' 字面值 ⇒ main.css 的字体栈不用动。
+  ],
   markdown: {
     remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkJianpu, remarkScoreSwitch, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 五线谱 + 简谱 + 「紧贴的两种记谱法合成切换器」+ 识别 $ $$ 语法
-    rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody, rehypePunctFullWidth], // ⚡️ KaTeX 公式 + 正文智能引号（统一状态机）+ 开明式标点（句末点号全角）
+    rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody, rehypePunctFullWidth, rehypeLazyImages], // 正文图片默认懒加载；独立题图由 Layout 提高优先级
     // ⚡️ 关闭内置 smartypants 的引号转换，改由 rehypeSmartQuotesBody 统一接管；
     //    保留破折号/省略号；backticks 也关闭（否则正文两个单引号 '' 会被合并成右双引号 ”）
     smartypants: {
@@ -760,7 +922,7 @@ export default defineConfig({
     },
   },
   vite: {
-    plugins: [jianpuBravuraFont(), blogEditorApi()],
+    plugins: [jianpuBravuraFont(), blogEditorApi(), inlineSvgMask()],
     optimizeDeps: {
       // ⚡️ 简谱库必须走普通 transform（见上面 jianpuBravuraFont），不能被 esbuild 预打包绕过
       exclude: ['simple-notation'],

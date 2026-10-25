@@ -1,0 +1,33 @@
+# Cloudflare Pages 缓存头。
+# 原则：文件名里带内容哈希的 ⇒ immutable（一年）；不带哈希的 ⇒ 中等时长 + stale-while-revalidate。
+# ⚠️ 一旦引入内容哈希，所有引用（HTML 里的 <link>/<script>/<img>、字体 src、preload）都必须用哈希后的 URL，
+#    否则改了文件用户还会拿到旧的——本项目已由 Astro/Vite 与 scripts/build-fonts.mjs 保证。
+
+# Astro/Vite 产物：main.[hash].css / *.woff2 / *.avif / *.webp 全部带哈希
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 中文字体分片 + 那份生成的 @font-face 样式表：文件名都是内容哈希
+/fonts/cjk/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# KaTeX（样式表 + 字体）：目录名带 katex 版本号，升级即换 URL
+/katex/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 下面这些不带哈希：编辑器会覆盖同名图片（/images/xxx.webp），字体也可能被替换
+/images/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/fonts/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/js/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/docs/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# GSF б�壨�ļ��������ݹ�ϣ��
+/fonts/gsf/*
+  Cache-Control: public, max-age=31536000, immutable

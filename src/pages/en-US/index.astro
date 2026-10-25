@@ -8,6 +8,14 @@ const LANG: Lang = 'en';
 const postsPerPage = 8;
 const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
 const rantFiles = import.meta.glob('../blog/en-US/rants/*.md', { eager: true });
+// Card images: only metadata, to give <img> width/height (the card is already a fixed 10:3 crop;
+// the attributes keep the placeholder correct if CSS is late). Files stay in public/images.
+const cardImages = import.meta.glob('/public/images/*.{webp,jpg,jpeg,png}', {
+    eager: true,
+    import: 'default',
+}) as Record<string, { width: number; height: number }>;
+const cardDims = (src?: string) =>
+    typeof src === 'string' && src.startsWith('/images/') ? cardImages['/public' + src] : undefined;
 const rantModules = new Set<any>(Object.values(rantFiles));
 // Numbering and date sorting include rants (the article header lines up), the homepage cards do not
 const allPosts: any[] = [...Object.values(markdownFiles), ...Object.values(rantFiles)].filter((p: any) => !p.frontmatter?.draft);
@@ -78,7 +86,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 <Layout
     title="Ethan's Blog"
     brandUrl="https://www.ethan929.com/en-US/"
-    brandText='<img src="/images/avatar.webp" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
+    brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
 >
     <Fragment slot="head">
         {/* ⚠️ These two used to sit at the very end of the page (after `</Layout>`): the stylesheet
@@ -140,7 +148,14 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                     <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-categories={postCats.join(',')}>
                         {post.frontmatter?.image && (
                             <div class="post-card-image">
-                                <img src={post.frontmatter.image} alt="" loading="lazy" decoding="async" />
+                                <img
+                                    src={post.frontmatter.image}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    width={cardDims(post.frontmatter.image)?.width}
+                                    height={cardDims(post.frontmatter.image)?.height}
+                                />
                             </div>
                         )}
                         <span class="post-index">{rankByUrl[postUrl]}</span>

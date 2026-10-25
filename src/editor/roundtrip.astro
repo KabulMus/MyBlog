@@ -4,6 +4,7 @@
 // 这是 M1 的安全底线：只要这里全绿，编辑 abc/简谱/短代码的文章就不会被改写。
 import '../styles/main.css';
 import './editor.css';
+import FontFaces from '../components/FontFaces.astro';
 ---
 
 <html lang="zh-CN" data-pagefind-ignore>
@@ -12,6 +13,7 @@ import './editor.css';
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="robots" content="noindex, nofollow" />
 		<title>Markdown 往返自检</title>
+		<FontFaces />
 	</head>
 	<body class="editor-body editor-body--scroll">
 		<header class="editor-bar">

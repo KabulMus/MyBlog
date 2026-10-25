@@ -4,6 +4,7 @@
 // M1：frontmatter 表单 + TipTap 正文 + 保存（写回文件 -> 右侧 iframe 自动热更新）
 import '../styles/main.css';
 import './editor.css';
+import FontFaces from '../components/FontFaces.astro';
 import { categories } from '../config/categories';
 import { tagDefs, tagOrder, RANT_TAG } from '../config/tags';
 
@@ -49,15 +50,9 @@ const editorConfig = {
 		<title>Blog Editor</title>
 		<!-- ⚠️ 必须跟 Layout.astro 一样引一遍字体：正文样式（main.css 的 .typography-body）用的是
 		     Inter / JetBrains Mono / Noto Serif SC / Source Serif 4 等，编辑器不引就全套回落成系统字体，
-		     跟真页面对不上。（Source Serif 4 是 main.css 自带 @font-face，其余都靠这两个 link） -->
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
-		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
-		<link rel="preconnect" href="https://rsms.me/" />
-		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-		<!-- Google Sans Flex：编辑器标题栏和日期栏用它（editor.css 里点名的），不引就全套回落成 Inter。 -->
-		<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wdth,wght@6..144,25..151,1..1000&display=swap" rel="stylesheet" />
+		     跟真页面对不上。
+		     （Source Serif 4 是 main.css 自带的自托管 @font-face，其余都走 FontFaces 里的 Fonts API） -->
+		<FontFaces />
 		<script src="/js/core.js" is:inline></script>
 	</head>
 	<body class="editor-body">

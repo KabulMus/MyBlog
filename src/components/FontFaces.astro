@@ -1,0 +1,85 @@
+---
+/**
+ * 一键把站点用到的字体注入页面。
+ *
+ * 两条路，各有原因：
+ *
+ * 1) 拉丁四族（Google Sans Flex / Inter / Encode Sans SC / JetBrains Mono）走 Astro 的 Fonts API：
+ *    构建时自托管、自动生成 @font-face + CSS 变量、顺带给出度量匹配的兜底字面。
+ *    ⚠️ Astro 给族名加了内容哈希 ⇒ main.css 里一律写 var(--font-xxx)，
+ *       写死 'Noto Sans SC' 这类字面名会静默落到系统字体。
+ *    ⚠️ 拉丁族的 `fallbacks` 配成 []：var() 展开是「族名, 系统兜底, generic」，
+ *       自带 generic 的话它会排在后面那个中文字族**前面**，汉字就落到系统宋体/黑体了。
+ *
+ * 2) 中文两族（Noto Sans SC / Noto Serif SC）走 scripts/build-fonts.mjs 生成的
+ *    /fonts/cjk/<hash>.css（全站共用、可 immutable 缓存）。
+ *    原因见那个脚本的注释：Fonts API 会把 196 条 unicode-range 规则内联进**每个**页面，
+ *    gzip 后每页白白多 63 KB。
+ *    ⚠️ 这条样式表用**阻塞式** <link>，不要再用 media="print"+onload 那套非阻塞写法：
+ *       它会拖到 load 之后才生效 ⇒ 浏览器那时才知道有中文 @font-face，分片要再等一个 RTT 才开始下。
+ *       实测（冷缓存 / DPR2 / 150ms RTT / 4Mbps）：非阻塞时中文分片 3423 ms 才发请求、4.5~6.6 s 才显示；
+ *       阻塞后 @font-face 在首帧前就位，分片立刻开抓。代价只是首屏多等约 0.2 s 的 CSS（之后 immutable 命中）。
+ *
+ * ⚠️ preload 预算：全站图片 preload ≤1（当前 0 条，见 Layout 的说明）+ 字体 preload 4 条：
+ *    Google Sans Flex（站名/大标题）、Inter（正文）、Encode Sans SC（导航/分类）、
+ *    CatNotoSC（分类 chip 的中文子集，只有 7.9 KB）。
+ *    清单建议 ≤3，这里第 4 条是 8 KB 级的小子集，对带宽影响可忽略，换来 chip 上的汉字不闪。
+ * ⚠️ 关于「Google Sans Flex 闪一下」：它 368 KB，冷缓存下晚于首帧到达，
+ *    以前是 swap ⇒ 先画 Inter 再跳到 GSF。现在这一族单独用 font-display: block
+ *    （见 astro.config.mjs），字形没到就先不画，绝不出现「错误字形 → 正确字形」的跳变。
+ *    所以它虽然大，仍然值得 preload：pre 的是「让它尽量早到、缩短空白期」，不是「靠缩体积免闪」。
+ *    中文两族是 100 片按 unicode-range 分的，preload 任何一片都是瞎猜，所以不 preload。
+ * ⚠️ preload 链接自带 crossorigin（同源也要写）：凭据模式不一致会重复下载一次。
+ */
+import { Font } from 'astro:assets';
+import { componentDataByCssVariable } from 'virtual:astro:assets/fonts/internal';
+import cjkFonts from '../generated/cjk-fonts.json';
+import gsfItalic from '../generated/gsf-italic.json';
+
+interface Props {
+  /** 只在需要最快出字的页面（正文布局）打开 */
+  preload?: boolean;
+}
+
+const { preload = false } = Astro.props;
+
+// ⚡️ Google Sans Flex 的斜体面。
+// GSF 没有 italic，只有 slnt 轴（-10..0）；只声明正体的话，`font-style: italic` 没有可选的
+// @font-face，浏览器就自己把正体倾斜（假斜体）。这里补一个 font-style: italic 的面，
+// 指向 scripts/build-fonts.mjs 生成的那份带 slnt 的文件，并把 slnt 压到 -10。
+// 族名必须和 Astro 生成的正体**完全一致**（它带内容哈希），所以从 Fonts API 的虚拟模块里读出来。
+// ⚠️ ss01 = 单层 a（GSF 的样式集）。写在 @font-face 描述符里即可：
+//    实测它不会被 body 上继承的 font-feature-settings 覆盖；元素上显式写 ss01:0 仍能关掉。
+// ⚠️ 正则要容忍冒号后的空白：build 的 CSS 是压缩过的（`font-family:"X"`），
+//    dev 下没压缩（`font-family: "X"`），写死不带空格会让 dev 里静默拿不到族名。
+const gsfFamily = /font-family:\s*"([^"]+)"/.exec(
+  componentDataByCssVariable.get('--font-google-sans-flex')?.css ?? ''
+)?.[1];
+const gsfItalicCss =
+  gsfFamily &&
+  `@font-face{` +
+    `font-family:"${gsfFamily}";` +
+    `src:url("${gsfItalic.url}") format("woff2");` +
+    `font-display:block;` +
+    `unicode-range:${gsfItalic.unicodeRange};` +
+    `font-weight:1 1000;` +
+    `font-style:italic;` +
+    `font-feature-settings:"ss01" 1;` +
+    `font-variation-settings:"slnt" ${gsfItalic.slnt};` +
+    `}`;
+---
+
+ {/* GSF 只有一个 face（按轴请求的整份字体），用 true（= 该族全部 face）比 subset 过滤稳；
+     其余族按 subset 过滤，避免把 latin-ext / italic 也一起 preload 掉 */}
+<Font cssVariable="--font-google-sans-flex" preload={preload ? true : false} />
+<Font cssVariable="--font-inter" preload={preload ? [{ subset: 'latin', weight: 400, style: 'normal' }] : false} />
+<Font cssVariable="--font-encode-sans-sc" preload={preload ? [{ subset: 'latin' }] : false} />
+<Font cssVariable="--font-jetbrains-mono" />
+
+{preload && (
+  <link rel="preload" href="/fonts/CatNotoSC-VF.woff2" as="font" type="font/woff2" crossorigin />
+)}
+
+{gsfItalicCss && <style set:html={gsfItalicCss}></style>}
+
+<link rel="stylesheet" href={cjkFonts.href} />

@@ -32,3 +32,16 @@ pnpm-debug.log*
 # 草稿（drafts/ 不进 Git/公开仓库；CF 从 git 拉取时草稿不存在，不会部署）
 src/pages/blog/drafts/
 src/pages/blog/en-US/drafts/
+
+# 字体构建产物（scripts/build-fonts.mjs 生成：中文字体分片 + 分片样式表 + 清单）
+.cache/fonts/
+public/fonts/cjk/
+src/generated/cjk-fonts.json
+
+# KaTeX ���йܲ��scripts/build-fonts.mjs �� node_modules �������
+public/katex/
+src/generated/katex.json
+
+# GSF б�壨scripts/build-fonts.mjs ���ɣ��� slnt ��� latin �Ӽ���
+public/fonts/gsf/
+src/generated/gsf-italic.json

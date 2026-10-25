@@ -8,6 +8,14 @@ const LANG: Lang = 'zh';
 const postsPerPage = 8;
 const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
 const rantFiles = import.meta.glob('./blog/rants/*.md', { eager: true });
+// 卡片图：只取尺寸元数据给 <img> 补 width/height（卡片本身已经是 10:3 固定裁剪，
+// 加属性是为了在 CSS 失效/未加载时也留好占位；图片文件仍在 public/images，不走派生）。
+const cardImages = import.meta.glob('/public/images/*.{webp,jpg,jpeg,png}', {
+    eager: true,
+    import: 'default',
+}) as Record<string, { width: number; height: number }>;
+const cardDims = (src?: string) =>
+    typeof src === 'string' && src.startsWith('/images/') ? cardImages['/public' + src] : undefined;
 const rantModules = new Set<any>(Object.values(rantFiles));
 // 序号和日期排序都算上吐槽（站点文章页的 #N 也是这么算的），只是主页卡片不列他们
 const allPosts: any[] = [...Object.values(markdownFiles), ...Object.values(rantFiles)].filter((p: any) => !p.frontmatter?.draft);
@@ -78,7 +86,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
 <Layout
     title="Ethan's Blog" 
     brandUrl="https://www.ethan929.com/" 
-    brandText='<img src="/images/avatar.webp" alt="Avatar" class="nav-avatar"><span>Ethan</span>'
+    brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
 >
     <Fragment slot="head">
         {/* ⚠️ 这两行原来放在页面最末尾（`</Layout>` 之后）：那张样式表会卡住首屏绘制，
@@ -141,7 +149,14 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                     <li class="post-item" data-page={postPage} data-tags={(post.frontmatter?.tags || []).join(',')} data-categories={postCats.join(',')}>
                         {post.frontmatter?.image && (
                             <div class="post-card-image">
-                                <img src={post.frontmatter.image} alt="" loading="lazy" decoding="async" />
+                                <img
+                                    src={post.frontmatter.image}
+                                    alt=""
+                                    loading="lazy"
+                                    decoding="async"
+                                    width={cardDims(post.frontmatter.image)?.width}
+                                    height={cardDims(post.frontmatter.image)?.height}
+                                />
                             </div>
                         )}
                         <span class="post-index">{rankByUrl[postUrl]}</span>

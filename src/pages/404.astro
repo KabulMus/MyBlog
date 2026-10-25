@@ -3,6 +3,7 @@
 // 不套用 Layout（无需导航/hero/toast 等）；404 特有样式单独放 404.css
 import '../styles/main.css';
 import '../styles/404.css';
+import FontFaces from '../components/FontFaces.astro';
 ---
 
 <html lang="zh-CN" data-pagefind-ignore>
@@ -11,16 +12,8 @@ import '../styles/404.css';
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta name="robots" content="noindex, nofollow">
 		<title>404 - Page Not Found</title>
-		<!-- Google Fonts（替代原 CSS @import：link 并行加载 + preconnect 提前握手）
-		     ⚠️ media="print" + onload 是非阻塞加载：这 60+ KB 的目录 CSS 不再卡首屏，字体没到就先用后备字体
-		     （display=swap 本来就是这个行为）；关了 JS 由 <noscript> 里那份兜底。 -->
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" media="print" onload="this.media='all'" />
-		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Encode+Sans+SC:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap" /></noscript>
-		<!-- Inter 官方可变字体（全字形 + optical size） -->
-		<link rel="preconnect" href="https://rsms.me/" />
-		<link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+		<!-- 字体全部自托管（Astro Fonts API）：不再有第三方源的 <link> / preconnect -->
+		<FontFaces />
 		<script src="/js/core.js" is:inline></script>
 	</head>
 	<body>
