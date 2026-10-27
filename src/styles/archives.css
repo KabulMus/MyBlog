@@ -119,7 +119,7 @@ body.is-posts-index .page-hero h1 *,
     color: var(--text-sub);
     font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-size: 0.9rem;
-    font-stretch: 75%;
+    font-stretch: 125%;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     user-select: none;

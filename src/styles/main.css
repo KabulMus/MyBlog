@@ -386,26 +386,24 @@ body {
 }
 
 .rss-link svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     stroke: currentColor;
-    stroke-width: 4;
+    stroke-width: 4.8;
     stroke-linecap: round;
     stroke-linejoin: round;
     transition: stroke-width 0.2s ease;
 }
 
-.rss-link svg circle {
-    transform-box: fill-box;
-    transform-origin: center;
-    transition: transform 0.2s ease;
+.nav-links .rss-link svg {
+    stroke-width: 3.2;
 }
 
 .rss-link:hover { color: var(--primary-blue); }
 
 @media (hover: hover) and (pointer: fine) {
-    .rss-link:hover svg { stroke-width: 6; }
-    .rss-link:hover svg circle { transform: scale(1.5); }
+    .rss-link:hover svg { stroke-width: 7.2; }
+    .nav-links .rss-link:hover svg { stroke-width: 6; }
 }
 
 .nav-links .rss-link::before {
@@ -1247,26 +1245,31 @@ html[lang='zh-CN'] .typography-body i {
    ========================================================================== */
 
 .typography-body blockquote {
-    margin: 1rem 0;                     /* 上下留足 2rem 的段落间距 */
-    padding: 12px 24px;                 /* 内部精致的四周留白 */
-    
-    /* 1. 核心底色与边框：左侧一条优雅的品牌蓝粗线，搭配微微透明的淡色底盘 */
-    border-left: 4px solid var(--primary-blue);
-    background-color: var(--card-bg);   /* 亮色下是干净白，暗色下会联动切换 */
-    border-radius: var(--card-radius); /* 仅右侧圆角 */
+    position: relative;
+    margin: 1rem 0;
+    padding: 0 0 0 16px;
 }
 
-/* 3. 文艺感微调：让引用块里纯普通的文字带有一点优雅的气质 */
+.typography-body blockquote::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    border-radius: 999px;
+    background: var(--primary-blue);
+    content: '';
+}
+
 .typography-body blockquote p {
-    margin: 0;                          /* 清理 p 标签默认导致的上下空行 */
+    margin: 0;
 }
 
-/* 4. 惊喜小细节：支持多层级嵌套（例如 Markdown 里连续写两个 >>） */
 .typography-body blockquote blockquote {
     margin: 1rem 0 0 0;
-    padding: 12px 18px;
-    background-color: var(--item-border); /* 嵌套时底盘颜色层层加深 */
-    border-left-color: var(--text-sub);    /* 嵌套线变成低调的副文本色 */
+    padding-left: 16px;
+}
+
+.typography-body blockquote blockquote::before {
+    background: var(--text-sub);
 }
 
 .typography-body code {
@@ -1480,7 +1483,7 @@ html[lang='zh-CN'] .typography-body i {
 .typography-body p:has(img) small,
 .typography-body p:has(img) em:last-child {
     display: block;
-    margin-top: 0.8rem;
+    margin: 0.5rem 0 0.5rem;
     font-size: 0.85rem;
     color: var(--text-sub);             /* 淡淡的副文本色 */
     text-align: center;

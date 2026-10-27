@@ -10,8 +10,8 @@ tags: ['note']
 warning: []
 ---
 
-北——京——欢迎你~  
-为你开天辟地~
+> 北——京——欢迎你~  
+> 为你开天辟地~
 
 ## 10月10日
 
@@ -31,7 +31,7 @@ warning: []
 ![](/images/2026-10-13-beijing-04-peking-jinguang.webp)
 *北京大学金光楼*
 
-![](/images/2026-10-13-beijing-05-summer-palace.webp)
+![](/images/2026-10-13-beijing-05-old-summer-palace.webp)
 *圆明园 大水法*
 
 ## 10月13日

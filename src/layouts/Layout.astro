@@ -295,7 +295,7 @@ function getLangSwitchHref(pathname: string) {
 				
 				<div class="nav-links desktop-only">
 					<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-nav-link rss-link" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} aria-label={isEnglishRoute ? 'Copy RSS feed link' : '复制 RSS 订阅链接'} title="RSS">
-						<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="2" fill="currentColor" stroke="none"/></g></svg>
+						<svg viewBox="-4.8 -4.8 57.6 57.6" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="4.8" fill="none" stroke="currentColor"/></g></svg>
 					</a>
 					<span class="nav-divider" aria-hidden="true"></span>
 					<a href={navHrefs.blog} data-text={navLabels.blog} class={navSection === 'blog' ? 'active' : undefined}>{navLabels.blog}</a>
@@ -305,7 +305,7 @@ function getLangSwitchHref(pathname: string) {
 				</div>
 
 				<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-link mobile-rss mobile-only" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} aria-label={isEnglishRoute ? 'Copy RSS feed link' : '复制 RSS 订阅链接'} title="RSS">
-					<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="2" fill="currentColor" stroke="none"/></g></svg>
+					<svg viewBox="-4.8 -4.8 57.6 57.6" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="4.8" fill="none" stroke="currentColor"/></g></svg>
 				</a>
 				<span class="mobile-rss-divider mobile-only" aria-hidden="true"></span>
 				<button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label={menuAriaLabel}>
@@ -622,7 +622,7 @@ function getLangSwitchHref(pathname: string) {
 							e.preventDefault();
 							var url = link.getAttribute('data-copy') || link.href;
 							copyToClipboard(url, function() {
-								showToast(document.documentElement.lang === 'en-US' ? 'RSS link copied' : 'RSS 地址已复制');
+								showToast(document.documentElement.lang === 'en-US' ? 'RSS link copied' : 'RSS地址已复制');
 							});
 						});
 					})(links[i]);
