@@ -1,0 +1,12 @@
+/* Inter 变体族（Ramblings 列表 + 吐槽正文专用，见 main.css 的 --inter-rant-features）。
+   ⚠️ 为什么不能直接用 Fonts API 那份 Inter：Google Fonts 的 woff2 被裁过，GSUB 只剩
+      calt/ccmp/dnom/frac/locl/numr/pnum/tnum ⇒ ss03、cv03–cv05、cv09、cv11、ss08
+      这些字形变体**在文件里根本不存在**，CSS 写 font-feature-settings 也不会有任何变化。
+      这里换成官方 Inter（rsms.me）的子集：同样只保留拉丁字形，但 --layout-features 全留，
+      所以变体都在。正体 1195 字形 / 178 KB，斜体 1174 / 195 KB。
+   ⚠️ 惰性加载：这两个 @font-face 只有族名被排进 font-family 的页面上才会下载
+      （Ramblings 列表、/blog/rants/* 正文），其他页面零成本。
+   ⚠️ 保留 opsz / wght 两个轴，`font-optical-sizing: auto` 照常生效。
+   ⚠️ 斜体那份没有 cv11 —— 官方 Inter 斜体本身就没做这个变体，不是裁掉的。 */
+@font-face{font-family:'Inter Rant';font-style:normal;font-weight:100 900;font-display:swap;src:url(./fonts/inter-rant.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2000-206F,U+20A0-20C0,U+2113,U+2122,U+2191,U+2193,U+2212,U+2215,U+2C60-2C7F,U+A720-A7FF,U+FEFF,U+FFFD}
+@font-face{font-family:'Inter Rant';font-style:italic;font-weight:100 900;font-display:swap;src:url(./fonts/inter-rant-italic.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2000-206F,U+20A0-20C0,U+2113,U+2122,U+2191,U+2193,U+2212,U+2215,U+2C60-2C7F,U+A720-A7FF,U+FEFF,U+FFFD}

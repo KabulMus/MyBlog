@@ -1,4 +1,5 @@
 @import './source-serif-4.css';
+@import './inter-rant.css';
 /* --- 1. 字体声明 --- */
 /* 注：Google Fonts 改为在 Layout.astro / 404.astro 的 <head> 用 <link>+preconnect 加载（比 CSS @import 并行更快） */
 /* 注：Source Serif 4 的 12 个子集 @font-face 已抽到独立文件 source-serif-4.css（本地 @import，构建时自动内联合并，无额外请求） */
@@ -75,7 +76,6 @@
     --color-rose: #f43f5e;
     --color-rose-bg: rgba(244, 63, 94, 0.1);
     --color-rose-border: rgba(244, 63, 94, 0.3);
-    --mark-cyan: #2dd4bfa0;
     /* 背景装饰的墨色（线稿小图形）。两档是按「看起来一样淡」配的：
        亮底 ≈0.105 的品牌蓝 与 暗底 0.075 的亮蓝，感知亮度差接近（ΔL* 都 ≈5）。 */
     --bg-doodle: rgba(30, 102, 198, 0.105);
@@ -121,7 +121,6 @@
     --color-rose: #fb7185;
     --color-rose-bg: rgba(251, 113, 133, 0.15);
     --color-rose-border: rgba(251, 113, 133, 0.3);
-    --mark-cyan: #2dd4bf60;
     /* 背景装饰：暗底对比低，给亮蓝并提高一档透明度 */
     --bg-doodle: rgba(147, 197, 253, 0.075);
     --selection-bg: #93c5fd80;
@@ -165,7 +164,6 @@
         --color-rose: #fb7185;
         --color-rose-bg: rgba(251, 113, 133, 0.15);
         --color-rose-border: rgba(251, 113, 133, 0.3);
-        --mark-cyan: #2dd4bf60;
         /* 背景装饰：暗底对比低，给亮蓝并提高一档透明度 */
         --bg-doodle: rgba(147, 197, 253, 0.075);
         --selection-bg: #93c5fd80;
@@ -237,7 +235,8 @@ body {
     color: var(--text-main);
     line-height: 1.6;
     line-break: strict;
-    font-feature-settings: "liga" 1, "calt" 1, "halt" 1;
+    --inter-rant-features: "ss03" 0, "cv03" 0, "cv04" 0, "cv09" 0, "cv11" 0, "cv05" 0, "ss08" 0;
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 1, var(--inter-rant-features);
     /* CJK 跟西文/数字交界处自动让出 1/8 em 的空隙（CSS Text 4 的 text-autospace）。
        挂在 body 上是「全站所有文字都吃」：正文、标题、卡片、标签、导航、页脚，还有编辑器
        （/admin 的 body 也是这个 body）—— 子元素继承，不用逐处写。
@@ -249,6 +248,20 @@ body {
     text-autospace: normal;
     transition: background-color 0.3s ease, color 0.3s ease;
     user-select: text;
+}
+
+/* ⚠️ 光开 font-feature-settings 不够：那几套变体只在自托管的 'Inter Rant' 里
+   （Google Fonts 那份被裁掉了，见 inter-rant.css）。所以只把**内文**换成它 ——
+   导航、大标题、页脚、标签那些仍用原来的字族，一个字都不动。
+   body 上保留那份全 0 的 --inter-rant-features，是给下面 .punct-full 之类的 var() 兜底：
+   变量缺失会让整条 font-feature-settings 变成无效值，连 halt 一起丢掉。 */
+body.is-rant-article .typography-body,
+body.is-rants-index .rant-card-body {
+    --inter-rant-features: "ss03" 1, "cv03" 1, "cv04" 1, "cv09" 1, "cv11" 1, "cv05" 1, "ss08" 1;
+    font-family: 'Inter Rant', var(--font-inter), 'Noto Sans SC', -apple-system, sans-serif;
+    /* 必须在这里再声明一次：font-feature-settings 在 body 上就已经算完了，
+       只改后代的自定义属性不会让它重新求值（继承的是计算结果，不是表达式）。 */
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 1, var(--inter-rant-features);
 }
 
 /* 中西之间的空隙：Chromium 靠 text-autospace 自己补，Safari / Firefox 靠 Layout.astro 里那段脚本
@@ -263,13 +276,13 @@ body {
    必须包 span 是因为 halt 只能整块开关，无法按字符选。
    这里是元素自身的声明，一定盖过 body 继承下来的值。 */
 .punct-full {
-    font-feature-settings: "liga" 1, "calt" 1, "halt" 0;
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 0, var(--inter-rant-features);
 }
 
 /* 行末句末号：压回半宽（判定与挂类在 Layout.astro 的行末标点脚本里）。
    省下的半格由 justify 摊进本行字间，所以行依然两端对齐，墨迹也贴到版心右缘。 */
 .punct-full.punct-line-end {
-    font-feature-settings: "liga" 1, "calt" 1, "halt" 1;
+    font-feature-settings: "liga" 1, "calt" 1, "halt" 1, var(--inter-rant-features);
 }
 
 /* 下一行开头那几项被粘成一整块：合计宽过半格就塞不进压半宽省出来的那半格，
@@ -281,7 +294,7 @@ body {
 /* 打印是另一套版心宽度，屏幕上量出来的行尾在纸上不成立 ⇒ 一律按全角，宁可有那半格凹陷。 */
 @media print {
     .punct-full.punct-line-end {
-        font-feature-settings: "liga" 1, "calt" 1, "halt" 0;
+        font-feature-settings: "liga" 1, "calt" 1, "halt" 0, var(--inter-rant-features);
     }
     .punct-line-head {
         white-space: normal;
@@ -1586,8 +1599,9 @@ html[lang='zh-CN'] .typography-body i {
     line-height: 1.5;
     color: var(--video-fg);
     opacity: 0.85;
-    font-feature-settings: "liga", "calt", "halt"; /* 继承用户设置的标点宽度（halt 半宽） */
+    font-feature-settings: "liga", "calt", "halt", var(--inter-rant-features); /* 继承用户设置的标点宽度（halt 半宽） */
 }
+
 .video-embed iframe {
     position: absolute;
     inset: 0;
@@ -1701,7 +1715,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
 
 /* 2. ⚡️ 文本高亮（Mark）：真正意义上的荧光笔划线 */
 .typography-body mark {
-    background: linear-gradient(to top, var(--mark-cyan) 60%, transparent 00%);
+    background: linear-gradient(to top, var(--selection-bg) 60%, transparent 00%);
     color: inherit;
     padding: 0 4px;
 }
@@ -2223,8 +2237,9 @@ html[lang='en-US'] .post-nav-link.next .post-nav-title {
     -webkit-user-select: none;
 }
 
-/* 主页大标题也是纯展示的，拖选照样会把站名一起选进去 ⇒ 一并禁选 */
-body.is-home .page-hero h1 {
+/* 主页和 Ramblings 大标题是展示文字，不参与选中 */
+body.is-home .page-hero h1,
+body.is-rants-index .page-hero h1 {
     user-select: none;
     -webkit-user-select: none;
 }

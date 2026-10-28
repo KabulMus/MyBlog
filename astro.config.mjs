@@ -891,6 +891,9 @@ export default defineConfig({
       styles: ['normal', 'italic'],
       subsets: ['latin', 'latin-ext'],
       fallbacks: [],
+      // ⚠️ 这份 Google woff2 被裁过：GSUB 只剩 calt/ccmp/dnom/frac/locl/numr/pnum/tnum，
+      //    没有 ss03 / cv03–cv05 / cv09 / cv11 / ss08 ⇒ 那些变体写在 CSS 里也不会生效。
+      //    Ramblings 与吐槽正文因此另挂自托管的 'Inter Rant'（src/styles/inter-rant.css）。
       options: { experimental: { variableAxis: { opsz: ['14', '32'] } } },
     },
     {
