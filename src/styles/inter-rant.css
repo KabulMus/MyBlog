@@ -2,8 +2,13 @@
    ⚠️ 为什么不能直接用 Fonts API 那份 Inter：Google Fonts 的 woff2 被裁过，GSUB 只剩
       calt/ccmp/dnom/frac/locl/numr/pnum/tnum ⇒ ss03、cv03–cv05、cv09、cv11、ss08
       这些字形变体**在文件里根本不存在**，CSS 写 font-feature-settings 也不会有任何变化。
-      这里换成官方 Inter（rsms.me）的子集：同样只保留拉丁字形，但 --layout-features 全留，
-      所以变体都在。正体 1195 字形 / 178 KB，斜体 1174 / 195 KB。
+      这里换成官方 Inter（rsms.me）的子集：同样只保留拉丁字形，但按白名单保留了需要的
+      OpenType 特性（含 tnum/pnum — 注脚序号靠 tabular-nums，少一个就会静默退回比例数字）。
+      正体 1384 字形 / 191 KB，斜体 1363 / 210 KB。
+      白名单：ccmp,locl,rlig,calt,clig,liga,kern,mark,mkmk,curs,rvrn,
+              tnum,pnum,lnum,onum,zero,frac,dnom,numr,sups,subs,case,ordn,
+              ss03,cv03,cv04,cv05,cv06,cv09,cv11,ss08
+      ⚠️ 以后要加别的变体，得连字体文件一起重做子集 —— 只在 CSS 里写 tag 是没用的。
    ⚠️ 惰性加载：这两个 @font-face 只有族名被排进 font-family 的页面上才会下载
       （Ramblings 列表、/blog/rants/* 正文），其他页面零成本。
    ⚠️ 保留 opsz / wght 两个轴，`font-optical-sizing: auto` 照常生效。

@@ -871,6 +871,15 @@ function rehypeLazyImages() {
 
 export default defineConfig({
   site: 'https://blog.ethan929.com',
+  // 旧地址 → 新地址（列表页改名：/rants ⇒ /ramblings、/posts ⇒ /archives）。
+  // 静态构建时 Astro 会为每条生成一个 meta refresh 落地页，老链接、RSS 订阅里的地址都还能用。
+  // ⚠️ 只重定向列表页；文章仍在 /blog/rants/<slug>（目录名是体裁，不是路由别名）。
+  redirects: {
+    '/rants': '/ramblings',
+    '/en-US/rants': '/en-US/ramblings',
+    '/posts': '/archives',
+    '/en-US/posts': '/en-US/archives',
+  },
   // ⚡️ 字体：由 Astro 的 Fonts API 自托管（构建时从 Google Fonts 取 woff2 落到 /_astro/fonts/），
   //    页面里不再出现 fonts.googleapis.com / fonts.gstatic.com / rsms.me。
   //    ⚠️ 族名会被 Astro 加上内容哈希（防缓存串味）⇒ CSS 里**不要**再写 'Noto Sans SC' 这类字面名，
@@ -982,7 +991,10 @@ export default defineConfig({
     }
   },
   integrations: [
-    sitemap(),
+    sitemap({
+      // 旧地址的 meta refresh 落地页不该进 sitemap（否则搜索引擎会收录一个假页面）
+      filter: (page) => !/^\/(?:en-US\/)?(?:rants|posts)\/?$/.test(new URL(page).pathname),
+    }),
     blogEditor(),
   ],
   server: {

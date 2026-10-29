@@ -1,18 +1,19 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import '../styles/archives.css';
-import { categoryNamesZh, toCatArray } from '../config/categories';
-import { formatDate, getPostUrl, renderTitleHtml, type Lang } from '../lib/posts';
+import Layout from '../../layouts/Layout.astro';
+import '../../styles/archives.css';
+import { categoryNamesEn, toCatArray } from '../../config/categories';
+import { formatDate, getPostUrl, renderTitleHtml, type Lang } from '../../lib/posts';
 
-const LANG: Lang = 'zh';
-// 只收成篇的（blog/ 平铺目录）：吐槽住在 blog/rants/ 下，走 /rants 那条线
-const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
+const LANG: Lang = 'en';
+// Full posts only (blog/en-US/ flat directory): rants live in blog/en-US/rants/ and have their own /ramblings page
+const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
 
 const posts = Object.values(markdownFiles)
     .filter((p: any) => !p.frontmatter?.draft)
     .sort((a: any, b: any) => new Date(b.frontmatter?.date || 0).getTime() - new Date(a.frontmatter?.date || 0).getTime());
 
-// 按年分组（年份倒序，年内也倒序）：直接读日期字符串，免得时区把跨年那几篇挪到隔壁
+// Group by year (years descending, then posts descending inside a year). Read the year off the raw
+// date string so time-zone conversion can't push a New Year's Eve post into the neighbouring year.
 const years: { year: string; posts: any[] }[] = [];
 for (const post of posts) {
     const year = String(post.frontmatter?.date || '').slice(0, 4) || '——';
@@ -22,10 +23,10 @@ for (const post of posts) {
     years[years.length - 1].posts.push(post);
 }
 
-// 年份已经挂在分组标题上，行内日期就不再重复
+// The year is already in the group heading, so the row keeps only month + day
 function monthDay(dateStr: string) {
     const full = formatDate(dateStr, LANG);
-    const stripped = full.replace(/^\d{4}年/, '');
+    const stripped = full.replace(/,\s*\d{4}$/, '');
     return stripped === full ? full : stripped;
 }
 
@@ -38,15 +39,15 @@ const rows = years.map((group) => ({
         iso: String(post.frontmatter?.date || ''),
         date: monthDay(post.frontmatter?.date || ''),
         cats: toCatArray(post.frontmatter?.category),
-        title: renderTitleHtml(post.frontmatter?.title || '未命名文章'),
+        title: renderTitleHtml(post.frontmatter?.title || 'Untitled'),
     })),
 }));
 ---
 
 <Layout
     title="Archives"
-    description="全部文章，按年份排列。"
-    brandUrl="https://www.ethan929.com/"
+    description="Every post, arranged by year."
+    brandUrl="https://www.ethan929.com/en-US/"
     brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
 >
     <div class="posts-index" data-pagefind-ignore>
@@ -54,7 +55,7 @@ const rows = years.map((group) => ({
             <section class="posts-year">
                 <h2 class="posts-year-title" id={String(group.year)}>
                     <span class="posts-year-label">{group.year}</span>
-                    <sup class="posts-year-count" aria-label={`${group.posts.length} 篇文章`}>{group.posts.length}</sup>
+                    <sup class="posts-year-count" aria-label={`${group.posts.length} posts`}>{group.posts.length}</sup>
                 </h2>
                 <ul class="posts-rows">
                     {group.posts.map((post: any) => (
@@ -62,18 +63,24 @@ const rows = years.map((group) => ({
                             <a class="posts-row" href={post.url}>
                                 <span class="posts-row-cats">
                                     {post.cats.map((cat: string) => (
-                                        <span class={`tag cat-tag cat-${cat}`}>{categoryNamesZh[cat] || cat}</span>
+                                        <span
+                                            class={`tag cat-tag cat-${cat}`}
+                                            title={categoryNamesEn[cat] || cat}
+                                            aria-label={categoryNamesEn[cat] || cat}
+                                        >
+                                            {cat === 'achievements' ? 'Achieve.' : categoryNamesEn[cat] || cat}
+                                        </span>
                                     ))}
                                 </span>
                                 <time class="posts-row-date" datetime={post.iso}>{post.date}</time>
                                 <span class="posts-row-title" set:html={post.title}></span>
-                                <span class="posts-row-index" aria-label={`第 ${post.index} 篇文章`}>#{post.index}</span>
+                                <span class="posts-row-index" aria-label={`Post ${post.index}`}>#{post.index}</span>
                             </a>
                         </li>
                     ))}
                 </ul>
             </section>
         ))}
-        {rows.length === 0 && <p class="posts-empty">还没有文章。</p>}
+        {rows.length === 0 && <p class="posts-empty">No posts yet.</p>}
     </div>
 </Layout>

@@ -30,13 +30,13 @@ const langSwitchLabel = isEnglishRoute ? '切换到中文' : 'Switch to English'
 const navLabels = isEnglishRoute
     ? { blog: 'Blog', posts: 'Archives', ramblings: 'Ramblings', search: 'Search' }
     : { blog: '博客', posts: '文章', ramblings: 'Ramblings', search: '搜索' };
-// 吐槽那条线（/rants、/en-US/rants）：正文页的返回按钮要用
-const rantsHref = isEnglishRoute ? '/en-US/rants' : '/rants';
-const isRantsRoute = currentPath === rantsHref;
+// 吐槽那条线（/ramblings、/en-US/ramblings）：正文页的返回按钮要用
+const ramblingsHref = isEnglishRoute ? '/en-US/ramblings' : '/ramblings';
+const isRantsRoute = currentPath === ramblingsHref;
 const navHrefs = {
     blog: isEnglishRoute ? '/en-US' : '/',
-    posts: isEnglishRoute ? '/en-US/posts' : '/posts',
-    ramblings: rantsHref,
+    posts: isEnglishRoute ? '/en-US/archives' : '/archives',
+    ramblings: ramblingsHref,
     search: isEnglishRoute ? '/en-US/search' : '/search',
 };
 // 导航高亮：文章页（/blog/*）算「帖文」，吐槽正文算「Ramblings」
@@ -147,10 +147,10 @@ const articlePage = (frontmatter?.date && currentPath.startsWith('/blog') && sor
     ? Math.floor((sorted.length - postIndex) / backPostsPerPage) + 1
     : 1;
 const baseHome = isEnglishRoute ? '/en-US' : '/';
-// 吐槽（住在 blog/rants/ 下）：正文页不放分类标签和内容警告，返回按钮也指到 /rants
+// 吐槽（住在 blog/rants/ 下）：正文页不放分类标签和内容警告，返回按钮也指到 /ramblings
 const isRantArticle = currentPath.includes('/rants/');
 const backHref = isRantArticle
-    ? rantsHref
+    ? ramblingsHref
     : (articlePage > 1 ? `${baseHome}?page=${articlePage}` : baseHome);
 
 function formatDate(dateStr: string) {
@@ -194,10 +194,10 @@ function getLangSwitchHref(pathname: string) {
     if (normalized === "/en-US") return "/";
     if (normalized === "/blog") return "/blog/en-US";
     if (normalized === "/blog/en-US") return "/blog";
-    if (normalized === "/rants") return "/en-US/rants";
-    if (normalized === "/en-US/rants") return "/rants";
-    if (normalized === "/posts") return "/en-US/posts";
-    if (normalized === "/en-US/posts") return "/posts";
+    if (normalized === "/ramblings") return "/en-US/ramblings";
+    if (normalized === "/en-US/ramblings") return "/ramblings";
+    if (normalized === "/archives") return "/en-US/archives";
+    if (normalized === "/en-US/archives") return "/archives";
     if (normalized === "/search") return "/en-US/search";
     if (normalized === "/en-US/search") return "/search";
 

@@ -55,9 +55,16 @@ function insertHanSpaces(html) {
   );
 }
 
+let indexedCount = 0;
 for (const file of htmlFiles) {
   const html = readFileSync(file, 'utf8');
+  // 旧地址的 meta refresh 落地页是空壳，没有任何正文 ⇒ 不进索引（否则搜索会命中一个空白页）
+  if (html.includes('http-equiv="refresh"')) {
+    rmSync(file, { force: true });
+    continue;
+  }
   writeFileSync(file, insertHanSpaces(html));
+  indexedCount++;
 }
 
 // 验证：插入是否真实生效（用码点构造字符，避免字面量编码问题）
@@ -74,4 +81,4 @@ execSync('npx pagefind --site ' + TMP + ' --output-path ' + join(DIST, 'pagefind
 // 5. 清理临时目录
 rmSync(TMP, { recursive: true, force: true });
 
-console.log('✓ Pagefind unigram 中文索引已生成（' + htmlFiles.length + ' 个 HTML）');
+console.log('✓ Pagefind unigram 中文索引已生成（' + indexedCount + ' 个 HTML）');

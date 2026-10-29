@@ -43,7 +43,7 @@ const sortedPosts = allPosts.sort((a, b) => {
     return dateB - dateA;
 });
 
-// 目录就是体裁：blog/*.md 是成篇的，blog/rants/*.md 是吐槽（另走 /rants 那条线）
+// 目录就是体裁：blog/*.md 是成篇的，blog/rants/*.md 是吐槽（另走 /ramblings 那条线）
 const homePosts = sortedPosts.filter((p: any) => !rantModules.has(p));
 // 卡片上的 #N 是「成篇的」那串里的顺序号（吐槽不参与序号编排，跟文章页头部一致）
 const rankByUrl: Record<string, number> = {};

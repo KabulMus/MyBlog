@@ -235,7 +235,7 @@ body {
     color: var(--text-main);
     line-height: 1.6;
     line-break: strict;
-    --inter-rant-features: "ss03" 0, "cv03" 0, "cv04" 0, "cv09" 0, "cv11" 0, "cv05" 0, "ss08" 0;
+    --inter-rant-features: "ss03" 0, "cv03" 0, "cv04" 0, "cv06" 0, "cv09" 0, "cv11" 0, "cv05" 0, "ss08" 0;
     font-feature-settings: "liga" 1, "calt" 1, "halt" 1, var(--inter-rant-features);
     /* CJK 跟西文/数字交界处自动让出 1/8 em 的空隙（CSS Text 4 的 text-autospace）。
        挂在 body 上是「全站所有文字都吃」：正文、标题、卡片、标签、导航、页脚，还有编辑器
@@ -257,7 +257,7 @@ body {
    变量缺失会让整条 font-feature-settings 变成无效值，连 halt 一起丢掉。 */
 body.is-rant-article .typography-body,
 body.is-rants-index .rant-card-body {
-    --inter-rant-features: "ss03" 1, "cv03" 1, "cv04" 1, "cv09" 1, "cv11" 1, "cv05" 1, "ss08" 1;
+    --inter-rant-features: "ss03" 1, "cv03" 1, "cv04" 1, "cv06" 1, "cv09" 1, "cv11" 1, "cv05" 1, "ss08" 1;
     font-family: 'Inter Rant', var(--font-inter), 'Noto Sans SC', -apple-system, sans-serif;
     /* 必须在这里再声明一次：font-feature-settings 在 body 上就已经算完了，
        只改后代的自定义属性不会让它重新求值（继承的是计算结果，不是表达式）。 */
@@ -2326,7 +2326,7 @@ body.is-rants-index .page-hero h1 {
 }
 
 /* 页脚跟版心（main 那个 800 的盒子）同宽：宽屏下比卡片左右各宽 32，分割线正好齐版心边缘。
-   首页、/rants、/posts、/search 都是这种「内容列 736、版心 800」的页面（body 都带 is-listing-page）；
+   首页、/ramblings、/archives、/search 都是这种「内容列 736、版心 800」的页面（body 都带 is-listing-page）；
    文章页不动 —— 那边页脚跟标题区、上下篇导航本来就是同一带宽（1100）。 */
 body.is-listing-page footer {
     width: 100%;
