@@ -880,31 +880,16 @@ export default defineConfig({
     '/posts': '/archives',
     '/en-US/posts': '/en-US/archives',
   },
-  // ⚡️ 字体：由 Astro 的 Fonts API 自托管（构建时从 Google Fonts 取 woff2 落到 /_astro/fonts/），
-  //    页面里不再出现 fonts.googleapis.com / fonts.gstatic.com / rsms.me。
-  //    ⚠️ 族名会被 Astro 加上内容哈希（防缓存串味）⇒ CSS 里**不要**再写 'Noto Sans SC' 这类字面名，
-  //       一律用 var(--font-xxx)（见 main.css 顶部注释）。
+  // ⚡️ 字体：Astro Fonts API 里的字体由构建时从 Google Fonts 自托管；
+  //    InterVariable 则由 scripts/build-inter-fonts.mjs 从 rsms.me 下载并自托管。
+  //    Astro Fonts API 管理的字体会加内容哈希，CSS 中应通过对应 var(--font-xxx) 引用。
   //    ⚠️ 拉丁族一律 `fallbacks: []`：var() 展开成「族名, 系统兜底, generic」，
   //       若拉丁族自带 generic，它就会排在后面那个中文字族**前面**，
   //       汉字会落到系统宋体/黑体而不是 Noto —— 中文排版静默变味（本地实测就是这么翻的车）。
   //       栈尾的 generic 由 CSS 自己写（main.css 的 font-family 列表末尾本来就有）。
-  //    ⚠️ 中文两族保留默认 fallbacks：它们是栈里最后一档，度量匹配的兜底字面正好用在加载期。
   //    Source Serif 4 不在这个列表里：它带 `size-adjust: 105%`（正文排版按这个调过），
   //    Fonts API 没有暴露 size-adjust ⇒ 改为本地自托管（src/styles/fonts/，@font-face 在 source-serif-4.css）。
   fonts: [
-    {
-      provider: fontProviders.google(),
-      name: 'Inter',
-      cssVariable: '--font-inter',
-      weights: ['100 900'],
-      styles: ['normal', 'italic'],
-      subsets: ['latin', 'latin-ext'],
-      fallbacks: [],
-      // ⚠️ 这份 Google woff2 被裁过：GSUB 只剩 calt/ccmp/dnom/frac/locl/numr/pnum/tnum，
-      //    没有 ss03 / cv03–cv05 / cv09 / cv11 / ss08 ⇒ 那些变体写在 CSS 里也不会生效。
-      //    Ramblings 与吐槽正文因此另挂自托管的 'Inter Rant'（src/styles/inter-rant.css）。
-      options: { experimental: { variableAxis: { opsz: ['14', '32'] } } },
-    },
     {
       provider: fontProviders.google(),
       name: 'Encode Sans SC',
@@ -951,12 +936,7 @@ export default defineConfig({
       //    不再靠缩体积。
       options: { experimental: { variableAxis: { opsz: ['6', '144'], wdth: ['25', '151'] } } },
     },
-    // ⚠️ 中文两族（Noto Sans SC / Noto Serif SC）**不**在这里：Fonts API 会把 @font-face 内联进每个
-    //    页面的 <head>，两族共 196 条 unicode-range 规则 ≈ 188 KB（gzip 63 KB）**每页**重下一遍
-    //    （实测 71 个页面 HTML 从 4 MB 涨到 16.6 MB，单页 gzip 19 → 83 KB）。
-    //    改由 scripts/build-fonts.mjs 生成一份带内容哈希的一等公民 CSS（/fonts/cjk-fonts.<hash>.css，
-    //    全站共用一份、可 immutable 缓存、按 unicode-range 分片、零第三方请求），
-    //    族名保持 'Noto Sans SC' / 'Noto Serif SC' 字面值 ⇒ main.css 的字体栈不用动。
+    // 中文两族通过 FontFaces 中的 Google Fonts CSS API <link> 加载，以避免将大量 unicode-range 规则内联进页面。
   ],
   markdown: {
     remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkJianpu, remarkScoreSwitch, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 五线谱 + 简谱 + 「紧贴的两种记谱法合成切换器」+ 识别 $ $$ 语法

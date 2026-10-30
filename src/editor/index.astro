@@ -51,7 +51,7 @@ const editorConfig = {
 		<!-- ⚠️ 必须跟 Layout.astro 一样引一遍字体：正文样式（main.css 的 .typography-body）用的是
 		     Inter / JetBrains Mono / Noto Serif SC / Source Serif 4 等，编辑器不引就全套回落成系统字体，
 		     跟真页面对不上。
-		     （Source Serif 4 是 main.css 自带的自托管 @font-face，其余都走 FontFaces 里的 Fonts API） -->
+		     （Source Serif 4 是 main.css 自带的自托管 @font-face；其余由 FontFaces 加载） -->
 		<FontFaces />
 		<script src="/js/core.js" is:inline></script>
 	</head>

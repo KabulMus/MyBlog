@@ -7,8 +7,8 @@
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 
-# 中文字体分片 + 那份生成的 @font-face 样式表：文件名都是内容哈希
-/fonts/cjk/*
+# InterVariable：文件名带内容哈希
+/fonts/inter/*
   Cache-Control: public, max-age=31536000, immutable
 
 # KaTeX（样式表 + 字体）：目录名带 katex 版本号，升级即换 URL
@@ -28,6 +28,6 @@
 /docs/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-# GSF б�壨�ļ��������ݹ�ϣ��
+# GSF б�壨�ļ��������ݹ�ϣ��
 /fonts/gsf/*
   Cache-Control: public, max-age=31536000, immutable

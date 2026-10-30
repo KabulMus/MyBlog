@@ -240,9 +240,7 @@ function getLangSwitchHref(pathname: string) {
 		    "preloaded but not used" 警告）。改成单一候选后，<picture> 在解析阶段就被扫描到
 		    （实测与 preload 只差 14ms），没有 preload 也几乎同步开抓。 */}
 
-		<!-- 字体：全部自托管（Astro Fonts API + scripts/build-fonts.mjs，见 astro.config.mjs）。
-		     不再有 fonts.googleapis.com / fonts.gstatic.com / rsms.me 的 <link> 与 preconnect：
-		     自托管后 preconnect 指向的源已经没人用了，只会白占连接槽。 -->
+		<!-- 拉丁字体自托管，思源黑体/宋体通过 Google Fonts API 加载（由 FontFaces 注入 CSS 与 preconnect）。 -->
 		<FontFaces preload />
 		<meta name="generator" content={Astro.generator} />
 		<title>{pageTitleText}</title>

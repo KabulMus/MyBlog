@@ -4,39 +4,34 @@
  *
  * 两条路，各有原因：
  *
- * 1) 拉丁四族（Google Sans Flex / Inter / Encode Sans SC / JetBrains Mono）走 Astro 的 Fonts API：
+ * 1) Google Sans Flex / Encode Sans SC / JetBrains Mono 走 Astro 的 Fonts API：
  *    构建时自托管、自动生成 @font-face + CSS 变量、顺带给出度量匹配的兜底字面。
- *    ⚠️ Astro 给族名加了内容哈希 ⇒ main.css 里一律写 var(--font-xxx)，
- *       写死 'Noto Sans SC' 这类字面名会静默落到系统字体。
+ *    InterVariable 则由 scripts/build-inter-fonts.mjs 从 rsms.me 下载完整变量字体并自托管。
+ *    ⚠️ Astro 给这些拉丁族名加内容哈希 ⇒ main.css 里用 var(--font-xxx) 引用；
+ *       中文 Noto 字体不走 Astro API，保留 'Noto Sans SC' / 'Noto Serif SC' 字面名。
  *    ⚠️ 拉丁族的 `fallbacks` 配成 []：var() 展开是「族名, 系统兜底, generic」，
  *       自带 generic 的话它会排在后面那个中文字族**前面**，汉字就落到系统宋体/黑体了。
  *
  * 1b) GSF 的**斜体面**是单独一份烘焙产物（slnt 冻结 + ss01 并入 ccmp），见下面那段注释。
  *     它只在这条链路里出现，不进 Fonts API 的 fonts 配置。
  *
- * 2) 中文两族（Noto Sans SC / Noto Serif SC）走 scripts/build-fonts.mjs 生成的
- *    /fonts/cjk/<hash>.css（全站共用、可 immutable 缓存）。
- *    原因见那个脚本的注释：Fonts API 会把 196 条 unicode-range 规则内联进**每个**页面，
- *    gzip 后每页白白多 63 KB。
- *    ⚠️ 这条样式表用**阻塞式** <link>，不要再用 media="print"+onload 那套非阻塞写法：
- *       它会拖到 load 之后才生效 ⇒ 浏览器那时才知道有中文 @font-face，分片要再等一个 RTT 才开始下。
- *       实测（冷缓存 / DPR2 / 150ms RTT / 4Mbps）：非阻塞时中文分片 3423 ms 才发请求、4.5~6.6 s 才显示；
- *       阻塞后 @font-face 在首帧前就位，分片立刻开抓。代价只是首屏多等约 0.2 s 的 CSS（之后 immutable 命中）。
+ * 2) 中文两族（Noto Sans SC / Noto Serif SC）直接用 Google Fonts CSS API；
+ *    Google 根据 unicode-range 选择所需的字体分片，字 CSS 与字体文件均由 Google 提供。
  *
  * ⚠️ preload 预算：全站图片 preload ≤1（当前 0 条，见 Layout 的说明）+ 字体 preload 4 条：
- *    Google Sans Flex（站名/大标题）、Inter（正文）、Encode Sans SC（导航/分类）、
+ *    Google Sans Flex（站名/大标题）、InterVariable 正体（正文）、Encode Sans SC（导航/分类）、
  *    CatNotoSC（分类 chip 的中文子集，只有 7.9 KB）。
  *    清单建议 ≤3，这里第 4 条是 8 KB 级的小子集，对带宽影响可忽略，换来 chip 上的汉字不闪。
  * ⚠️ 关于「Google Sans Flex 闪一下」：它 368 KB，冷缓存下晚于首帧到达，
  *    以前是 swap ⇒ 先画 Inter 再跳到 GSF。现在这一族单独用 font-display: block
  *    （见 astro.config.mjs），字形没到就先不画，绝不出现「错误字形 → 正确字形」的跳变。
  *    所以它虽然大，仍然值得 preload：pre 的是「让它尽量早到、缩短空白期」，不是「靠缩体积免闪」。
- *    中文两族是 100 片按 unicode-range 分的，preload 任何一片都是瞎猜，所以不 preload。
+ *    中文字体按 unicode-range 分片，preload 任何一片都是瞎猜，所以不 preload。
  * ⚠️ preload 链接自带 crossorigin（同源也要写）：凭据模式不一致会重复下载一次。
  */
 import { Font } from 'astro:assets';
 import { componentDataByCssVariable } from 'virtual:astro:assets/fonts/internal';
-import cjkFonts from '../generated/cjk-fonts.json';
+import interFonts from '../generated/inter-fonts.json';
 import gsfItalic from '../generated/gsf-italic.json';
 
 interface Props {
@@ -45,6 +40,8 @@ interface Props {
 }
 
 const { preload = false } = Astro.props;
+const cjkGoogleFontsUrl =
+  'https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100..900&family=Noto+Serif+SC:wght@200..900&display=swap';
 
 // ⚡️ Google Sans Flex 的斜体面。
 // GSF 没有 italic，只有 slnt 轴（-10..0）；只声明正体的话，`font-style: italic` 没有可选的
@@ -74,12 +71,19 @@ const gsfItalicCss =
     `}`;
 ---
 
+ <link rel="preconnect" href="https://fonts.googleapis.com" />
+ <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+ <link rel="stylesheet" href={cjkGoogleFontsUrl} />
+
  {/* GSF 只有一个 face（按轴请求的整份字体），用 true（= 该族全部 face）比 subset 过滤稳；
-     其余族按 subset 过滤，避免把 latin-ext / italic 也一起 preload 掉 */}
-<Font cssVariable="--font-google-sans-flex" preload={preload ? true : false} />
-<Font cssVariable="--font-inter" preload={preload ? [{ subset: 'latin', weight: 400, style: 'normal' }] : false} />
-<Font cssVariable="--font-encode-sans-sc" preload={preload ? [{ subset: 'latin' }] : false} />
-<Font cssVariable="--font-jetbrains-mono" />
+      其余族按 subset 过滤，避免把 latin-ext / italic 也一起 preload 掉 */}
+ <Font cssVariable="--font-google-sans-flex" preload={preload ? true : false} />
+ <Font cssVariable="--font-encode-sans-sc" preload={preload ? [{ subset: 'latin' }] : false} />
+ <Font cssVariable="--font-jetbrains-mono" />
+
+{preload && (
+  <link rel="preload" href={interFonts.normal} as="font" type="font/woff2" crossorigin />
+)}
 
 {preload && (
   <link rel="preload" href="/fonts/CatNotoSC-VF.woff2" as="font" type="font/woff2" crossorigin />
@@ -87,4 +91,4 @@ const gsfItalicCss =
 
 {gsfItalicCss && <style set:html={gsfItalicCss}></style>}
 
-<link rel="stylesheet" href={cjkFonts.href} />
+<link rel="stylesheet" href={interFonts.href} />

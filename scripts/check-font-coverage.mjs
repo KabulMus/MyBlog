@@ -1,5 +1,5 @@
 /**
- * 字体覆盖闸门：构建产物里出现的每一个「会渲染的字符」，必须落在自托管字体的覆盖范围内。
+ * 字体覆盖闸门：构建产物里出现的每一个「会渲染的字符」，必须落在字体覆盖范围内。
  *
  * 为什么需要它：子集化/分片字体缺字时浏览器**不报错**，只是静默回退到系统字体 —— 排版悄悄变味，
  * 直到有人肉眼发现。所以要在构建后扫一遍真实产物。
@@ -8,7 +8,7 @@
  *   1. HTML 正文（去掉标签、去掉 script/style 内容）
  *   2. 内联 / 外链 JS 的字符串字面量（**去注释后**）—— 最常漏：toast 文案「已复制到剪贴板」「加载失败」
  *   3. CSS 的 content: 值（伪元素上的字也是字）
- * 覆盖范围从产物里真实的 unicode-range 声明读（不是写死的白名单）。
+ * 覆盖范围从产物里的 unicode-range 声明及页面实际引用的 Google Fonts CSS API 读取（不是写死的白名单）。
  * Emoji 永远走系统彩色字体，按区间白名单剔除（含变体选择符 / ZWJ / tag 序列）。
  * 另外校验自建子集字体（CatNotoSC / Bravura-Symbols / Musical）确实含有它该管的那些字。
  * cmap 由本文件自己解 WOFF2 读出，**不依赖 python / fonttools**：部署机没有它，
@@ -166,12 +166,21 @@ const jsFiles = files.filter((f) => f.endsWith('.js'));
 const cssFiles = files.filter((f) => f.endsWith('.css'));
 
 const sources = { htmlText: '', jsStrings: '', cssContent: '', allCss: '' };
+const externalFontStylesheets = new Set();
 
 for (const f of htmlFiles) {
   const html = readFileSync(f, 'utf8');
   sources.htmlText += extractHtmlText(html);
   sources.jsStrings += extractInlineScripts(html);
   sources.allCss += extractInlineStyles(html);
+  for (const tag of html.matchAll(/<link\b[^>]*>/gi)) {
+    const href = /\bhref="([^"]+)"/i.exec(tag[0])?.[1]?.replace(/&amp;/g, '&');
+    if (!href) continue;
+    const url = new URL(href, 'https://blog.ethan929.com');
+    if (url.hostname === 'fonts.googleapis.com' && url.pathname === '/css2') {
+      externalFontStylesheets.add(url.href);
+    }
+  }
 }
 for (const f of jsFiles) sources.jsStrings += extractJsStrings(readFileSync(f, 'utf8'));
 for (const f of cssFiles) {
@@ -180,6 +189,17 @@ for (const f of cssFiles) {
   sources.cssContent += extractCssContentValues(css);
 }
 sources.cssContent += extractCssContentValues(sources.allCss);
+
+for (const url of externalFontStylesheets) {
+  const response = await fetch(url, {
+    headers: {
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    },
+  });
+  if (!response.ok) throw new Error(`读取 Google Fonts CSS 失败：${response.status} ${url}`);
+  sources.allCss += await response.text();
+}
 
 // ---- 自建本地字体：直接解 WOFF2 的 cmap（纯 Node，无外部依赖） ----
 //

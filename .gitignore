@@ -34,14 +34,15 @@ src/pages/blog/drafts/
 src/pages/blog/en-US/drafts/
 
 # ── 构建产物（CI 可现算，不入库）────────────────────────────
-# 中文字体分片 + 分片样式表 + 清单（scripts/build-fonts.mjs）
 .cache/fonts/
-public/fonts/cjk/
-src/generated/cjk-fonts.json
 
 # KaTeX 自托管产物（scripts/build-fonts.mjs 从 node_modules/katex 搬过来）
 public/katex/
 src/generated/katex.json
+
+# InterVariable 自托管产物（scripts/build-inter-fonts.mjs）
+public/fonts/inter/
+src/generated/inter-fonts.json
 
 # 字体重新生成时的中间文件
 .cache/

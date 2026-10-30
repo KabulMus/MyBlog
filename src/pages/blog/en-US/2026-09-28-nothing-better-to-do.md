@@ -88,8 +88,8 @@ t3[21(1] 1*4) 0*2 || [K:F] 3*2 6*2 5{5/}6 53 | (7(6 6*4)) 0*2 |
 
 Let me see if I guessed the Cantonese romanization (*Jyutping*) right...
 
-願似灣情共相連 *May our love flow deep as the bay, joining us as one.*  
-Jyun⁶ ci⁵ waan¹ cing⁴ gung⁶ soeng¹ lin⁴
+> 願似灣情共相連 *May our love flow deep as the bay, joining us as one.*  
+> Jyun⁶ ci⁵ waan¹ cing⁴ gung⁶ soeng¹ lin⁴
 
 🤔 I guessed "灣" and "相連" wrong ()
 

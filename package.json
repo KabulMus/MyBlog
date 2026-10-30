@@ -7,9 +7,9 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "predev": "node scripts/build-fonts.mjs",
+    "predev": "node scripts/build-fonts.mjs && node scripts/build-inter-fonts.mjs",
     "build": "astro build && node scripts/check-font-coverage.mjs && node scripts/prepare-pagefind.mjs",
-    "prebuild": "node scripts/build-fonts.mjs",
+    "prebuild": "node scripts/build-fonts.mjs && node scripts/build-inter-fonts.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "new": "node scripts/new-post.mjs",
