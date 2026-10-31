@@ -5,11 +5,11 @@ import { categoryNamesZh, toCatArray } from '../config/categories';
 import { formatDate, getPostUrl, renderTitleHtml, type Lang } from '../lib/posts';
 
 const LANG: Lang = 'zh';
-// 只收成篇的（blog/ 平铺目录）：吐槽住在 blog/rants/ 下，走 /ramblings 那条线
-const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
+// 只收成篇的：吐槽住在 blog/rants/ 下，走 /ramblings 那条线
+const markdownFiles = import.meta.glob('./blog/**/index.md', { eager: true });
 
 const posts = Object.values(markdownFiles)
-    .filter((p: any) => !p.frontmatter?.draft)
+    .filter((p: any) => !p.url.startsWith('/blog/en-US/') && !p.url.includes('/rants/') && !p.url.includes('/drafts/') && !p.frontmatter?.draft)
     .sort((a: any, b: any) => new Date(b.frontmatter?.date || 0).getTime() - new Date(a.frontmatter?.date || 0).getTime());
 
 // 按年分组（年份倒序，年内也倒序）：直接读日期字符串，免得时区把跨年那几篇挪到隔壁

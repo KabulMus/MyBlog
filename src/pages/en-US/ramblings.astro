@@ -4,7 +4,7 @@ import LikeButton from '../../components/LikeButton.astro';
 import { formatDate, formatTime, getPostUrl, type Lang } from '../../lib/posts';
 
 const LANG: Lang = 'en';
-const markdownFiles = import.meta.glob('../blog/en-US/rants/*.md', { eager: true });
+const markdownFiles = import.meta.glob('../blog/en-US/rants/**/index.md', { eager: true });
 // ⚠️ Not post.Content: the md frontmatter carries a layout, so Content would wrap the whole article page
 //    (hero, tags and all). compiledContent() gives just the compiled body, which is what a card wants.
 const cards = await Promise.all(

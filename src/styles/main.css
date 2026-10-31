@@ -1506,7 +1506,7 @@ html[lang='zh-CN'] .typography-body i {
    推荐写法：用 <p> 把图片和图注包在一起 —— <p> 里的 img 会按上面的规则 flex 居中，
    图注 <em> 会变成副文本小字居中。尺寸 class 加在 <img> 上：
      <p>
-       <img class="img-sm" src="/images/xxx.webp" alt="...">   小 · 约 40%
+       <img class="img-sm" src="./images/xxx.webp" alt="...">   小 · 约 40%
        <em>图注</em>
      </p>
    （img-md ≈ 65% 中；不写 class 或直接用 ![](url) 即默认全宽，无需大号）
@@ -2900,6 +2900,8 @@ html[lang='en-US'] .post-title-link {
 }
 
 .tag-filter-btn {
+    position: relative;
+    isolation: isolate; /* ::before/::after 的负 z-index 只在本按钮内生效 */
     display: inline-flex;
     align-items: center;
     padding: 4px 10px;
@@ -2915,16 +2917,39 @@ html[lang='en-US'] .post-title-link {
     user-select: none;
 }
 
+/* ⚠️ 半透明淡染**不能**写在 background 上：页面背景有线稿图案（body::before 的 mask），
+   半透明底会让图案透进按钮里。改成两层叠层 —— ::before 垫一层不透明的 --card-bg，
+   ::after 才是那层淡染，两层一起淡入淡出（opacity 可插值，background 从 none 切到颜色会瞬跳）。 */
+.tag-filter-btn::before,
+.tag-filter-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.tag-filter-btn::before { z-index: -2; background: var(--card-bg); }
+.tag-filter-btn::after { z-index: -1; background: var(--color-gray-bg); }
+
 @media (hover: hover) and (pointer: fine) {
     .tag-filter-btn:hover {
-        background: var(--color-gray-bg);
         color: var(--text-main);
+    }
+
+    .tag-filter-btn:hover::before,
+    .tag-filter-btn:hover::after {
+        opacity: 1;
     }
 }
 
 .tag-filter-btn.active {
-    background: var(--color-gray-bg) !important;
     color: var(--text-main) !important;
+}
+
+.tag-filter-btn.active::before,
+.tag-filter-btn.active::after {
+    opacity: 1;
 }
 
 /* --- 分类筛选栏（一级） --- */
@@ -2950,6 +2975,8 @@ html[lang='en-US'] .post-title-link {
    中文四枚都是两字、宽窄一模一样：P0 = 6.4px（不含字距，字距算在 --cat-ls 里），P1 = 1.344px/%。
    ⚠️ P1 写成 1.344px 只是拿它当「除以 1.344」用（长度 ÷ 长度 = 数值，再 × 1% 得到百分比）。 */
 .cat-filter-btn {
+    position: relative;
+    isolation: isolate;   /* 选中淡染那层 ::before 的 z-index:-1 只在本按钮内生效 */
     --cat-padh: clamp(10px, 3.4vw, 16px);   /* 水平内边距随视口收缩（16px→10px），防止窄屏挤压 */
     /* 摊开倍率 k = 可用宽 / 125% 宽度轴 + 满字距时的自然宽合计（上下留白要用它的平方根） */
     --cat-k: calc(var(--cat-fit) / (8 * var(--cat-padh) + 204.64px));
@@ -3019,18 +3046,32 @@ html[lang='zh-CN'] .cat-filter-btn {
         font-stretch: clamp(75%, calc((var(--cat-row) - 16px - 6 * var(--cat-padh) - 4.72px) / 1.0088px * 1%), 125%);
     }
 }
+/* 选中淡染：底色始终是不透明的 --card-bg，半透明的颜色只叠在 ::before 上
+   （直接写 background 会让页面背景的线稿图案透进按钮）。每类只声明自己的 --cat-tint。 */
+.cat-filter-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--cat-tint, transparent);
+    opacity: 0;
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cat-filter-btn.is-active::before { opacity: 1; }
+
 @media (hover: hover) and (pointer: fine) {
     .cat-filter-btn:hover { transform: scale(1.05); box-shadow: var(--card-hover-shadow); }
 }
-.cat-filter-btn--music { color: var(--color-amber); border-color: var(--color-amber-border); }
-.cat-filter-btn--music.is-active { background: var(--color-amber-bg) !important; border-color: var(--color-amber) !important; color: var(--color-amber) !important; }
-.cat-filter-btn--studio { color: var(--color-blue); border-color: var(--color-blue-border); }
-.cat-filter-btn--studio.is-active { background: var(--color-blue-bg) !important; border-color: var(--color-blue) !important; color: var(--color-blue) !important; }
-.cat-filter-btn--essays { color: var(--color-indigo); border-color: var(--color-indigo-border); }
+.cat-filter-btn--music { --cat-tint: var(--color-amber-bg); color: var(--color-amber); border-color: var(--color-amber-border); }
+.cat-filter-btn--music.is-active { border-color: var(--color-amber) !important; color: var(--color-amber) !important; }
+.cat-filter-btn--studio { --cat-tint: var(--color-blue-bg); color: var(--color-blue); border-color: var(--color-blue-border); }
+.cat-filter-btn--studio.is-active { border-color: var(--color-blue) !important; color: var(--color-blue) !important; }
+.cat-filter-btn--essays { --cat-tint: var(--color-indigo-bg); color: var(--color-indigo); border-color: var(--color-indigo-border); }
 
-.cat-filter-btn--essays.is-active { background: var(--color-indigo-bg) !important; border-color: var(--color-indigo) !important; color: var(--color-indigo) !important; }
-.cat-filter-btn--achievements { color: var(--color-cyan); border-color: var(--color-cyan-border); }
-.cat-filter-btn--achievements.is-active { background: var(--color-cyan-bg) !important; border-color: var(--color-cyan) !important; color: var(--color-cyan) !important; }
+.cat-filter-btn--essays.is-active { border-color: var(--color-indigo) !important; color: var(--color-indigo) !important; }
+.cat-filter-btn--achievements { --cat-tint: var(--color-cyan-bg); color: var(--color-cyan); border-color: var(--color-cyan-border); }
+.cat-filter-btn--achievements.is-active { border-color: var(--color-cyan) !important; color: var(--color-cyan) !important; }
 
 /* ==========================================================================
    📑 文章目录（Table of Contents）— 极简文字版

@@ -15,9 +15,6 @@
 :root {
 	--ed-font-ui: var(--font-encode-sans-sc), var(--font-inter), 'Noto Sans SC', sans-serif;
 	--ed-font-mono: var(--font-jetbrains-mono), 'Fira Code', var(--font-inter), 'Noto Sans SC', monospace;
-	/* 最底层那个「壳」的底色：把正文色掺一点进页面底 ⇒ 亮色下比页面灰一档、暗色下比页面亮一档。
-	   编辑区用的是 --bg-light（跟预览里的真页面同一个底色），壳跟它拉开一截才看得出两张面板的边界。 */
-	--ed-bg-shell: color-mix(in srgb, var(--text-main) 8%, var(--bg-light));
 }
 
 .editor-body {
@@ -33,9 +30,11 @@
 	overflow: hidden;
 	display: flex;
 	flex-direction: column;
-	background: var(--ed-bg-shell);
+	background: var(--bg-light);
 	color: var(--text-main);
 }
+
+.editor-body::before { display: none; }
 
 /* ⚠️ 表单控件（input / button / select / textarea）**拿不到** main.css 里 body 上那套
    `font-feature-settings`：UA 给控件的样式里有 `font` 简写，而 font 简写会把 font-feature-settings
@@ -282,27 +281,6 @@
 .editor-meta .meta-lang { display: inline-flex; align-items: center; }
 .editor-meta .meta-lang svg { display: block; width: 14px; height: 14px; }
 
-/* AI 译：跟「标记」里那枚 pill 同一套图标 + 文字，但颜色跟旁边那两项一样（副文本色），
-   不再单独用紫色 —— 顶栏那行小字要的是一整条一致的灰。
-   描边 2：这个图标是 viewBox 24 的，2/24 = 4/48 ⇒ 跟语言图标那两枚一样粗。 */
-.editor-meta .meta-ai { display: inline-flex; align-items: center; gap: 3px; }
-.editor-meta .meta-ai svg {
-	display: block;
-	width: 14px;
-	height: 14px;
-	fill: none;
-	stroke: currentColor;
-	stroke-width: 2;
-	stroke-linecap: round;
-	stroke-linejoin: round;
-}
-
-/* 文件大小：等宽（JetBrains Mono）+ 等宽数字 ⇒ 换一篇文章时那串数字不会左右跳 */
-.editor-meta .meta-size {
-	font-family: var(--ed-font-mono);
-	font-variant-numeric: tabular-nums;
-}
-
 /* ⚠️ 图标要跟文字一条线：居中排的是**盒子**中线，而文字墨迹（大写高）中线比盒中线高
    ≈0.06em（Inter / JetBrains 的 ascent 都比 cap 高一截）⇒ 图标整体上提 0.06em（0.74rem 下 ≈0.7px），
    才跟旁边的字、以及中间那两个分隔点对齐。别再改成“居中就完事”。 */
@@ -364,11 +342,21 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 .editor-main {
 	flex: 1 1 auto;
 	min-height: 0;
+	position: relative;
 	display: grid;
 	/* 宽屏：编辑 + 预览两栏并排（窄屏预览收进浮层，见文件后面那两段媒体查询） */
 	grid-template-columns: minmax(320px, 1fr) minmax(360px, 1fr);
-	gap: 12px;
-	padding: 12px;
+	gap: 0;
+}
+
+.editor-main::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	border-left: 1px solid var(--item-border);
+	pointer-events: none;
 }
 
 .editor-pane {
@@ -376,18 +364,17 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
-	background: var(--card-bg);
-	border: 1px solid var(--item-border);
-	border-radius: var(--card-radius);
-	box-shadow: var(--card-shadow);
 	overflow: hidden;
 }
 
-/* 编辑面板的底 = 站点页面底色（跟右边预览里的真页面一致）；
+/* 编辑区域的底 = 站点页面底色（跟右边预览里的真页面一致）；
    表单输入框、卡片仍然是 --card-bg，所以控件不会溶进底色里。
    ⚠️ 这里必须能纵向滚：手机键盘弹起时可见区可能只有四百来像素，而表单 + 工具条就有 350 以上，
    正文会被挤成 0 高（下面的 min-height 会拦住它）→ 装不下的那部分全靠这一条滚出来。 */
-.editor-pane--edit { background: var(--bg-light); overflow-y: auto; }
+.editor-pane--edit {
+	padding: 12px;
+	overflow-y: auto;
+}
 
 .editor-pane-head {
 	flex: 0 0 auto;
@@ -498,7 +485,12 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 
 /* 窄屏（窄窗口 / 手机）：单栏；预览栏变成整屏浮层，由右下角那枚眼睛开合，遮罩和 Esc 负责关 */
 @media (max-width: 900px) {
-	.editor-main { grid-template-columns: minmax(0, 1fr); }
+	.editor-main {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.editor-main::after { display: none; }
 
 	/* 进出场：以前只是切 display（硬切）。照 .editor-linkpop 那套补上 —— 收起态写出终点值，
 	   display 用 allow-discrete 过渡（不然收回时「啪」一下没了），进场第一帧交给 @starting-style。
@@ -508,6 +500,9 @@ html[data-theme='dark'] .theme-switch .icon-moon { display: inline-flex; }
 		inset: 20px;
 		z-index: 60;
 		display: none;
+		background: var(--card-bg);
+		border: 1px solid var(--item-border);
+		border-radius: var(--card-radius);
 		opacity: 0;
 		transform: translateY(10px) scale(0.98);
 		box-shadow: var(--card-hover-shadow);

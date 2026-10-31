@@ -1,24 +1,18 @@
 ---
+import { getImage } from 'astro:assets';
 import Layout from '../layouts/Layout.astro';
 import { tagNamesZh, tagCats, groupTagsByCat, tagOrder } from '../config/tags';
 import { categories, categoryNamesZh as categoryNames, catOrder, toCatArray } from '../config/categories';
 import { formatDate, formatTime, renderTitleHtml, getPostUrl, type Lang } from '../lib/posts';
+import { getArticleImage } from '../lib/article-images';
 
 const LANG: Lang = 'zh';
 const postsPerPage = 8;
-const markdownFiles = import.meta.glob('./blog/*.md', { eager: true });
-const rantFiles = import.meta.glob('./blog/rants/*.md', { eager: true });
-// 卡片图：只取尺寸元数据给 <img> 补 width/height（卡片本身已经是 10:3 固定裁剪，
-// 加属性是为了在 CSS 失效/未加载时也留好占位；图片文件仍在 public/images，不走派生）。
-const cardImages = import.meta.glob('/public/images/*.{webp,jpg,jpeg,png}', {
-    eager: true,
-    import: 'default',
-}) as Record<string, { width: number; height: number }>;
-const cardDims = (src?: string) =>
-    typeof src === 'string' && src.startsWith('/images/') ? cardImages['/public' + src] : undefined;
-const rantModules = new Set<any>(Object.values(rantFiles));
+const markdownFiles = import.meta.glob('./blog/**/index.md', { eager: true });
 // 序号和日期排序都算上吐槽（站点文章页的 #N 也是这么算的），只是主页卡片不列他们
-const allPosts: any[] = [...Object.values(markdownFiles), ...Object.values(rantFiles)].filter((p: any) => !p.frontmatter?.draft);
+const allPosts: any[] = Object.values(markdownFiles).filter(
+    (p: any) => !p.url.startsWith('/blog/en-US/') && !p.url.includes('/drafts/') && !p.frontmatter?.draft,
+);
 
 function buildPageHref(page: number, basePath = '/') {
     const path = basePath === '/' ? '/' : basePath;
@@ -43,8 +37,15 @@ const sortedPosts = allPosts.sort((a, b) => {
     return dateB - dateA;
 });
 
-// 目录就是体裁：blog/*.md 是成篇的，blog/rants/*.md 是吐槽（另走 /ramblings 那条线）
-const homePosts = sortedPosts.filter((p: any) => !rantModules.has(p));
+// 吐槽目录仍单独决定是否显示主页卡片（另走 /ramblings 那条线）
+const homePosts = sortedPosts.filter((p: any) => !p.url.includes('/rants/'));
+const cardImageByUrl = new Map(await Promise.all(homePosts.map(async (post: any) => {
+    const source = getArticleImage(post.url, post.frontmatter?.image);
+    const image = source
+        ? await getImage({ src: source, width: Math.min(800, source.width), format: 'webp' })
+        : undefined;
+    return [post.url, image] as const;
+})));
 // 卡片上的 #N 是「成篇的」那串里的顺序号（吐槽不参与序号编排，跟文章页头部一致）
 const rankByUrl: Record<string, number> = {};
 homePosts.forEach((p: any, i: number) => { rankByUrl[getPostUrl(p, LANG)] = homePosts.length - i; });
@@ -111,6 +112,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             {homePosts.map((post, index) => {
                 const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = getPostUrl(post, LANG);
+                const cardImage = cardImageByUrl.get(post.url);
                 const postCats = toCatArray(post.frontmatter?.category);
                 const postWarnings = Array.isArray(post.frontmatter?.warning)
                     ? post.frontmatter.warning
@@ -120,12 +122,12 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                         {post.frontmatter?.image && (
                             <div class="post-card-image">
                                 <img
-                                    src={post.frontmatter.image}
+                                    src={cardImage?.src ?? post.frontmatter.image}
                                     alt=""
                                     loading="lazy"
                                     decoding="async"
-                                    width={cardDims(post.frontmatter.image)?.width}
-                                    height={cardDims(post.frontmatter.image)?.height}
+                                    width={cardImage?.attributes.width}
+                                    height={cardImage?.attributes.height}
                                 />
                             </div>
                         )}

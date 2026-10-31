@@ -146,7 +146,7 @@ export function titleToText(raw: string): string {
 export function getPostUrl(post: any, lang: Lang): string {
     if (post?.url) return post.url;
     const file = String(post?.file || '').replace(/\\/g, '/');
-    const hit = /(?:^|\/)pages\/(.+?)\.md$/.exec(file);
+    const hit = /(?:^|\/)pages\/(.+?)(?:\/index)?\.md$/.exec(file);
     if (hit) return '/' + hit[1];
     const name = file.split('/').pop()?.replace('.md', '') || '';
     return lang === 'en' ? `/blog/en-US/${name}` : `/blog/${name}`;

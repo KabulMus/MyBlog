@@ -144,7 +144,7 @@ const editorConfig = {
 						<div class="fm-meta" id="fm-meta" popover>
 							<div class="fm-meta-group fm-row is-post-meta">
 								<label for="fm-image">题图</label>
-								<input id="fm-image" type="text" placeholder="/images/日期-slug.webp" />
+								<input id="fm-image" type="text" placeholder="./images/image.webp" />
 								<button type="button" class="editor-btn editor-btn--icon" id="fm-image-upload" aria-label="上传题图">
 									<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 24.0083V42H42V24" /><path d="M33 15L24 6L15 15" /><path d="M23.9917 32V6" /></svg>
 								</button>
@@ -357,7 +357,7 @@ const editorConfig = {
 			import { loadBody, dumpBody } from './md/markdown-io.js';
 			import { editorExtensions } from './md/extensions.js';
 			// 图片转码 + 上传（正文粘贴/拖入、题图上传、图片卡片里的按钮共用这一份）
-			import { requestImageName, uploadImage } from './md/upload-image.js';
+			import { requestImageName, uploadImage, setUploadPostPath } from './md/upload-image.js';
 
 			type Post = { path: string; url: string; lang: 'zh' | 'en'; draft: boolean; rant: boolean; ai: boolean; date: string; title: string; bytes: number; index?: number };
 			type PostDetail = { path: string; url: string; raw: string; body: string; frontmatter: Record<string, unknown> };
@@ -369,6 +369,12 @@ const editorConfig = {
 			};
 
 			const api = (p: string) => `/__editor/api${p}`;
+			const postPairKey = (path: string) =>
+				path.replace(/^src\/pages\/blog\//, '').replace(/^en-US\//, '').replace(/\/index\.md$/, '');
+			const postDisplayName = (path: string) => {
+				const parts = path.split('/').filter(Boolean);
+				return parts[parts.length - 1] === 'index.md' ? (parts[parts.length - 2] ?? path) : (parts[parts.length - 1] ?? path);
+			};
 			// ⚠️ 必须走 unknown 中转：本仓库 TS 的 DOM lib 里 HTMLElement 与 HTMLSelectElement 等
 			//    被判定为「不充分重叠」（lib 版本差异），直接 as 会报错。
 			const el = <T,>(id: string) => document.getElementById(id) as unknown as T;
@@ -426,16 +432,9 @@ const editorConfig = {
 				en: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.11 18.91V5.31h7.63"/><path d="M3.11 12.11h7.16"/><path d="M3.11 18.91h7.16"/><path d="M13.75 18.91v-9.28"/><path d="M13.75 18.91v-5.32c0-2.03 1.65-3.68 3.68-3.68c2.03 0 3.68 1.65 3.68 3.68v5.32"/></svg>',
 			};
 
-			/** 「源码」前面那行小字：语言（图标）+ 草稿 + AI 译（图标 + AI，跟「标记」里那枚 pill 同一套）+ 文件大小 */
-			const fmtBadges = (p: Post) =>
-				[
-					`<span class="meta-lang" aria-label="${p.lang === 'en' ? '英文' : '中文'}">${LANG_ICON[p.lang]}</span>`,
-					p.rant ? '吐槽' : '',
-					p.draft ? '草稿' : '',
-					p.ai ? `<span class="meta-ai">${AI_BADGE_SVG}AI</span>` : '',
-				]
-					.filter(Boolean)
-					.join(' · ');
+			/** 顶栏状态区只显示当前文章语言；操作按钮独立保留。 */
+			const fmtLanguage = (p: Post) =>
+				`<span class="meta-lang" aria-label="${p.lang === 'en' ? '英文' : '中文'}">${LANG_ICON[p.lang]}</span>`;
 
 			const editor = new Editor({
 				element: docHost,
@@ -925,9 +924,9 @@ const editorConfig = {
 			dateInput.addEventListener('input', () => { frontmatter.date = dateInput.value; setDirty(true); });
 
 			// ── 题图（frontmatter 的 `image`）──────────────────────────
-			/* 题图就是 frontmatter 里那行 `image: '/images/xxx.webp'`：站点的文章页 hero 和主页卡片都用它
+			/* 题图就是 frontmatter 里那行 `image: './images/xxx.webp'`：站点的文章页 hero 和主页卡片都用它
 			   （素材按 16:9 准备，位置/裁剪的约定见 main.css）。这里给「路径输入 + 上传」——
-			   上传直接复用工具条那套转码（fileToUpload → POST /image，落在 public/images/、重名自动补 -1），
+			   上传直接复用工具条那套转码（fileToUpload → POST /image，落在文章 images/、重名自动补 -1），
 			   把返回的 url 填进输入框；**不往正文里插任何东西**（跟图片块不是一回事）。
 			   清空输入 = 去掉这个字段（serializeFrontmatter 会把空值整行丢掉）。 */
 			const imageInput = el<HTMLInputElement>('fm-image');
@@ -935,12 +934,12 @@ const editorConfig = {
 
 			async function uploadHeroImage(file: File) {
 				// 文件名用当前文章的 slug（`日期-slug.webp`，跟现有几张题图一个路子）
-				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
+				const slug = current?.path.split('/').filter(Boolean).slice(-2, -1)[0] ?? 'image';
 				try {
 					const name = await requestImageName(slug);
 					if (name === null) return;
 					toast('题图转码上传中…');
-					const out = await uploadImage(file, name);
+					const out = await uploadImage(file, name, current?.path);
 					imageInput.value = out.url;
 					frontmatter.image = out.url;
 					syncCreditRow();
@@ -984,7 +983,7 @@ const editorConfig = {
 					kind: 'fence',
 					source: ['```jianpu', 'title: ', 'key: C', 'beat: 4/4', 'tempo: 90', '', '1 2 3 4|5 6 7 1^|]', '```'].join('\n'),
 				},
-				image: { kind: 'image', source: '![图片说明](/images/2026-01-01-slug-name.webp)' },
+				image: { kind: 'image', source: '![图片说明](./images/image.webp)' },
 				table: {
 					kind: 'table',
 					source: ['| 表头 | 表头 |', '| --- | --- |', '|  |  |'].join('\n'),
@@ -1223,12 +1222,12 @@ const editorConfig = {
 			 */
 			async function uploadAndInsertImage(file: File) {
 				// 文件名用当前文章的 slug（跟现有 `2026-08-26-police-laughing.webp` 一个路子），重名中间件会补 -1、-2
-				const slug = (current?.path.split('/').pop() ?? 'image').replace(/\.md$/, '');
+				const slug = current?.path.split('/').filter(Boolean).slice(-2, -1)[0] ?? 'image';
 				try {
 					const name = await requestImageName(slug);
 					if (name === null) return;
 					toast('图片转码上传中…');
-					const out = await uploadImage(file, name);
+					const out = await uploadImage(file, name, current?.path);
 					const sel = editor.state.selection;
 					const pos = sel.empty ? sel.from : sel.to;
 					editor.chain().focus().insertContentAt(pos, { type: 'rawBlock', attrs: { source: `![](${out.url})`, kind: 'image' } }).run();
@@ -1445,9 +1444,9 @@ const editorConfig = {
 				if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when)) { npError.textContent = '日期时间格式不正确'; npWhen.focus(); return; }
 				if (!slug) { npError.textContent = '无法生成URL后缀，请手动输入'; npSlug.focus(); return; }
 				// 同名先拦一道：服务端也会拦，但先说清楚比白跑一趟强
-				const file = `${when.slice(0, 10)}-${slug}.md`;
-				const clash = posts.filter((p) => p.path.endsWith('/' + file));
-				if (clash.length) { npError.textContent = '已有同名文件：' + clash.map((p) => p.path).join('、'); return; }
+				const folder = `${when.slice(0, 10)}-${slug}`;
+				const clash = posts.filter((p) => p.path.endsWith('/' + folder + '/index.md'));
+				if (clash.length) { npError.textContent = '已有同名文章：' + clash.map((p) => p.path).join('、'); return; }
 				npCreateBtn.disabled = true;
 				npError.textContent = '创建中…';
 				try {
@@ -1472,7 +1471,7 @@ const editorConfig = {
 					const zh = out.files.find((f) => f.lang === 'zh') ?? out.files[0];
 					localStorage.setItem('editor:last-post', zh.path);
 					await loadPost(zh.path);
-					toast(`已新建 ${out.files.map((f) => f.path.split('/').pop()).join(' 和 ')}`);
+					toast(`已新建 ${out.files.map((f) => postDisplayName(f.path)).join(' 和 ')}`);
 				} catch (err) {
 					npError.textContent = '创建失败：' + String((err as Error)?.message ?? err);
 				} finally {
@@ -1619,15 +1618,15 @@ const editorConfig = {
 						postMenu.appendChild(sep);
 					}
 					firstGroup = false;
-					// 配对键 = 文件名：中英同一篇共用 `日期-slug.md`（目录不同而已）
+					// 配对键去掉语言前缀和 index.md：中英同一篇仍按文章目录配对
 					const rows: Array<{ zh?: Post; en?: Post }> = [];
 					const at = new Map<string, number>();
 					for (const p of items) {
-						const file = p.path.split('/').pop() ?? p.path;
-						let i = at.get(file);
+						const key = postPairKey(p.path);
+						let i = at.get(key);
 						if (i === undefined) {
 							i = rows.push({}) - 1;
-							at.set(file, i);
+							at.set(key, i);
 						}
 						rows[i][p.lang] = p;
 					}
@@ -1795,7 +1794,7 @@ const editorConfig = {
 						trWrite.disabled = false;
 						return;
 					}
-					toast(`${out.overwritten ? '已覆盖' : '已写入'} ${String(out.path ?? '').split('/').pop()} · 已标AI`);
+					toast(`${out.overwritten ? '已覆盖' : '已写入'} ${postDisplayName(String(out.path ?? ''))} · 已标AI`);
 					trModal.hidden = true;
 					await loadList(); // 下拉里立刻能看到那份英文
 				} catch (err) {
@@ -1811,12 +1810,13 @@ const editorConfig = {
 				if (!res.ok) { toast('读取失败：HTTP ' + res.status, 'err'); return; }
 				const detail = (await res.json()) as PostDetail;
 				current = detail;
+				setUploadPostPath(detail.path);
 				frontmatter = { ...detail.frontmatter };
 				lang = (posts.find((p) => p.path === path)?.lang ?? 'zh') as 'zh' | 'en';
 				// 正文样式（.typography-body）有 html[lang] 分支（中/英字体、中文斜体）⇒ 跟着文章语言切
 				document.documentElement.lang = lang === 'en' ? 'en-US' : 'zh-CN';
 				const p = posts.find((x) => x.path === path);
-				metaEl.innerHTML = p ? `${fmtBadges(p)} · <span class="meta-size">${(p.bytes / 1024).toFixed(1)} KB</span>` : '';
+				metaEl.innerHTML = p ? fmtLanguage(p) : '';
 				setPostPath(path); // 下拉触发器上那行字 + 菜单里的选中态
 
 				titleInput.value = String(frontmatter.title ?? '');
@@ -1866,7 +1866,7 @@ const editorConfig = {
 			}
 
 			async function save() {
-				if (!current) return;
+				if (!current) return false;
 				const target = current.path;
 				saveBtn.disabled = true;
 				const body = dumpBody(editor);
@@ -1876,57 +1876,56 @@ const editorConfig = {
 					body: JSON.stringify({ path: target, frontmatter, body }),
 				});
 				const out = (await res.json()) as { error?: string; bytes?: number };
-				if (!res.ok) { toast('保存失败：' + (out.error ?? res.status), 'err'); saveBtn.disabled = false; return; }
+				if (!res.ok) { toast('保存失败：' + (out.error ?? res.status), 'err'); saveBtn.disabled = false; return false; }
 
 				const afterRes = await fetch(api('/post?path=' + encodeURIComponent(target)));
 				if (afterRes.ok) {
 					current = (await afterRes.json()) as PostDetail;
+					setUploadPostPath(current.path);
 					sourceView.textContent = current.raw;
 					const length = current.raw.length;
-					toast(`已保存到 ${target.split('/').pop()}（${length} 字符）`);
+					toast(`已保存到 ${postDisplayName(target)}（${length} 字符）`);
 				} else {
 					toast('已保存');
 				}
 				setDirty(false);
 				reloadPreview();
 				window.setTimeout(reloadPreview, 800); // Astro 热更新后再刷一次更稳
+				return true;
 			}
 
 			/**
-			 * 「吐槽」标记：体裁由目录表达（blog/rants/ 和 blog/en-US/rants/）⇒ 切换就是把这一个文件
-			 * 在平级目录和 rants/ 之间挪一层，顺带改掉 layout 的相对层级（rants 深一级）。
-			 * ⚠️ 必须「先建新、后删旧」：中途出错最多多一个文件，绝不会把文章弄丢。
+			 * 「吐槽」标记：将整篇文章目录移入/移出 rants/，图片和译文引用也同步重定位。
 			 */
 			async function setRantFlag(next: boolean) {
 				if (!current) return;
 				const path = current.path;
 				if (path.includes('/rants/') === next) return;
-				const file = path.split('/').pop() ?? path;
-				const dir = path.slice(0, path.lastIndexOf('/'));
-				const newPath = (next ? dir + '/rants' : dir.replace(/\/rants$/, '')) + '/' + file;
-				if (dirty) await save(); // 先落盘：底下移动的是磁盘上的原文，没保存的改动不能丢
-				const freshRes = await fetch(api('/post?path=' + encodeURIComponent(path)));
-				if (!freshRes.ok) { toast('移动失败：无法读取原文件', 'err'); return; }
-				const fresh = (await freshRes.json()) as PostDetail;
-				const raw = String(fresh.raw).replace(/layout: '((?:\.\.\/)+)layouts\/Layout\.astro'/, (_m, ups: string) =>
-					`layout: '${next ? ups + '../' : ups.replace(/\.\.\/$/, '')}layouts/Layout.astro'`);
-				const created = await fetch(api('/post'), {
+				const prefix = path.startsWith('src/pages/blog/en-US/')
+					? 'src/pages/blog/en-US/'
+					: 'src/pages/blog/';
+				const relativePath = path.slice(prefix.length);
+				const articlePath = relativePath.startsWith('rants/') ? relativePath.slice('rants/'.length) : relativePath;
+				if (!articlePath.endsWith('/index.md')) {
+					toast('移动失败：文章路径格式不正确', 'err');
+					return;
+				}
+				const newPath = prefix + (next ? 'rants/' : '') + articlePath;
+				if (dirty && !(await save())) return;
+				const moved = await fetch(api('/move-post'), {
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ path: newPath, content: raw, overwrite: true }),
+					body: JSON.stringify({ source: path, target: newPath }),
 				});
-				const createdOut = (await created.json()) as { error?: string };
-				if (!created.ok) { toast('移动失败：' + (createdOut.error ?? created.status), 'err'); return; }
-				const removed = await fetch(api('/post'), {
-					method: 'DELETE',
-					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ path }),
-				});
-				if (!removed.ok) toast('新文件已写好，旧文件没删掉，手动删一下：' + path, 'err');
+				const out = (await moved.json()) as { error?: string; cleanupWarning?: string };
+				if (!moved.ok) { toast('移动失败：' + (out.error ?? moved.status), 'err'); return; }
 				await loadList();
 				localStorage.setItem('editor:last-post', newPath);
 				await loadPost(newPath);
-				toast(next ? `已标为吐槽：${newPath}` : `已取消吐槽：${newPath}`);
+				toast(out.cleanupWarning
+					? `已移动文章，但旧目录清理失败：${out.cleanupWarning}`
+					: next ? `已标为吐槽：${newPath}` : `已取消吐槽：${newPath}`,
+					out.cleanupWarning ? 'err' : undefined);
 			}
 
 			/**
@@ -1974,7 +1973,7 @@ const editorConfig = {
 			async function deleteCurrent() {
 				if (!current) return;
 				const target = current.path;
-				const file = target.split('/').pop() ?? target;
+				const file = postDisplayName(target);
 				const index = Math.max(0, posts.findIndex((p) => p.path === target));
 				const ok = await askConfirm({
 					title: '删除这篇文章？',
@@ -1998,7 +1997,7 @@ const editorConfig = {
 				toast(`已删除 ${file}`);
 
 				await loadList().catch((err) => { toast(String((err as Error)?.message ?? err), 'err'); });
-				const counterpart = posts.find((p) => (p.path.split('/').pop() ?? p.path) === file);
+				const counterpart = posts.find((p) => p.lang !== lang && postPairKey(p.path) === postPairKey(target));
 				const next = counterpart ?? posts[Math.min(index, posts.length - 1)];
 				if (next) {
 					localStorage.setItem('editor:last-post', next.path);
@@ -2008,6 +2007,7 @@ const editorConfig = {
 				// 一篇不剩：把编辑区清空，否则界面上还留着刚删掉那篇的内容
 				localStorage.removeItem('editor:last-post');
 				current = null;
+				setUploadPostPath('');
 				frontmatter = {};
 				titleInput.value = '';
 				dateInput.value = '';

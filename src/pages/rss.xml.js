@@ -3,12 +3,11 @@ import { titleToText } from '../lib/posts';
 
 // 中文 RSS：/rss.xml（只含中文文章）
 export async function GET(context) {
-  // 一份全量订阅：成篇的和吐槽都在里面（rants/ 在子目录，得单独 glob）
+  // 一份中文全量订阅：成篇的和吐槽都在里面
   const posts = [
-    ...Object.values(import.meta.glob('./blog/*.md', { eager: true })),
-    ...Object.values(import.meta.glob('./blog/rants/*.md', { eager: true })),
+    ...Object.values(import.meta.glob('./blog/**/index.md', { eager: true })),
   ]
-    .filter((p) => p.frontmatter && !p.frontmatter.draft)
+    .filter((p) => p.url.startsWith('/blog/') && !p.url.startsWith('/blog/en-US/') && !p.url.includes('/drafts/') && p.frontmatter && !p.frontmatter.draft)
     .sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
 
   return rss({

@@ -1,7 +1,7 @@
 // 文章仓库读写（CLI 脚本与本地编辑器 /admin 共用）
 // ⚠️ 只在 Node 侧使用（编辑器路由只在 dev 下挂载，见 astro.config.mjs）。
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve, sep } from 'node:path';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 const BLOG_ROOT = join('src', 'pages', 'blog');
 
@@ -23,6 +23,28 @@ export const FM_ORDER = ['layout', 'title', 'date', 'image', 'imageCredit', 'dra
 
 const toPosix = (p) => p.split(sep).join('/');
 
+function listMarkdownFiles(root) {
+  const files = [];
+  const scanRoot = resolve(root);
+  const excludedAtRoot = scanRoot === resolve(BLOG_ROOT)
+    ? new Set(['en-US', 'rants', 'drafts'])
+    : scanRoot === resolve(join(BLOG_ROOT, 'en-US'))
+      ? new Set(['rants', 'drafts'])
+      : new Set();
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (dir === scanRoot && excludedAtRoot.has(entry.name)) continue;
+        if (entry.name !== 'images') walk(join(dir, entry.name));
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        files.push(join(root, relative(scanRoot, join(dir, entry.name))));
+      }
+    }
+  };
+  walk(scanRoot);
+  return files;
+}
+
 /** 只接受 src/pages/blog 下的 .md，其他一律拒绝（防止路径穿越） */
 export function resolvePostPath(relPath) {
   if (typeof relPath !== 'string' || !relPath.trim()) throw new Error('缺少文章路径');
@@ -36,7 +58,7 @@ export function resolvePostPath(relPath) {
 /** 源码路径 → 站点 URL（草稿也在 dev 下可访问） */
 export function postUrl(relPath) {
   const posix = toPosix(relPath);
-  return '/' + posix.replace(/^src\/pages\//, '').replace(/\.md$/, '');
+  return '/' + posix.replace(/^src\/pages\//, '').replace(/(?:\/index)?\.md$/, '');
 }
 
 /**
@@ -137,14 +159,13 @@ export function listPosts() {
   const posts = [];
   for (const { dir, lang, draft, rant } of POST_DIRS) {
     if (!existsSync(dir)) continue;
-    for (const file of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
-      const rel = join(dir, file);
+    for (const rel of listMarkdownFiles(dir)) {
       try {
         const meta = readMeta(rel);
         // 草稿在草稿池里（目录不区分体裁），所以还看 frontmatter 的 tag
-        posts.push(Object.assign(meta, { lang, draft, file, rant: !!rant || meta.tags.includes(RANT_TAG) }));
+        posts.push(Object.assign(meta, { lang, draft, file: toPosix(rel), rant: !!rant || meta.tags.includes(RANT_TAG) }));
       } catch (err) {
-        posts.push({ path: toPosix(rel), url: postUrl(rel), lang, draft, rant: !!rant, file, title: '（解析失败）', date: '', category: [], tags: [], warning: [], ai: false, bytes: 0, mtime: 0, error: String(err.message) });
+        posts.push({ path: toPosix(rel), url: postUrl(rel), lang, draft, rant: !!rant, file: toPosix(rel), title: '（解析失败）', date: '', category: [], tags: [], warning: [], ai: false, bytes: 0, mtime: 0, error: String(err.message) });
       }
     }
   }
@@ -200,16 +221,20 @@ export function deletePost(relPath) {
   return { path: toPosix(relPath) };
 }
 
-const IMAGE_DIR = join('public', 'images');
 const IMAGE_EXT = new Set(['webp', 'png', 'jpg', 'jpeg', 'gif', 'avif']);
 
 /**
  * 存一张从编辑器粘贴/拖进来的图片。
- * ⚠️ 只允许落到 `public/images/` 下：名字里的路径分隔符与奇怪字符一律清掉（防目录穿越），
+ * ⚠️ 只允许落到当前文章的 `images/` 下：名字里的路径分隔符与奇怪字符一律清掉（防目录穿越），
  *    扩展名只放行图片类；重名**不覆盖**，改成 `-1`、`-2`…（二进制写坏了 git 里救不回来）。
  */
-export function saveImage(name, buf) {
+export function saveImage(name, buf, postPath) {
   if (!buf || !buf.length) throw new Error('图片内容为空');
+  if (!postPath) throw new Error('缺少文章路径');
+  const postFile = resolvePostPath(postPath);
+  if (postFile.split(sep).pop() !== 'index.md') throw new Error('图片必须关联到文章目录');
+  if (!existsSync(postFile)) throw new Error('文章不存在：' + postPath);
+  const imageDir = join(dirname(postFile), 'images');
   const raw = String(name || '');
   const ext = (raw.match(/\.([a-z0-9]+)$/i)?.[1] || 'webp').toLowerCase();
   const base =
@@ -218,12 +243,13 @@ export function saveImage(name, buf) {
       .replace(/[^a-zA-Z0-9._-]+/g, '-')
       .replace(/^[-.]+|[-.]+$/g, '')
       .slice(0, 80) || 'image';
-  mkdirSync(IMAGE_DIR, { recursive: true });
+  mkdirSync(imageDir, { recursive: true });
   const suffix = IMAGE_EXT.has(ext) ? ext : 'webp';
   let file = `${base}.${suffix}`;
-  for (let n = 1; existsSync(join(IMAGE_DIR, file)); n++) file = `${base}-${n}.${suffix}`;
-  writeFileSync(join(IMAGE_DIR, file), buf);
-  return { file, url: '/images/' + file, bytes: buf.length };
+  for (let n = 1; existsSync(join(imageDir, file)); n++) file = `${base}-${n}.${suffix}`;
+  const imagePath = join(imageDir, file);
+  writeFileSync(imagePath, buf);
+  return { file, url: './images/' + file, previewUrl: '/' + toPosix(relative('.', imagePath)), bytes: buf.length };
 }
 
 // ── 新建文章 ────────────────────────────────────────────────
@@ -248,8 +274,8 @@ export function nowStamp(d = new Date()) {
 
 /**
  * 新文章的两个文件（中文 + en-US）：
- * · 文件名 `${日期}-${slug}.md`，日期就是 frontmatter 里 date 的前 10 位；
- * · 草稿落各自的 drafts/ 子目录 ⇒ layout 的相对层级要跟着深一级（中文草稿是 blog/drafts/）；
+ * · 文件名 `${日期}-${slug}/index.md`，日期就是 frontmatter 里 date 的前 10 位；
+ * · 草稿落各自的 drafts/ 子目录，文章图片放在同级 images/；
  * · frontmatter 一律走 serializeFrontmatter（字段顺序、引号转义跟编辑器保存时完全一致）；
  * · 「AI 翻译」标记分中英两份各自开关（aiZh / aiEn）—— 不限定英文版：
  *   中文写的、AI 翻成英文是一种情况，英文写的、AI 翻成中文是另一种，两边都可能。
@@ -266,7 +292,7 @@ export function newPostBlueprint({ titleZh, titleEn, slug, date, draft = false, 
   const clean = slugify(slug) || slugify(enTitle) || slugify(zhTitle) || 'post';
   const inRants = isRant && !draft;
   const stamp = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(date || '')) ? String(date).slice(0, 16) : nowStamp();
-  const file = `${stamp.slice(0, 10)}-${clean}.md`;
+  const slugDir = `${stamp.slice(0, 10)}-${clean}`;
   const base = {
     date: stamp,
     draft: draft === true,
@@ -283,12 +309,12 @@ export function newPostBlueprint({ titleZh, titleEn, slug, date, draft = false, 
     base.warning = Array.isArray(warning) ? warning : [];
   }
   const make = (lang) => {
-    const dir = join(BLOG_ROOT, ...(lang === 'en' ? ['en-US'] : []), ...(inRants ? ['rants'] : []), ...(draft ? ['drafts'] : []));
-    // blog/ 起算两级，en-US / rants / drafts 各再加一级
-    const depth = 2 + (lang === 'en' ? 1 : 0) + (inRants ? 1 : 0) + (draft ? 1 : 0);
+    const dir = join(BLOG_ROOT, ...(lang === 'en' ? ['en-US'] : []), ...(inRants ? ['rants'] : []), ...(draft ? ['drafts'] : []), slugDir);
+    // blog/ 起算两级，语言、体裁、草稿和文章目录各占一级
+    const depth = 3 + (lang === 'en' ? 1 : 0) + (inRants ? 1 : 0) + (draft ? 1 : 0);
     const data = { layout: '../'.repeat(depth) + 'layouts/Layout.astro', ...(isRant ? {} : { title: title[lang] }), ...base };
     if (lang === 'en' ? aiEn : aiZh) data.ai = true;
-    return { path: toPosix(join(dir, file)), lang, content: serializeFrontmatter(data) };
+    return { path: toPosix(join(dir, 'index.md')), lang, content: serializeFrontmatter(data) };
   };
   return [make('zh'), make('en')];
 }
@@ -309,6 +335,118 @@ export function createNewPost(opts, overwrite = false) {
 function layoutDepth(relPath) {
   const dir = toPosix(dirname(relPath)).replace(/^src\/pages\/blog\/?/, '');
   return 2 + dir.split('/').filter(Boolean).length;
+}
+
+function rewriteArticleImageReferences(content, sourcePath, targetPath, movedArticle) {
+  const sourceDir = dirname(resolvePostPath(sourcePath));
+  const targetDir = dirname(resolvePostPath(targetPath));
+  const movedFromDir = movedArticle ? dirname(resolvePostPath(movedArticle.from)) : '';
+  const movedToDir = movedArticle ? dirname(resolvePostPath(movedArticle.to)) : '';
+  return String(content).replace(
+    /(?:\.\/images\/|(?:\.\.\/)+[\w.-]+(?:\/[\w.-]+)*\/images\/)[\w.-]+\.(?:avif|gif|jpe?g|png|webp)/gi,
+    (reference) => {
+      let imagePath = resolve(sourceDir, reference);
+      if (!imagePath.startsWith(resolve(BLOG_ROOT) + sep)) throw new Error('文章图片路径超出 blog 目录：' + reference);
+      if (movedArticle && imagePath.startsWith(movedFromDir + sep)) {
+        imagePath = resolve(movedToDir, relative(movedFromDir, imagePath));
+      }
+      const relativePath = toPosix(relative(targetDir, imagePath));
+      return relativePath.startsWith('.') ? relativePath : './' + relativePath;
+    },
+  );
+}
+
+export function movePost(sourcePath, targetPath) {
+  const sourceAbs = resolvePostPath(sourcePath);
+  const targetAbs = resolvePostPath(targetPath);
+  if (sourceAbs.split(sep).pop() !== 'index.md' || targetAbs.split(sep).pop() !== 'index.md') {
+    throw new Error('只能移动文章目录中的 index.md');
+  }
+  if (!existsSync(sourceAbs)) throw new Error('文件不存在：' + sourcePath);
+  if (existsSync(targetAbs) || existsSync(dirname(targetAbs))) throw new Error('目标文章目录已存在：' + targetPath);
+
+  const raw = readFileSync(sourceAbs, 'utf8');
+  const { hasFrontmatter } = parseFrontmatter(raw);
+  if (!hasFrontmatter) throw new Error('文章缺少 frontmatter：' + sourcePath);
+  const layout = '../'.repeat(layoutDepth(targetPath)) + 'layouts/Layout.astro';
+  const movedArticle = { from: sourcePath, to: targetPath };
+  const content = rewriteArticleImageReferences(raw, sourcePath, targetPath, movedArticle)
+    .replace(/^layout:\s*.*$/m, `layout: '${layout}'`);
+
+  const counterpartFiles = [...new Set([counterpartPath(sourcePath), counterpartPath(targetPath)])]
+    .map((path) => ({ path, abs: resolvePostPath(path) }))
+    .filter(({ abs }) => existsSync(abs))
+    .map(({ path, abs }) => {
+      const raw = readFileSync(abs, 'utf8');
+      return {
+        abs,
+        raw,
+        content: rewriteArticleImageReferences(raw, path, path, movedArticle),
+      };
+    });
+
+  const sourceDir = dirname(sourceAbs);
+  const targetDir = dirname(targetAbs);
+  mkdirSync(dirname(targetDir), { recursive: true });
+  const copyDirectory = (from, to) => {
+    mkdirSync(to, { recursive: true });
+    for (const entry of readdirSync(from, { withFileTypes: true })) {
+      const fromPath = join(from, entry.name);
+      const toPath = join(to, entry.name);
+      if (entry.isDirectory()) copyDirectory(fromPath, toPath);
+      else if (entry.isFile()) copyFileSync(fromPath, toPath);
+      else throw new Error('文章目录中有不支持的文件类型：' + fromPath);
+    }
+  };
+  const removeDirectory = (dir) => {
+    const errors = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      try {
+        if (entry.isDirectory()) {
+          errors.push(...removeDirectory(path));
+        } else if (entry.isFile()) {
+          unlinkSync(path);
+        } else {
+          errors.push('不支持删除的文件类型：' + path);
+        }
+      } catch (error) {
+        errors.push(`${path}: ${String(error.message)}`);
+      }
+    }
+    if (errors.length === 0) {
+      try {
+        rmdirSync(dir);
+      } catch (error) {
+        errors.push(`${dir}: ${String(error.message)}`);
+      }
+    }
+    return errors;
+  };
+
+  const attemptedCounterparts = [];
+  try {
+    copyDirectory(sourceDir, targetDir);
+    writeFileSync(targetAbs, content, 'utf8');
+    for (const counterpart of counterpartFiles) {
+      attemptedCounterparts.push(counterpart);
+      writeFileSync(counterpart.abs, counterpart.content, 'utf8');
+    }
+    unlinkSync(sourceAbs);
+  } catch (error) {
+    for (const counterpart of attemptedCounterparts) writeFileSync(counterpart.abs, counterpart.raw, 'utf8');
+    const cleanupErrors = removeDirectory(targetDir);
+    if (cleanupErrors.length) {
+      throw new Error(`${String(error.message)}；目标清理失败：${cleanupErrors.join('; ')}`);
+    }
+    throw error;
+  }
+  const cleanupWarning = removeDirectory(sourceDir);
+  return {
+    path: toPosix(targetPath),
+    url: postUrl(targetPath),
+    ...(cleanupWarning.length ? { cleanupWarning: cleanupWarning.join('; ') } : {}),
+  };
 }
 
 /**
@@ -348,13 +486,17 @@ export function writeTranslation(sourcePath, { title, body }) {
   const source = readPost(sourcePath);
   const target = counterpartPath(source.path);
   const data = { ...source.frontmatter };
+  if (typeof data.image === 'string') {
+    data.image = rewriteArticleImageReferences(data.image, source.path, target);
+  }
   const cleanTitle = String(title ?? '').trim();
   if (cleanTitle) data.title = cleanTitle;
   else delete data.title;
   data.layout = '../'.repeat(layoutDepth(target)) + 'layouts/Layout.astro';
   data.ai = true;
 
-  const content = serializeFrontmatter(data) + '\n' + String(body ?? '').trim() + '\n';
+  const translatedBody = rewriteArticleImageReferences(body, source.path, target);
+  const content = serializeFrontmatter(data) + '\n' + String(translatedBody).trim() + '\n';
   const existed = existsSync(resolvePostPath(target));
   createPost(target, content, true);
   return { path: target, bytes: Buffer.byteLength(content, 'utf8'), overwritten: existed };

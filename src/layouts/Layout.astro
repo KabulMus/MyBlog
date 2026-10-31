@@ -5,7 +5,7 @@ import FontFaces from '../components/FontFaces.astro';
 import katexAsset from '../generated/katex.json';
 import { tagNamesZh, tagNamesEn, tagCats, groupTagsByCat } from '../config/tags';
 import { getImage } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
+import { getArticleImage } from '../lib/article-images';
 import { getCategoryName, toCatArray } from '../config/categories';
 import { renderTitleHtml, titleToText } from '../lib/posts';
 
@@ -77,18 +77,8 @@ const ogImage = 'https://blog.ethan929.com/favicon.webp';
 const pageDate = formatDate(frontmatter?.date || "");
 const pageTime = formatTime(frontmatter?.date || "");
 
-// ⚡️ 题头图（LCP 图）：交给 astro:assets 生成 AVIF/WebP 多档 + 宽高。
-// 图片文件本身留在 public/images/（编辑器上传、RSS、OG 都按 /images/xxx 这个路径来），
-// 这里用 glob 把它们当模块导入 —— Vite/astro:assets 照样能读到尺寸并派生格式，不用搬家、不改写作流程。
-// ⚠️ 找不到对应文件时（比如外链图片）退回原来的裸 <img>，不要静默丢图。
-const heroImageModules = import.meta.glob('/public/images/*.{webp,jpg,jpeg,png}', {
-    eager: true,
-    import: 'default',
-}) as Record<string, ImageMetadata>;
-const heroSource =
-    typeof frontmatter?.image === 'string' && frontmatter.image.startsWith('/images/')
-        ? heroImageModules['/public' + frontmatter.image]
-        : undefined;
+// 题图与文章同目录保存；由 astro:assets 生成 LCP 图片的 AVIF/WebP 版本。
+const heroSource = getArticleImage(currentPath, frontmatter?.image);
 // ⚡️ 题头图为什么是**单一候选**（一个宽度、没有 srcset 描述符、没有 <source media>）：
 //    实测（DPR 1/2/3、窄屏 390/500/768、150ms RTT + 4Mbps、清缓存）下，只要存在「可选候选」，
 //    Chromium 的预加载扫描器就先按 1x 抓一份（1280w 或宽屏那档），布局定下来后 <picture> 再按
@@ -112,11 +102,13 @@ let idx = -1;
 let sorted: any[] = [];
 if (frontmatter?.date && currentPath.startsWith('/blog')) {
     // ⚠️ 只算成篇的（blog/ 平铺目录）：吐槽不参与序号编排，也不进上一篇/下一篇序列
-    const cnPosts = Object.values(import.meta.glob('../pages/blog/*.md', { eager: true })) as any[];
-    const enPosts = Object.values(import.meta.glob('../pages/blog/en-US/*.md', { eager: true })) as any[];
-    const allMd = isEnglishRoute ? enPosts : cnPosts;
+    const cnPosts = Object.values(import.meta.glob('../pages/blog/**/index.md', { eager: true })) as any[];
+    const enPosts = Object.values(import.meta.glob('../pages/blog/en-US/**/index.md', { eager: true })) as any[];
+    const allMd = isEnglishRoute
+        ? enPosts.filter((p: any) => p.url.startsWith('/blog/en-US/'))
+        : cnPosts.filter((p: any) => !p.url.startsWith('/blog/en-US/'));
     sorted = allMd
-        .filter((p: any) => !p.frontmatter?.draft)
+        .filter((p: any) => !p.url.includes('/rants/') && !p.url.includes('/drafts/') && !p.frontmatter?.draft)
         .sort((a: any, b: any) => new Date(a.frontmatter?.date || 0).getTime() - new Date(b.frontmatter?.date || 0).getTime());
     // ⚠️ 按 URL 找自己，别按标题：吐槽已经没有 title，undefined === undefined 会匹到第一篇
     idx = sorted.findIndex((p: any) => p.url === currentPath);
@@ -565,7 +557,7 @@ function getLangSwitchHref(pathname: string) {
 
 		<footer>
 			<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/info' : 'https://www.ethan929.com/info'}>{isEnglishRoute ? 'Tech & Copyright' : '技术与版权'}</a>
-			<p>©2026 Ethan Shaw</p>
+			<p>© 2026 Ethan Shaw</p>
 			<p>Built with love for Charlie and you all</p>
 		</footer>
 

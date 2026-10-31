@@ -18,15 +18,15 @@
  * 2) 中文两族（Noto Sans SC / Noto Serif SC）直接用 Google Fonts CSS API；
  *    Google 根据 unicode-range 选择所需的字体分片，字 CSS 与字体文件均由 Google 提供。
  *
- * ⚠️ preload 预算：全站图片 preload ≤1（当前 0 条，见 Layout 的说明）+ 字体 preload 4 条：
- *    Google Sans Flex（站名/大标题）、InterVariable 正体（正文）、Encode Sans SC（导航/分类）、
+ * ⚠️ preload 预算：全站图片 preload ≤1（当前 0 条，见 Layout 的说明）+ 字体 preload 3 条：
+ *    Google Sans Flex（站名/大标题）、Encode Sans SC（导航/分类）、
  *    CatNotoSC（分类 chip 的中文子集，只有 7.9 KB）。
- *    清单建议 ≤3，这里第 4 条是 8 KB 级的小子集，对带宽影响可忽略，换来 chip 上的汉字不闪。
+ *    InterVariable 正体通过样式表正常加载，不额外 preload；中文字体按 unicode-range 分片，
+ *    preload 任何一片都是瞎猜，所以不 preload。
  * ⚠️ 关于「Google Sans Flex 闪一下」：它 368 KB，冷缓存下晚于首帧到达，
  *    以前是 swap ⇒ 先画 Inter 再跳到 GSF。现在这一族单独用 font-display: block
  *    （见 astro.config.mjs），字形没到就先不画，绝不出现「错误字形 → 正确字形」的跳变。
  *    所以它虽然大，仍然值得 preload：pre 的是「让它尽量早到、缩短空白期」，不是「靠缩体积免闪」。
- *    中文字体按 unicode-range 分片，preload 任何一片都是瞎猜，所以不 preload。
  * ⚠️ preload 链接自带 crossorigin（同源也要写）：凭据模式不一致会重复下载一次。
  */
 import { Font } from 'astro:assets';
@@ -80,10 +80,6 @@ const gsfItalicCss =
  <Font cssVariable="--font-google-sans-flex" preload={preload ? true : false} />
  <Font cssVariable="--font-encode-sans-sc" preload={preload ? [{ subset: 'latin' }] : false} />
  <Font cssVariable="--font-jetbrains-mono" />
-
-{preload && (
-  <link rel="preload" href={interFonts.normal} as="font" type="font/woff2" crossorigin />
-)}
 
 {preload && (
   <link rel="preload" href="/fonts/CatNotoSC-VF.woff2" as="font" type="font/woff2" crossorigin />

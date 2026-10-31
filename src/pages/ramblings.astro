@@ -4,7 +4,7 @@ import LikeButton from '../components/LikeButton.astro';
 import { formatDate, formatTime, getPostUrl, type Lang } from '../lib/posts';
 
 const LANG: Lang = 'zh';
-const markdownFiles = import.meta.glob('./blog/rants/*.md', { eager: true });
+const markdownFiles = import.meta.glob('./blog/rants/**/index.md', { eager: true });
 // ⚠️ 不能用 post.Content：md 的 frontmatter 里写了 layout ⇒ Content 会把整个文章页（含页头、标签）也套进来。
 //    compiledContent() 只给编译后的正文 HTML，正好是卡片里要的。
 const cards = await Promise.all(

@@ -250,7 +250,7 @@ function rehypePunctFullWidth() {
 }
 
 // ⚡️ 图片尺寸 + 图注的 Markdown 写法支持（Pandoc 风格）：
-//   ![alt](/images/xxx.webp){.img-md}
+//   ![alt](./images/xxx.webp){.img-md}
 //   *图注*（markdown 斜体，可省略）
 // 编译成 <p><img class="img-md"><em>图注</em></p>，复用现有 p:has(img) 居中 + em 图注样式；
 // 图注是普通 md 文本节点，智能引号也能正常生效。
@@ -715,6 +715,10 @@ function blogEditorApi() {
             const body = await readBody(req);
             return send(200, io.createPost(body.path, body.content, !!body.overwrite));
           }
+          if (req.method === 'POST' && route === '/move-post') {
+            const body = await readBody(req);
+            return send(200, io.movePost(body.source, body.target));
+          }
           // 删除一篇原文（只删这一个文件，中英各一份互不影响）
           if (req.method === 'DELETE' && route === '/post') {
             const body = await readBody(req);
@@ -724,7 +728,7 @@ function blogEditorApi() {
           // 图片上传：body = 原始二进制，文件名（含扩展名）走查询参数 `name`
           if (req.method === 'POST' && route === '/image') {
             const buf = await readBinary(req);
-            return send(200, io.saveImage(url.searchParams.get('name'), buf));
+            return send(200, io.saveImage(url.searchParams.get('name'), buf, url.searchParams.get('path')));
           }
           // 新建文章：中文 + en-US 两份一起建（模板/命名在 scripts/lib/post-io.mjs 的 newPostBlueprint）
           if (req.method === 'POST' && route === '/new-post') {
@@ -828,7 +832,7 @@ function blogEditorApi() {
 // 为什么必须补宽高：`.typography-body p:has(img)` 是 flex 列容器，图只写了 max-width:100% + height:auto，
 // 加载前没有任何确定尺寸 ⇒ 占位 0×0，图片一到位整页往下窜（实测 CLS 就是这么来的）。
 // 有了 width/height 属性，浏览器先按属性算出的宽高比留位，尺寸到了再填。
-// 尺寸从 public/images 里的真实文件读（只读一次，进程内缓存），不是写死的表。
+// Markdown 中由文章目录导入的图片由 Astro 自动补尺寸；这里也兼容仍从 public/images 引入的原生 HTML 图片。
 import { imageSize } from 'image-size';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -887,7 +891,7 @@ export default defineConfig({
   //       若拉丁族自带 generic，它就会排在后面那个中文字族**前面**，
   //       汉字会落到系统宋体/黑体而不是 Noto —— 中文排版静默变味（本地实测就是这么翻的车）。
   //       栈尾的 generic 由 CSS 自己写（main.css 的 font-family 列表末尾本来就有）。
-  //    Source Serif 4 不在这个列表里：它带 `size-adjust: 105%`（正文排版按这个调过），
+  //    Source Serif 4 不在这个列表里：它带 `size-adjust: 110%`（正文排版按这个调过），
   //    Fonts API 没有暴露 size-adjust ⇒ 改为本地自托管（src/styles/fonts/，@font-face 在 source-serif-4.css）。
   fonts: [
     {

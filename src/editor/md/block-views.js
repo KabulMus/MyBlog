@@ -9,7 +9,7 @@
 // 乐谱头部（abc 的 X/T/C/M/L/Q/K、简谱的 title/key/beat/time/…）不让人手写：
 // 摆成小表单，空着就是不写这一行（"用不着的参数就留空"）。
 
-import { UPLOAD_ICON, requestImageName, uploadImage } from './upload-image.js';
+import { UPLOAD_ICON, requestImageName, uploadImage, resolveImagePreviewUrl } from './upload-image.js';
 
 /** 卡片里没有 toast（那是编辑器外壳的），用事件把它叫出来（index.astro 接了这条） */
 const tellEditor = (msg, kind = 'ok') => document.dispatchEvent(new CustomEvent('editor-toast', { detail: { msg, kind } }));
@@ -664,7 +664,7 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 		const img = h('img', 'md-image-preview');
 		img.alt = info.alt;
 		img.loading = 'lazy';
-		img.src = info.src;
+		img.src = resolveImagePreviewUrl(info.src);
 		img.addEventListener('load', () => { thumb.dataset.state = 'ok'; });
 		img.addEventListener('error', () => { thumb.dataset.state = 'missing'; });
 		thumb.append(img, h('span', 'md-image-note md-image-note--missing', '找不到文件'), h('span', 'md-image-note md-image-note--loading', '读取中…'));
@@ -677,7 +677,7 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 				info[key] = v;
 				if (key === 'src') {
 					thumb.dataset.state = 'loading';
-					img.src = v;
+					img.src = resolveImagePreviewUrl(v);
 				}
 				write(buildImageLine(info));
 			}, 'md-field-val');
@@ -686,13 +686,13 @@ export function createBlockNodeView({ node: initialNode, getPos, editor }) {
 		};
 		// ⚠️ 只有「路径 / 尺寸 / 图注」三栏：「说明」（alt）那栏删了 —— 插入时默认就是 Placeholder
 		// 那种，留着也没人填（alt 依旧原样保留在源里，改别的字段不会弄丢它）。
-		// 路径那行右侧挂个上传按钮：选图 → 转 webp 存进 public/images/ → 路径自动填好（不用手拄）。
+		// 路径那行右侧挂个上传按钮：选图 → 转 webp 存进文章 images/ → 路径自动填好。
 		const srcLine = h('div', 'md-field');
 		srcLine.append(h('label', 'md-field-label', '路径'));
-		const srcInput = makeField(info.src ?? '', '/images/2026-01-01-slug-name.webp', (v) => {
+		const srcInput = makeField(info.src ?? '', './images/image.webp', (v) => {
 			info.src = v;
 			thumb.dataset.state = 'loading';
-			img.src = v;
+			img.src = resolveImagePreviewUrl(v);
 			write(buildImageLine(info));
 		}, 'md-field-val');
 		const uploadFile = h('input', 'md-upload-file');

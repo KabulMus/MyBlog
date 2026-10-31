@@ -3,7 +3,7 @@
 // 浏览器这边先转 webp：`canvas.toBlob('image/webp', 0.9)` 零依赖，不用装 sharp；
 //   ⚠️ 唯独 GIF 不转 —— canvas 只能画第一帧，转完动图就成静图了。
 // 🚨 转不了（浏览器不会编 / 文件本身解不开）就原样传，中间件按扩展名放行常见的图片格式。
-// 落盘位置与重名处理都在中间件那侧（`scripts/lib/post-io.mjs` 的 saveImage ⇒ `public/images/`，重名补 -1）。
+// 落盘位置与重名处理都在中间件那侧（`scripts/lib/post-io.mjs` 的 saveImage ⇒ 文章 images/，重名补 -1）。
 
 const API = '/__editor/api';
 
@@ -15,6 +15,17 @@ let imageNameDialog;
 let imageNameInput;
 let imageNameSubmit;
 let imageNameResolve;
+let activePostPath = '';
+
+export function setUploadPostPath(path) {
+	activePostPath = String(path || '');
+}
+
+export function resolveImagePreviewUrl(source) {
+	if (!activePostPath || !/^(?:\.{1,2}\/|images\/)/.test(source)) return source;
+	const articlePath = activePostPath.replace(/\/index\.md$/, '/');
+	return new URL(source, `${location.origin}/${articlePath}`).pathname;
+}
 
 function finishImageNameDialog(name) {
 	imageNameDialog.hidden = true;
@@ -141,17 +152,21 @@ export async function fileToWebp(file) {
 }
 
 /**
- * 上传一张图，返回中间件给的 `{ file, url, bytes }`。
+ * 上传一张图，返回中间件给的 `{ file, url, previewUrl, bytes }`。
  * `name` 只是**文件名建议**（真扩展名以转换结果为准）：中间件会清掉路径分隔符之类的字符，
  * 重名自动补 `-1`、`-2`。不传就用图片自己的文件名。
  */
-export async function uploadImage(file, name) {
+export async function uploadImage(file, name, postPath = activePostPath) {
 	const { blob, ext } = await fileToWebp(file);
 	const base = String(name || file.name || 'image')
 		.replace(/^.*[\\/]/, '')
 		.replace(/\.[a-z0-9]+$/i, '')
 		.trim();
-	const res = await fetch(`${API}/image?name=${encodeURIComponent(`${base || 'image'}.${ext}`)}`, {
+	const query = new URLSearchParams({
+		name: `${base || 'image'}.${ext}`,
+		path: postPath,
+	});
+	const res = await fetch(`${API}/image?${query}`, {
 		method: 'POST',
 		headers: { 'content-type': 'application/octet-stream' },
 		body: blob,

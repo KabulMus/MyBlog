@@ -1,24 +1,18 @@
 ---
+import { getImage } from 'astro:assets';
 import Layout from '../../layouts/Layout.astro';
 import { tagNamesEn, tagCats, groupTagsByCat, tagOrder } from '../../config/tags';
 import { categories, categoryNamesEn as categoryNames, catOrder, toCatArray } from '../../config/categories';
 import { formatDate, formatTime, renderTitleHtml, getPostUrl, type Lang } from '../../lib/posts';
+import { getArticleImage } from '../../lib/article-images';
 
 const LANG: Lang = 'en';
 const postsPerPage = 8;
-const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
-const rantFiles = import.meta.glob('../blog/en-US/rants/*.md', { eager: true });
-// Card images: only metadata, to give <img> width/height (the card is already a fixed 10:3 crop;
-// the attributes keep the placeholder correct if CSS is late). Files stay in public/images.
-const cardImages = import.meta.glob('/public/images/*.{webp,jpg,jpeg,png}', {
-    eager: true,
-    import: 'default',
-}) as Record<string, { width: number; height: number }>;
-const cardDims = (src?: string) =>
-    typeof src === 'string' && src.startsWith('/images/') ? cardImages['/public' + src] : undefined;
-const rantModules = new Set<any>(Object.values(rantFiles));
+const markdownFiles = import.meta.glob('../blog/en-US/**/index.md', { eager: true });
 // Numbering and date sorting include rants (the article header lines up), the homepage cards do not
-const allPosts: any[] = [...Object.values(markdownFiles), ...Object.values(rantFiles)].filter((p: any) => !p.frontmatter?.draft);
+const allPosts: any[] = Object.values(markdownFiles).filter(
+    (p: any) => p.url.startsWith('/blog/en-US/') && !p.url.includes('/drafts/') && !p.frontmatter?.draft,
+);
 
 function buildPageHref(page: number, basePath = '/en-US') {
     const path = basePath === '/' ? '/' : basePath;
@@ -43,8 +37,15 @@ const sortedPosts = allPosts.sort((a, b) => {
     return dateB - dateA;
 });
 
-// The folder is the genre: blog/en-US/*.md are full posts, blog/en-US/rants/*.md are rants
-const homePosts = sortedPosts.filter((p: any) => !rantModules.has(p));
+// The rants folder still determines which posts are omitted from homepage cards
+const homePosts = sortedPosts.filter((p: any) => !p.url.includes('/rants/'));
+const cardImageByUrl = new Map(await Promise.all(homePosts.map(async (post: any) => {
+    const source = getArticleImage(post.url, post.frontmatter?.image);
+    const image = source
+        ? await getImage({ src: source, width: Math.min(800, source.width), format: 'webp' })
+        : undefined;
+    return [post.url, image] as const;
+})));
 // #N on a card is the ordinal within the full posts (rants carry no number, matching the article header)
 const rankByUrl: Record<string, number> = {};
 homePosts.forEach((p: any, i: number) => { rankByUrl[getPostUrl(p, LANG)] = homePosts.length - i; });
@@ -111,6 +112,7 @@ const nextPage = Math.min(totalPages, currentPage + 1);
             {homePosts.map((post, index) => {
                 const postPage = Math.floor(index / postsPerPage) + 1;
                 const postUrl = getPostUrl(post, LANG);
+                const cardImage = cardImageByUrl.get(post.url);
                 const postCats = toCatArray(post.frontmatter?.category);
                 const postWarnings = Array.isArray(post.frontmatter?.warning)
                     ? post.frontmatter.warning
@@ -120,12 +122,12 @@ const nextPage = Math.min(totalPages, currentPage + 1);
                         {post.frontmatter?.image && (
                             <div class="post-card-image">
                                 <img
-                                    src={post.frontmatter.image}
+                                    src={cardImage?.src ?? post.frontmatter.image}
                                     alt=""
                                     loading="lazy"
                                     decoding="async"
-                                    width={cardDims(post.frontmatter.image)?.width}
-                                    height={cardDims(post.frontmatter.image)?.height}
+                                    width={cardImage?.attributes.width}
+                                    height={cardImage?.attributes.height}
                                 />
                             </div>
                         )}

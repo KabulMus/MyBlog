@@ -5,11 +5,11 @@ import { categoryNamesEn, toCatArray } from '../../config/categories';
 import { formatDate, getPostUrl, renderTitleHtml, type Lang } from '../../lib/posts';
 
 const LANG: Lang = 'en';
-// Full posts only (blog/en-US/ flat directory): rants live in blog/en-US/rants/ and have their own /ramblings page
-const markdownFiles = import.meta.glob('../blog/en-US/*.md', { eager: true });
+// Full posts only: rants live in blog/en-US/rants/ and have their own /ramblings page
+const markdownFiles = import.meta.glob('../blog/en-US/**/index.md', { eager: true });
 
 const posts = Object.values(markdownFiles)
-    .filter((p: any) => !p.frontmatter?.draft)
+    .filter((p: any) => p.url.startsWith('/blog/en-US/') && !p.url.includes('/rants/') && !p.url.includes('/drafts/') && !p.frontmatter?.draft)
     .sort((a: any, b: any) => new Date(b.frontmatter?.date || 0).getTime() - new Date(a.frontmatter?.date || 0).getTime());
 
 // Group by year (years descending, then posts descending inside a year). Read the year off the raw

@@ -1,0 +1,14 @@
+---
+layout: '../../../../../layouts/Layout.astro'
+date: '2026-07-22T23:03'
+draft: false
+ai: true
+---
+
+our No.1 High School is SOOOO amazing!!!
+
+hmm yeah I admit I'm **quite capable**~ (that's a good thing bro)
+
+but the school makes us **get up at 6 and sleep at midnight every day**. Have they ever considered that we might want to push back...?
+
+EXCUSE ME?

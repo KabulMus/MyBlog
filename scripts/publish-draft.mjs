@@ -3,9 +3,9 @@
 import { execSync } from 'node:child_process';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { readdirSync, readFileSync, writeFileSync, rmSync, existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-import { parseFrontmatter, RANT_TAG } from './lib/post-io.mjs';
+import { readdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { movePost, parseFrontmatter, RANT_TAG } from './lib/post-io.mjs';
 
 const rl = createInterface({ input: stdin, output: stdout });
 
@@ -16,11 +16,21 @@ const draftDirs = [
 
 // 收集草稿
 const drafts = [];
-for (const dir of draftDirs) {
-  if (!existsSync(dir)) continue;
-  for (const f of readdirSync(dir).filter((f) => f.endsWith('.md'))) {
-    drafts.push({ dir, file: f });
+function collectMarkdownFiles(dir) {
+  const files = [];
+  if (!existsSync(dir)) return files;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name !== 'images') files.push(...collectMarkdownFiles(path));
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      files.push(path);
+    }
   }
+  return files;
+}
+for (const dir of draftDirs) {
+  for (const path of collectMarkdownFiles(dir)) drafts.push({ dir, path });
 }
 
 if (drafts.length === 0) {
@@ -29,7 +39,7 @@ if (drafts.length === 0) {
 }
 
 console.log(`📄 发现 ${drafts.length} 篇草稿：`);
-drafts.forEach((d, i) => console.log(`  ${i + 1}. ${join(d.dir, d.file)}`));
+drafts.forEach((d, i) => console.log(`  ${i + 1}. ${d.path}`));
 const ans = (
   await rl.question('\n要发布哪些？(序号/逗号分隔，回车或 all = 全部)：')
 ).trim().toLowerCase();
@@ -54,21 +64,19 @@ if (toPublish.length === 0) {
 const moved = [];
 for (const d of toPublish) {
   const isEn = d.dir.includes('en-US');
-  const src = join(d.dir, d.file);
+  const src = d.path;
   const content = readFileSync(src, 'utf8');
-  // 带「吐槽」tag 的草稿发到 rants/ 下；那边和 drafts/ 一样深一级，所以 layout 只改「草稿级 → 正式级」
+  // 带「吐槽」tag 的草稿发到 rants/ 下；movePost 会重算 layout 并重定位图片引用
   const tags = parseFrontmatter(content).data.tags;
   const isRant = Array.isArray(tags) ? tags.includes(RANT_TAG) : tags === RANT_TAG;
-  // 草稿目录的 layout 相对路径比正式目录多一级，发布时改回正式级
-  const layoutFix = isEn
-    ? /\.\.\/\.\.\/\.\.\/\.\.\/layouts\/Layout\.astro/
-    : /\.\.\/\.\.\/\.\.\/layouts\/Layout\.astro/;
-  const layoutTo = isEn
-    ? (isRant ? '../../../../layouts/Layout.astro' : '../../../layouts/Layout.astro')
-    : (isRant ? '../../../layouts/Layout.astro' : '../../layouts/Layout.astro');
-  let cleaned = content
-    .replace(layoutFix, layoutTo)
-    .replace(/\ndraft:\s*true\s*\n/, '\n');
+  const draftRelativePath = relative(d.dir, src);
+  const articleRelativePath = draftRelativePath.endsWith('index.md')
+    ? draftRelativePath
+    : join(draftRelativePath.replace(/\.md$/, ''), 'index.md');
+  const destDir = join('src', 'pages', 'blog', ...(isEn ? ['en-US'] : []), ...(isRant ? ['rants'] : []));
+  const dest = join(destDir, articleRelativePath);
+  const movedPost = movePost(src, dest);
+  let cleaned = readFileSync(dest, 'utf8').replace(/\ndraft:\s*true\s*\n/, '\n');
   if (isRant) {
     // 吐槽的体裁由 rants/ 目录表达 ⇒ 发布时把草稿池里用来分流的那枚 tag、category/warning，
     // 以及 title（信息流用日期和正文，不写标题）一并摘掉
@@ -85,12 +93,9 @@ for (const d of toPublish) {
       });
   }
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-  const destDir = join('src', 'pages', 'blog', ...(isEn ? ['en-US'] : []), ...(isRant ? ['rants'] : []));
-  mkdirSync(destDir, { recursive: true });
-  const dest = join(destDir, d.file);
   writeFileSync(dest, cleaned);
-  rmSync(src);
-  moved.push(`${d.file} → ${dest}`);
+  if (movedPost.cleanupWarning) console.warn(`⚠️ 旧草稿目录清理失败：${movedPost.cleanupWarning}`);
+  moved.push(`${src} → ${dest}`);
 }
 
 // 清理空的 drafts 目录

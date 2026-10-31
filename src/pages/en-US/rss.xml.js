@@ -3,12 +3,11 @@ import { titleToText } from '../../lib/posts';
 
 // 英文 RSS：/en-US/rss.xml（只含英文文章）
 export async function GET(context) {
-  // One full feed: rants are in a subfolder, so they need their own glob
+  // One full English feed: include full posts and rants, but never drafts
   const posts = [
-    ...Object.values(import.meta.glob('../blog/en-US/*.md', { eager: true })),
-    ...Object.values(import.meta.glob('../blog/en-US/rants/*.md', { eager: true })),
+    ...Object.values(import.meta.glob('../blog/en-US/**/index.md', { eager: true })),
   ]
-    .filter((p) => p.frontmatter && !p.frontmatter.draft)
+    .filter((p) => p.url.startsWith('/blog/en-US/') && !p.url.includes('/drafts/') && p.frontmatter && !p.frontmatter.draft)
     .sort((a, b) => new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
 
   return rss({
