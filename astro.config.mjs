@@ -321,12 +321,16 @@ function remarkEmbed() {
       let src = '';
       let logo = '';
       let note = '';
+      let noteLabel = '';
       if (kind === 'youtube') {
         if (!args[0]) continue;
         const id = args[0];
         src = 'https://www.youtube.com/embed/' + encodeURIComponent(id);
         // 可选参数 cn → 在占位 logo 下方显示「中国大陆可能无法访问」提示（开关）
-        if (args[1] === 'cn') note = isEn ? 'Note: this platform cannot be directly accessible in Chinese mainland.' : '请注意，此平台在中国大陆无法直接访问。';
+        if (args[1] === 'cn') {
+          note = isEn ? 'Not directly accessible in Chinese mainland' : '中国大陆无法直接访问';
+          noteLabel = isEn ? 'Region restricted' : '区域限制';
+        }
         // 正式 YouTube logo（红播放钮 #F03 + 白三角 + 文字用 currentColor 随主题黑白转换：亮=近黑、暗=近白）
         logo = '<svg viewBox="0 0 42.75 9.23" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
           '<path fill="currentColor" d="M15.95,8.72v-2.52l-1.58-5.23h1.2l.59,2.37c.15.58.29,1.18.35,1.65h.07c.09-.53.22-1.1.36-1.64l.61-2.37h1.2l-1.6,5.23v2.52h-1.19Z"/>' +
@@ -346,12 +350,20 @@ function remarkEmbed() {
       } else {
         continue;
       }
+      const buttonLabel = note ? label + (isEn ? '. ' : '；') + note : label;
       const html =
         '<div class="video-embed" data-pagefind-ignore data-embed-src="' + src + '">' +
-        '<button class="video-embed-btn" type="button" aria-label="' + label + '">' +
+        '<button class="video-embed-btn" type="button" aria-label="' + buttonLabel + '">' +
         '<span class="video-embed-center">' +
         '<span class="video-embed-logo">' + logo + '</span>' +
-        (note ? '<span class="video-embed-note">' + note + '</span>' : '') +
+        (note ? '<span class="video-embed-note" aria-hidden="true">' +
+          '<svg class="video-embed-note-region-mark" viewBox="0 0 25 14" fill="none" focusable="false">' +
+          '<path d="M9.8 3.1c-.8-.75-1.6-1.1-2.7-1.1C4.2 2 2.8 4 2.8 7s1.4 5 4.3 5c1.1 0 1.9-.35 2.7-1.1M14.1 11.8V2.2l7.7 9.6V2.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '<svg viewBox="0 0 48 48" fill="none" focusable="false">' +
+          '<path d="M24 44.0002C35.0457 44.0002 44 35.0459 44 24.0002C44 12.9545 35.0457 4.00024 24 4.00024C12.9543 4.00024 4 12.9545 4 24.0002C4 35.0459 12.9543 44.0002 24 44.0002Z" stroke="currentColor" stroke-width="4" />' +
+          '<path d="M6 30.9856C8.63192 32.041 10.5266 32.041 11.6839 30.9856C13.4199 29.4025 11.9219 24.5978 14.3532 23.2727C16.7844 21.9476 20.4886 27.8214 23.9508 25.8887C27.4129 23.9559 23.6246 18.8023 26.0272 16.713C28.4298 14.6237 31.554 16.98 32.1001 13.4865C32.6462 9.99304 29.5521 11.5082 28.9584 8.20693C28.5625 6.00611 28.5625 4.84884 28.9584 4.73511" stroke="currentColor" stroke-width="4" stroke-linecap="round" />' +
+          '<path d="M29.0209 43.3505C27.1468 41.4325 26.4721 39.6497 26.9969 38.0019C27.7841 35.5303 29.0826 35.6764 29.6488 34.1482C30.2149 32.6199 28.6156 30.4433 32.1643 28.5826C34.5301 27.3421 37.783 28.7794 41.9228 32.8944" stroke="currentColor" stroke-width="4" stroke-linecap="round" /></svg>' +
+          '<span class="video-embed-note-label">' + noteLabel + '</span></span>' : '') +
         '</span>' +
         '</button></div>';
       children[i] = { type: 'html', value: html };

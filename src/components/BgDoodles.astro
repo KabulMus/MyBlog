@@ -1,0 +1,13 @@
+---
+// 站点背景装饰图案的两个固定图层（图案 / 颜色 / 平铺尺寸全在 main.css 的 .bg-doodle--a / --b）。
+//
+// 为什么要拆成两个 div，而不是像以前那样把两块 mask 叠在 body::before 上：
+// 两块 tile 的高度不同（A 1680×1360、B 1120×920），视差偏移要按**各自**的 tile 高度取模，
+// 所以它们必须各动各的 transform；一层的 mask 里放两块图案只能整体一起动。
+// 拆开以后 mask 是静态的，滚动只改各层自己的 transform（见 layouts/Layout.astro 的 shiftDoodles）。
+//
+// 只有带站点外壳的页面（Layout、404）渲染它；编辑器 / 自检页不要背景图案。
+---
+
+<div class="bg-doodle bg-doodle--a" aria-hidden="true"></div>
+<div class="bg-doodle bg-doodle--b" aria-hidden="true"></div>

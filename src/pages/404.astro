@@ -4,6 +4,7 @@
 import '../styles/main.css';
 import '../styles/404.css';
 import FontFaces from '../components/FontFaces.astro';
+import BgDoodles from '../components/BgDoodles.astro';
 ---
 
 <html lang="zh-CN" data-pagefind-ignore>
@@ -17,6 +18,8 @@ import FontFaces from '../components/FontFaces.astro';
 		<script src="/js/core.js" is:inline></script>
 	</head>
 	<body>
+		<!-- 背景图案图层（这一页没有脚本，所以图案是静止的，跟改动前一致） -->
+		<BgDoodles />
 		<main class="content-section">
 			<section class="container">
 				<section class="section-content">
@@ -35,7 +38,7 @@ import FontFaces from '../components/FontFaces.astro';
 						<p style="font-size: 0.9rem;">It seems this note isn’t in the score… Please check the URL or click below to return home.</p>
 						<p style="font-size: 0.9rem;">If you need to report any issues with the website content, please submit an issue on <a href="https://github.com/KabulMus/MyBlog/issues" target="_blank" style="color: var(--primary-blue); text-decoration: none;">GitHub</a> or contact me via <a href="mailto:ethanshaw@ethan929.com" target="_blank" style="color: var(--primary-blue); text-decoration: none;">email</a>.</p>
 					</div>
-					<a href="/" class="modal-btn">返回首页 &nbsp;·&nbsp; Back Home</a>
+					<a href="/" class="card" style="width: fit-content; font-weight: 600;">返回首页 &nbsp;·&nbsp; Back Home</a>
 				</section>
 
 				<footer>

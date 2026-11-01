@@ -34,8 +34,6 @@
 	color: var(--text-main);
 }
 
-.editor-body::before { display: none; }
-
 /* ⚠️ 表单控件（input / button / select / textarea）**拿不到** main.css 里 body 上那套
    `font-feature-settings`：UA 给控件的样式里有 `font` 简写，而 font 简写会把 font-feature-settings
    重置成 normal ⇒ 输入框里打出来的中文标点不会半宽（halt 没了），跟站点正文/标签的字距对不上。
@@ -1141,7 +1139,6 @@ html.is-card-dragging { user-select: none; }
 
 .editor-btn:hover { color: var(--primary-blue); border-color: currentColor; }
 
-/* 主按钮 = 站点的 .modal-btn 语言 */
 .editor-btn--primary {
 	padding: 5px 20px;
 	color: var(--on-primary);

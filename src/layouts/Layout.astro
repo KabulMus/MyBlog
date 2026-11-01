@@ -2,6 +2,7 @@
 import '../styles/main.css'
 import LikeButton from '../components/LikeButton.astro';
 import FontFaces from '../components/FontFaces.astro';
+import BgDoodles from '../components/BgDoodles.astro';
 import katexAsset from '../generated/katex.json';
 import { tagNamesZh, tagNamesEn, tagCats, groupTagsByCat } from '../config/tags';
 import { getImage } from 'astro:assets';
@@ -264,6 +265,7 @@ function getLangSwitchHref(pathname: string) {
 		isHome ? 'is-home' : '',
 		isListingPage ? 'is-listing-page' : '',
 	].filter(Boolean).join(' ')}>
+		<BgDoodles />
 		{currentPath.startsWith('/blog') && (
 			<a class="article-back-btn" id="article-back-btn" href={backHref} aria-label={isEnglishRoute ? 'Back' : '返回'}>
 				<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M31 36L19 24L31 12"/></svg>
@@ -873,16 +875,24 @@ function getLangSwitchHref(pathname: string) {
 				bootTitlePoll();
 			}
 
-			// 背景图案视差：这一层是 fixed 的，所以「滑动」其实是改 mask 的纵向偏移。
-			// 偏移量按两块 tile 各自的高度取模（1360 / 920），取多大都接得上。
+			// 背景图案视差：两块 tile 各是一个 fixed 图层（.bg-doodle），滚动只改它们自己的 transform。
+			// ⚠️ 不要再退回「改 mask-position」的写法：那会让浏览器每帧重画整层图案。
+			// 偏移量按各自 tile 的高度取模（1360 / 920）—— tile 本身就是无缝平铺的，
+			// 位移满一整块时回到 0，画面完全接得上（图层在视口下方多留的那一块就是为这个准备的）。
 			var DOODLE_RATE = 0.35;
 			var DOODLE_TILES = [1360, 920];
+			var doodleLayers = null;   // 只查一次；空 NodeList 也是真值，不会每帧重查
+			var doodleShifts = [NaN, NaN];   // 上一次写进去的值；NaN = 还没写过
 			function shiftDoodles() {
-				var body = document.body;
-				if (!body) return;
+				if (!doodleLayers) doodleLayers = document.querySelectorAll('.bg-doodle');
 				var y = (window.scrollY || window.pageYOffset || 0) * DOODLE_RATE;
-				body.style.setProperty('--bg-shift-a', (-(y % DOODLE_TILES[0])).toFixed(2) + 'px');
-				body.style.setProperty('--bg-shift-b', (-(y % DOODLE_TILES[1])).toFixed(2) + 'px');
+				for (var i = 0; i < doodleLayers.length && i < DOODLE_TILES.length; i++) {
+					var shift = -(y % DOODLE_TILES[i]);
+					// 同一块 tile 周期内没变化就别写 style（滚动事件比实际位移密得多）
+					if (shift === doodleShifts[i]) continue;
+					doodleShifts[i] = shift;
+					doodleLayers[i].style.transform = 'translate3d(0, ' + shift.toFixed(2) + 'px, 0)';
+				}
 			}
 			// 不套 rAF：蹭上惯性滚动那类场景 rAF 会被暂停，图案会卡住不动
 			window.addEventListener('scroll', shiftDoodles, { passive: true });

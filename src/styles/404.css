@@ -1,6 +1,6 @@
 /* ===== 404 页面（独立页：复用站内 main.css 的变量/body/footer/主题按钮样式，仅保留 404 特有部分） ===== */
 .content-section {
-    /* 不铺底色：这层几乎占满整页，铺了就盖掉 body::before 的背景图案 */
+    /* 不铺底色：这层几乎占满整页，铺了就盖掉 .bg-doodle 的背景图案 */
     padding: 120px 20px 60px;
     text-align: left;
     min-height: 80vh;
@@ -46,20 +46,23 @@
     font-weight: 500;
     margin-bottom: 15px;
 }
-.modal-btn {
-    display: inline-block;
-    margin-top: 20px;
-    padding: 10px 35px;
-    background-color: var(--primary-blue);
-    color: var(--on-primary) !important;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: opacity 0.2s;
+
+.card {
+	background-color: var(--card-bg);
+	border-radius: 100px;
+	padding: 10px 20px;
+	box-shadow: var(--card-shadow);
+	text-decoration: none;
+	color: var(--text-main);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	translate: 0;
+	border: 1px solid var(--item-border);
+	transition: transform 0.3s ease, translate 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+	cursor: pointer;
+	flex-direction: row;
+    font-family: 'Google Sans Flex', 'Inter', 'Noto Sans SC Local', 'Noto Sans SC', sans-serif;
 }
-.modal-btn:hover { opacity: 0.85; }
-@media (max-width: 768px) {
-    .section-content p { display: inline; margin: 0; }
-    .section-content div { margin-bottom: 10px !important; }
-    .modal-btn { display: block; margin-top: 25px; width: fit-content; }
-}
+
+.card:hover { background-color: var(--primary-blue); color: var(--on-primary); box-shadow: var(--card-hover-shadow); }

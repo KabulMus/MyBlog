@@ -48,6 +48,10 @@
     --on-primary: #ffffff; /* 初始为白色 */
     /* 视频占位：背景=文字色(--text-main 近黑)，logo 文字取反色(白) */
     --video-fg: #ffffff;
+    /* 提示条位于与页面相反的底色上，因此琥珀色也随占位背景反转 */
+    --video-note-amber: #e9c15c;
+    --video-note-amber-bg: rgba(251, 191, 36, 0.15);
+    --video-note-amber-border: rgba(251, 191, 36, 0.3);
     /* --- 标签颜色（亮色模式）：按色相命名 --- */
     --color-blue: var(--primary-blue);
     --color-blue-bg: rgba(30, 102, 198, 0.1);
@@ -97,6 +101,9 @@
     --on-primary: #0f172a; /* 深色模式下设为与背景相同的深蓝色/黑色 */
     /* 视频占位：背景=文字色(--text-main 近白)，logo 文字取反色(黑) */
     --video-fg: #0a0a0a;
+    --video-note-amber: #b45309;
+    --video-note-amber-bg: rgba(180, 83, 9, 0.1);
+    --video-note-amber-border: rgba(180, 83, 9, 0.3);
     /* --- 标签颜色（深色模式）：按色相命名 --- */
     --color-blue-bg: rgba(147, 197, 253, 0.15);
     --color-blue-border: rgba(147, 197, 253, 0.3);
@@ -140,6 +147,9 @@
         --on-primary: #0f172a;
         /* 视频占位：背景=文字色(--text-main 近白)，logo 文字取反色(黑) */
         --video-fg: #0a0a0a;
+        --video-note-amber: #b45309;
+        --video-note-amber-bg: rgba(180, 83, 9, 0.1);
+        --video-note-amber-border: rgba(180, 83, 9, 0.3);
         /* --- 标签颜色（跟随系统深色）：按色相命名 --- */
         --color-blue-bg: rgba(147, 197, 253, 0.15);
         --color-blue-border: rgba(147, 197, 253, 0.3);
@@ -198,31 +208,57 @@ button, input, select, textarea { font-family: inherit; }
       内联前会自动去注释、压空白、编码 # < > "。
    ⚠️ 两块 tile 的尺寸错开（横向要 A 铺两块、B 铺三块才对齐，纵向 31280px 才重样）
       ⇒ 屏幕上看不出「一块一块重复」。
-   ⚠️ 挂在 body::before 上（position: fixed + z-index: -1）：body 的底色会被传播到 canvas
-      （即最底那层），所以这一层在它之上、在所有内容之下；又因为 pointer-events: none，
-      完全不参与交互。卡片是不透明的，所以图案只在两边的空档里显形。
+   ⚠️ 每块 tile 是一个**独立的固定图层**（components/BgDoodles.astro 渲染的 div.bg-doodle--a / --b）。
+      以前两块 mask 叠在同一个 body::before 上，视差只能靠每帧改 mask-position ⇒ 整层图案重画；
+      拆开之后 mask 是静态的，滚动只改各层自己的 transform（见 Layout 里的 shiftDoodles）。
+      ⚠️ 两块 tile 高度不同、取模周期不同，必须各动各的 —— 这正是不放在同一个伪元素里的原因。
+   ⚠️ 层级：position: fixed + z-index: -1 ⇒ 在 body 底色（会被传播到 canvas）之上、所有内容之下；
+      pointer-events: none ⇒ 完全不参与交互。卡片是不透明的，所以图案只在两边的空档里显形。
    ------------------------------------------------------------------ */
-body::before {
-    content: '';
+.bg-doodle {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
     z-index: -1;
     pointer-events: none;
     background-color: var(--bg-doodle);
-    -webkit-mask-image: url('__inline-svg:bg-doodle-a.svg'), url('__inline-svg:bg-doodle-b.svg');
-    mask-image: url('__inline-svg:bg-doodle-a.svg'), url('__inline-svg:bg-doodle-b.svg');
-    -webkit-mask-size: 1680px 1360px, 1120px 920px;
-    mask-size: 1680px 1360px, 1120px 920px;
-    -webkit-mask-repeat: repeat, repeat;
-    mask-repeat: repeat, repeat;
-    /* 视差：滚动时让图案慢慢往上走（见 Layout 里的 shiftDoodles）。偏移量是按各自
-       tile 高度取模后传进来的，所以取多大值图案都接得上，不会露出边缘。 */
-    -webkit-mask-position: 0 var(--bg-shift-a, 0px), 190px calc(110px + var(--bg-shift-b, 0px));
-    mask-position: 0 var(--bg-shift-a, 0px), 190px calc(110px + var(--bg-shift-b, 0px));
+    -webkit-mask-repeat: repeat;
+    mask-repeat: repeat;
+    /* 全站只有这两层会随滚动位移 ⇒ 各自提一个合成层，位移时不再重画图案。
+       别把 will-change 加到别的元素上。 */
+    will-change: transform;
+}
+
+/* 每层都往上挪**一整块 tile**、高度也相应加两块：位移范围是 ±tile（负值来自正常滚动，
+   正值只在 iOS 橡皮筋回弹、scrollY 为负时出现），上下各留一块缓冲，任何一端都不会露白。
+   ⚠️ 上挪一整块正好等于一个平铺周期 ⇒ 图案在视口里的位置跟「贴在视口顶部」完全一样，
+      初始偏移不需要改。 */
+.bg-doodle--a {
+    top: -1360px;
+    height: calc(100% + 2720px);
+    -webkit-mask-image: url('__inline-svg:bg-doodle-a.svg');
+    mask-image: url('__inline-svg:bg-doodle-a.svg');
+    -webkit-mask-size: 1680px 1360px;
+    mask-size: 1680px 1360px;
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+}
+
+.bg-doodle--b {
+    top: -920px;
+    height: calc(100% + 1840px);
+    -webkit-mask-image: url('__inline-svg:bg-doodle-b.svg');
+    mask-image: url('__inline-svg:bg-doodle-b.svg');
+    -webkit-mask-size: 1120px 920px;
+    mask-size: 1120px 920px;
+    /* B 块自己的初始偏移（跟 A 的格子错开，原来是 mask-position 的第二层） */
+    -webkit-mask-position: 190px 110px;
+    mask-position: 190px 110px;
 }
 
 @media print {
-    body::before { display: none; }
+    .bg-doodle { display: none; }
 }
 
 body {
@@ -1590,14 +1626,36 @@ html[lang='zh-CN'] .typography-body i {
     height: auto;
     display: block;
 }
-/* 占位内可选提示（如 {{youtube ID cn}} 的大陆不可访问提示） */
+/* 占位内可选区域限制提示 */
 .video-embed-note {
-    width: 100%; /* 撑满可用宽度，避免被文字内容宽度限制 */
+    box-sizing: border-box;
+    width: fit-content;
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45em;
+    padding: 0.45em 0.7em;
+    border: 1px solid var(--video-note-amber-border);
+    border-radius: 8px;
+    background: var(--video-note-amber-bg);
     font-size: 0.85em; /* 动态：相对正文继承的字号缩放，跟随主题字体设置 */
     line-height: 1.5;
-    color: var(--video-fg);
-    opacity: 0.85;
+    color: var(--video-note-amber);
     font-feature-settings: "liga", "calt", "halt", var(--inter-variant-features); /* 继承用户设置的标点宽度（halt 半宽） */
+}
+.video-embed-note svg {
+    display: block;
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+}
+.video-embed-note .video-embed-note-region-mark {
+    width: 1.7em;
+    height: 0.95em;
+}
+.video-embed-note-label {
+    line-height: 1.2;
 }
 
 .video-embed iframe {
@@ -2917,7 +2975,7 @@ html[lang='en-US'] .post-title-link {
     user-select: none;
 }
 
-/* ⚠️ 半透明淡染**不能**写在 background 上：页面背景有线稿图案（body::before 的 mask），
+/* ⚠️ 半透明淡染**不能**写在 background 上：页面背景有线稿图案（.bg-doodle 的 mask），
    半透明底会让图案透进按钮里。改成两层叠层 —— ::before 垫一层不透明的 --card-bg，
    ::after 才是那层淡染，两层一起淡入淡出（opacity 可插值，background 从 none 切到颜色会瞬跳）。 */
 .tag-filter-btn::before,
