@@ -74,7 +74,7 @@ const gsfItalicCss =
 
  <link rel="preconnect" href="https://fonts.googleapis.com" />
  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
- <link rel="stylesheet" href={cjkGoogleFontsUrl} />
+ <link rel="stylesheet" href={cjkGoogleFontsUrl} rel="stylesheet"/>
 
  {/* GSF 只有一个 face（按轴请求的整份字体），用 true（= 该族全部 face）比 subset 过滤稳；
       其余族按 subset 过滤，避免把 latin-ext / italic 也一起 preload 掉 */}
