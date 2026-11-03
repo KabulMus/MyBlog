@@ -30,6 +30,7 @@
  * ⚠️ preload 链接自带 crossorigin（同源也要写）：凭据模式不一致会重复下载一次。
  */
 import { Font } from 'astro:assets';
+// @ts-ignore Astro supplies this internal virtual module at build time without a TS declaration.
 import { componentDataByCssVariable } from 'virtual:astro:assets/fonts/internal';
 import interFonts from '../generated/inter-fonts.json';
 import gsfItalic from '../generated/gsf-italic.json';
