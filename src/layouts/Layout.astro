@@ -233,7 +233,7 @@ function getLangSwitchHref(pathname: string) {
 		    "preloaded but not used" 警告）。改成单一候选后，<picture> 在解析阶段就被扫描到
 		    （实测与 preload 只差 14ms），没有 preload 也几乎同步开抓。 */}
 
-		<!-- 拉丁字体自托管，思源黑体/宋体通过 Google Fonts API 加载（由 FontFaces 注入 CSS 与 preconnect）。 -->
+		<!-- 拉丁字体自托管；JetBrains Mono 和思源黑体/宋体通过 Google Fonts API 加载。 -->
 		<FontFaces preload />
 		<meta name="generator" content={Astro.generator} />
 		<title>{pageTitleText}</title>

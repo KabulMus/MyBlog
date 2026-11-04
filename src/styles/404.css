@@ -62,7 +62,7 @@
 	transition: transform 0.3s ease, translate 0.3s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 	cursor: pointer;
 	flex-direction: row;
-    font-family: 'Google Sans Flex', 'Inter', 'Noto Sans SC Local', 'Noto Sans SC', sans-serif;
+    font-family: var(--font-google-sans-flex), 'Inter', 'Noto Sans SC Local', 'Noto Sans SC', sans-serif;
 }
 
 .card:hover { background-color: var(--primary-blue); color: var(--on-primary); box-shadow: var(--card-hover-shadow); }

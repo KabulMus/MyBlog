@@ -896,13 +896,9 @@ export default defineConfig({
     '/posts': '/archives',
     '/en-US/posts': '/en-US/archives',
   },
-  // ⚡️ 字体：Astro Fonts API 里的字体由构建时从 Google Fonts 自托管；
+  // ⚡️ Google Sans Flex / Encode Sans SC 由 Astro Fonts API 在构建时从 Google Fonts 获取并自托管；
+  //    JetBrains Mono 通过 FontFaces 的 Google Fonts CSS API 直接加载。
   //    InterVariable 则由 scripts/build-inter-fonts.mjs 从 rsms.me 下载并自托管。
-  //    Astro Fonts API 管理的字体会加内容哈希，CSS 中应通过对应 var(--font-xxx) 引用。
-  //    ⚠️ 拉丁族一律 `fallbacks: []`：var() 展开成「族名, 系统兜底, generic」，
-  //       若拉丁族自带 generic，它就会排在后面那个中文字族**前面**，
-  //       汉字会落到系统宋体/黑体而不是 Noto —— 中文排版静默变味（本地实测就是这么翻的车）。
-  //       栈尾的 generic 由 CSS 自己写（main.css 的 font-family 列表末尾本来就有）。
   //    Source Serif 4 不在这个列表里：它带 `size-adjust: 110%`（正文排版按这个调过），
   //    Fonts API 没有暴露 size-adjust ⇒ 改为本地自托管（src/styles/fonts/，@font-face 在 source-serif-4.css）。
   fonts: [
@@ -918,38 +914,14 @@ export default defineConfig({
     },
     {
       provider: fontProviders.google(),
-      name: 'JetBrains Mono',
-      cssVariable: '--font-jetbrains-mono',
-      weights: ['100 800'],
-      styles: ['normal', 'italic'],
-      subsets: ['latin', 'latin-ext'],
-      fallbacks: [],
-    },
-    {
-      provider: fontProviders.google(),
       name: 'Google Sans Flex',
       cssVariable: '--font-google-sans-flex',
       weights: ['1 1000'],
       subsets: ['latin'],
       fallbacks: [],
-      // ⚠️ font-display: block（只给这一族）：
-      //    swap 的语义是「先用兜底字形画，字体到了再换」⇒ 冷缓存下必然先闪一下 Inter，
-      //    而这一族是站名/大标题用的，换字非常扎眼。
-      //    block 则是「字形没到就先不画」，绝不会出现「错误字形 → 正确字形」的跳变。
-      //    真拿不到时浏览器的 block 期（约 3 s）过后会自动落到 Inter，不会永远空着。
-      // ⚠️ 代价：极慢网络下标题文字会晚到（标题当 LCP 元素时 LCP 被推迟）。
-      //    若更在意 LCP 而不是字形一致性，把这里换成 display: 'optional'
-      //    （首访直接定格 Inter、永不换字；缓存命中后才用 GSF）。
+      // block 避免站名标题先用 Inter 绘制后再跳换成 GSF；极慢网络下最多延迟约 3 秒。
       display: 'block',
-      // ⚠️ 轴：**opsz / wdth / wght 三个都必须保留**（用户明确要求 opsz 不能去掉）。
-      //    - opsz：`font-optical-sizing: auto` 靠它，大字号下的字形是按 opsz 设计过的；
-      //            实测 73.6px 处带 opsz 与不带 opsz 宽度差 4%（461.61 vs 480.8）。
-      //    - wdth：首页标题 fitHomeTitle 二分 font-stretch 撑满靠它。
-      //    - wght：最粗 1000 的站名标题靠它。
-      //    代价：这一族是站上最大的单个字体（实测 368 KB）。**不要**为了省体积砍轴或按字符裁剪 ——
-      //    砍 opsz 会改变字形、按字符裁剪会让标题里的生僻拉丁字母静默回退到 Inter。
-      //    「不闪」这件事交给下面的 font-display: block + FontFaces 里的 preload 解决，
-      //    不再靠缩体积。
+      // opsz 控制光学尺寸，wdth 用于首页标题宽度拟合，wght 支持最粗的站名标题。
       options: { experimental: { variableAxis: { opsz: ['6', '144'], wdth: ['25', '151'] } } },
     },
     // 中文两族通过 FontFaces 中的 Google Fonts CSS API <link> 加载，以避免将大量 unicode-range 规则内联进页面。
