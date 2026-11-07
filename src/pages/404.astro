@@ -5,6 +5,8 @@ import '../styles/main.css';
 import '../styles/404.css';
 import FontFaces from '../components/FontFaces.astro';
 import BgDoodles from '../components/BgDoodles.astro';
+
+const currentYear = new Date().getFullYear();
 ---
 
 <html lang="zh-CN" data-pagefind-ignore>
@@ -42,7 +44,7 @@ import BgDoodles from '../components/BgDoodles.astro';
 				</section>
 
 				<footer>
-					<p>© 2026 Ethan Shaw</p>
+					<p>© {currentYear} Ethan Shaw</p>
 					<p>Built with love for Charlie and you all</p>
 				</footer>
 			</section>

@@ -20,6 +20,7 @@ interface Props {
 
 const { frontmatter, title, description, brandUrl, brandText } = Astro.props;
 const katexCss = katexAsset.css;
+const currentYear = new Date().getFullYear();
 const currentPath = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const isEnglishRoute = currentPath.includes('/en-US');
 // 首页（中/英）不进 pagefind 索引：搜索只命中具体文章页
@@ -559,7 +560,7 @@ function getLangSwitchHref(pathname: string) {
 
 		<footer>
 			<a href={isEnglishRoute ? 'https://www.ethan929.com/en-US/info' : 'https://www.ethan929.com/info'}>{isEnglishRoute ? 'Tech & Copyright' : '技术与版权'}</a>
-			<p>© 2026 Ethan Shaw</p>
+			<p>© {currentYear} Ethan Shaw</p>
 			<p>Built with love for Charlie and you all</p>
 		</footer>
 
