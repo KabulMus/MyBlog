@@ -1,0 +1,125 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { renderTypographicHtml } from '../lib/posts';
+import '../styles/rss.css';
+---
+
+<Layout
+	title={'Subscribe <span class="rss-title-light">with</span> RSS'}
+	brandUrl="https://www.ethan929.com/"
+	brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
+>
+	<link slot="head" rel="alternate" type="application/rss+xml" href="https://blog.ethan929.com/rss.xml" />
+	<section class="rss-guide">
+		<div class="rss-quick-copy" role="group" aria-label="快捷复制订阅地址">
+			<button type="button" class="rss-copy-button rss-quick-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/rss.xml" aria-label="复制简体中文 RSS 地址">中文RSS</button>
+			<button type="button" class="rss-copy-button rss-quick-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="复制英文 RSS 地址">英文RSS</button>
+		</div>
+
+		<h2 set:html={renderTypographicHtml('何为RSS')}></h2>
+		<p set:html={renderTypographicHtml('RSS（RDF Site Summary, Really Simple Syndication）是一种基于XML的网络内容发布汇总格式，用于向用户即时推送更新的网络内容。')}></p>
+		<p set:html={renderTypographicHtml('RSS允许网站内容提供者将其更新的内容以标准的结构化数据输出。用户可以通过专门的RSS阅读器订阅多个网站的RSS摘要，在一个统一界面中集中阅读不同来源的最新更新，而无需逐个访问各个网站。')}></p>
+
+		<h2 set:html={renderTypographicHtml('订阅Ethan\'s Blog')}></h2>
+
+		<h3 set:html={renderTypographicHtml('1. 选择RSS阅读器')} style="font-variant-numeric: tabular-nums;"></h3>
+		<p set:html={renderTypographicHtml('订阅RSS需要RSS阅读器。如果你还没有阅读器，这里可以为你提供一些选择：')}></p>
+		<div class="rss-reader-table-wrap" role="region" aria-label="RSS 阅读器对比" tabindex="0">
+			<table class="rss-reader-table">
+				<thead>
+					<tr>
+						<th scope="col">阅读器</th>
+						<th scope="col">平台</th>
+						<th scope="col">特点</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><a href="https://feedly.com/" target="_blank" rel="noopener noreferrer">Feedly</a></td>
+						<td><icons>iOS android ie</icons></td>
+						<td>支持多设备使用，适合有跨设备同步阅读需求的读者。</td>
+					</tr>
+					<tr>
+						<td><a href="https://www.inoreader.com/" target="_blank" rel="noopener noreferrer">Ino&ZeroWidthSpace;reader</a></td>
+						<td><icons>iOS android ie</icons></td>
+						<td>提供网页和移动端阅读器，同时支持用文件夹整理订阅。</td>
+					</tr>
+					<tr>
+						<td><a href="https://netnewswire.com/" target="_blank" rel="noopener noreferrer">Net&ZeroWidthSpace;News&ZeroWidthSpace;Wire</a></td>
+						<td><icons>macOS iOS</icons></td>
+						<td>免费、开源，适合使用Apple设备的读者。</td>
+					</tr>
+					<tr>
+						<td><a href="https://www.thunderbird.net/" target="_blank" rel="noopener noreferrer">Thunder&ZeroWidthSpace;bird</a></td>
+						<td><icons>windows macOS Linux</icons></td>
+						<td>桌面邮件客户端自带RSS订阅功能，可以把邮件和订阅放在一起管理。</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+
+		<h3 set:html={renderTypographicHtml('2. 订阅地址')} style="font-variant-numeric: tabular-nums;"></h3>
+		<p set:html={renderTypographicHtml('Ethan\'s Blog提供简体中文、英文的RSS。请复制下方地址进行订阅：')}></p>
+		<div class="rss-feed-addresses">
+			<div class="rss-feed-address">
+				<span class="rss-feed-label">中文</span>
+				<code>https://blog.ethan929.com/rss.xml</code>
+				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/rss.xml" aria-label="复制简体中文 RSS 地址">复制</button>
+			</div>
+			<div class="rss-feed-address">
+				<span class="rss-feed-label">英文</span>
+				<code>https://blog.ethan929.com/en-US/rss.xml</code>
+				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="复制英文 RSS 地址">复制</button>
+			</div>
+		</div>
+
+		<h3 set:html={renderTypographicHtml('3. 添加订阅')} style="font-variant-numeric: tabular-nums;"></h3>
+		<p set:html={renderTypographicHtml('在大部分阅读器中，你可以通过以下步骤添加订阅：')}></p>
+		<ol>
+			<li set:html={renderTypographicHtml('打开你下载好的RSS阅读器。')}></li>
+			<li set:html={renderTypographicHtml('找到并点击「添加订阅」或右上角的 + 加号。')}></li>
+			<li set:html={renderTypographicHtml('粘贴刚才复制的订阅地址，点击「确认/搜索」，选择「订阅」即可。')}></li>
+		</ol>
+		<p class="rss-note" set:html={renderTypographicHtml('不同阅读器的操作可能略有差异。')}></p>
+
+		<h3 set:html={renderTypographicHtml('4. 常见问题')} style="font-variant-numeric: tabular-nums;"></h3>
+		<div class="rss-faq-dialogue" role="group">
+			<p class="rss-faq-question" set:html={renderTypographicHtml('为什么打开订阅地址是一堆密密麻麻的代码？')}></p>
+			<p class="rss-faq-answer" set:html={renderTypographicHtml('这是正常现象！RSS订阅地址是专门给阅读器软件读取的数据格式，不需要在浏览器里直接看。你只需要复制该网页的地址，粘贴进你的RSS阅读器即可。')}></p>
+		</div>
+		<div class="rss-faq-dialogue" role="group">
+			<p class="rss-faq-question" set:html={renderTypographicHtml('订阅需要付费吗？')}></p>
+			<p class="rss-faq-answer" set:html={renderTypographicHtml('完全免费！RSS是一种开放的网络协议，本站不会收取任何订阅费用。')}></p>
+		</div>
+		<div class="rss-faq-dialogue" role="group">
+			<p class="rss-faq-question" set:html={renderTypographicHtml('什么时候能收到更新？')}></p>
+			<p class="rss-faq-answer" set:html={renderTypographicHtml('只要本站发布新文章，你的RSS阅读器就会在下一次刷新时自动抓取并提醒你。')}></p>
+		</div>
+
+		<p set:html={renderTypographicHtml('祝阅读愉快！✨')} style="text-align: center; font-size: 2rem; font-weight: 700;"></p>
+	</section>
+</Layout>
+
+<script>
+	const guide = document.querySelector<HTMLElement>('.rss-guide');
+	const showToast = (window as Window & {
+		showToast: (message: string, isError?: boolean) => void;
+	}).showToast;
+
+	guide?.querySelectorAll<HTMLButtonElement>('[data-rss-copy]').forEach((copyButton) => {
+		copyButton.addEventListener('click', async () => {
+			const feedUrl = copyButton.dataset.feedUrl;
+			if (!feedUrl) {
+				showToast('复制失败', true);
+				return;
+			}
+			try {
+				await navigator.clipboard.writeText(feedUrl);
+				showToast('RSS地址已复制');
+			} catch {
+				showToast('复制失败', true);
+			}
+		});
+	});
+</script>

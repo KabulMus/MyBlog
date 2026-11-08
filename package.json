@@ -23,6 +23,8 @@
     "@astrojs/sitemap": "^3.7.3",
     "abcjs": "^6.7.0",
     "astro": "^7.0.2",
+    "hyphenation.en-us": "^0.2.1",
+    "hypher": "^0.2.5",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",

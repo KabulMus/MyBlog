@@ -1,0 +1,203 @@
+---
+import licenseBadge from '../assets/cc-by-nc-sa.svg?raw';
+import ccMark from '../assets/cc.svg?raw';
+
+interface Props {
+	title: string;
+	url: string;
+	author: string;
+	date: string;
+	isEnglish: boolean;
+}
+
+const { title, url, author, date, isEnglish } = Astro.props;
+const licenseUrl = isEnglish
+	? 'https://creativecommons.org/licenses/by-nc-sa/4.0/'
+	: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
+---
+
+<aside class="copyright-card" data-pagefind-ignore aria-label={isEnglish ? 'Article information' : '文章信息'}>
+	<span class="cc-decoration" aria-hidden="true" set:html={ccMark} />
+	<div class="copyright-heading">
+		<p class="copyright-title">{title}</p>
+		<a class="copyright-url" href={url}>{url}</a>
+	</div>
+	<dl class="copyright-details">
+		<div>
+			<dt>{isEnglish ? 'Author' : '作者'}</dt>
+			<dd>{author}</dd>
+		</div>
+		<div>
+			<dt>{isEnglish ? 'Date' : '日期'}</dt>
+			<dd>{date}</dd>
+		</div>
+		<div>
+			<dt>{isEnglish ? 'License' : '许可协议'}</dt>
+			<dd>
+				<a class="license-link" href={licenseUrl} rel="license">CC BY-NC-SA 4.0</a>
+			</dd>
+		</div>
+	</dl>
+	<div class="license-explanation">
+		<span class="license-badge" aria-hidden="true" set:html={licenseBadge} />
+		<p>
+			{isEnglish
+				? <>You are free to share and adapt this work for non-commercial purposes, <br class="license-line-break" />with attribution and under the same license.</>
+				: <>您可以自由地出于非商业目的共享和演绎本作品，<br class="license-line-break" />惟须署名，并基于相同的许可协议。</>}
+		</p>
+	</div>
+</aside>
+
+<style>
+	.copyright-card {
+		position: relative;
+		margin: 2.5rem 0 1.5rem;
+		padding: 1.25rem 1.5rem;
+		border: 1px solid var(--item-border);
+		border-radius: var(--card-radius);
+		background: var(--card-bg);
+		overflow: hidden;
+		container-type: inline-size;
+		color: var(--text-main);
+		font-size: 0.9rem;
+		line-height: 1.65;
+	}
+
+	.cc-decoration {
+		position: absolute;
+		right: -2rem;
+		bottom: -2rem;
+		z-index: 0;
+		width: 10rem;
+		height: 10rem;
+		color: var(--text-sub);
+		opacity: 0.1;
+		pointer-events: none;
+	}
+
+	.cc-decoration :global(svg) {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+
+	.copyright-heading {
+		position: relative;
+		z-index: 1;
+		display: grid;
+		gap: 0.15rem;
+		margin-bottom: 1rem;
+	}
+
+	.copyright-title {
+		margin: 0;
+		font-size: 1.2rem;
+		font-weight: 650;
+		line-height: 1.4;
+	}
+
+	.copyright-url {
+		display: inline-block;
+		justify-self: start;
+		width: fit-content;
+		max-width: 100%;
+		font-size: 0.8rem;
+		overflow-wrap: anywhere;
+	}
+
+	.copyright-details {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 1rem 2rem;
+		margin: 0;
+	}
+
+	.copyright-details > div {
+		flex: 0 0 auto;
+		min-width: 0;
+		max-width: 100%;
+	}
+
+	dt {
+		color: var(--text-sub);
+		font-size: 0.8rem;
+		font-family: 'Encode Sans SC', 'Inter', 'Noto Sans SC', sans-serif;
+	}
+
+	dd {
+		margin: 0;
+		min-width: 0;
+		overflow-wrap: anywhere;
+		font-weight: 550;
+	}
+
+	a {
+		color: var(--primary-blue);
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+
+	.license-explanation {
+		position: relative;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		gap: 0.9rem;
+		margin: 0.9rem 0 0;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--item-border);
+		color: var(--text-sub);
+		font-size: 0.82rem;
+	}
+
+	.license-badge {
+		display: block;
+		width: 120px;
+		height: 42px;
+		flex: 0 0 auto;
+		color: var(--text-main);
+	}
+
+	.license-badge :global(svg) {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+
+	.license-badge :global(svg path),
+	.license-badge :global(svg circle) {
+		fill: currentColor;
+	}
+
+	.license-explanation p {
+		flex: 1 1 0;
+		min-width: 0;
+		margin: 0;
+	}
+
+	@container (max-width: 36.5rem) {
+		.license-line-break {
+			display: none;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.copyright-card {
+			padding: 1rem;
+		}
+
+		.copyright-details {
+			gap: 0.75rem 1rem;
+		}
+
+		.copyright-title {
+			font-size: 1.05rem;
+		}
+
+		.copyright-url {
+			font-size: 0.72rem;
+		}
+	}
+</style>

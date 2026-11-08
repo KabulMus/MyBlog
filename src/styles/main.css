@@ -17,6 +17,13 @@
    ⚠️ font-display: block：字形没就绪时「先不画、就绪再画」，避免闪一下豆腐块。 */
 @font-face { font-family: 'Bravura-Digits'; src: url('/fonts/Bravura-Symbols.woff2') format('woff2'); font-display: block; }
 
+@font-face {
+    font-family: 'Icons';
+    src: url('/fonts/Icons-Regular.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+}
 
 /* CatNotoSC - 分类（cat）筛选按钮专用的中文子集（作者自建，只有那几个字，~7.9 KB）。
    为什么需要它：`Encode Sans SC` 是拉丁 Small Caps 族、没有汉字，中文标签会一路回退到
@@ -180,6 +187,11 @@
     }
 }
 
+icons {
+    font-family: 'Icons';
+    font-weight: 400;
+}
+
 /* --- 3. 基础复位 --- */
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
 
@@ -271,7 +283,7 @@ body {
     color: var(--text-main);
     line-height: 1.6;
     line-break: strict;
-    --inter-variant-features: "ss03" 0, "cv03" 0, "cv04" 0, "cv06" 0, "cv09" 0, "cv11" 0, "cv05" 0, "ss08" 0;
+    --inter-variant-features: "ss03" 0, "cv02" 0, "cv03" 0, "cv04" 0, "cv06" 0, "cv09" 0, "cv11" 0, "cv05" 0, "ss08" 0;
     font-feature-settings: "liga" 1, "calt" 1, "halt" 1, var(--inter-variant-features);
     /* CJK 跟西文/数字交界处自动让出 1/8 em 的空隙（CSS Text 4 的 text-autospace）。
        挂在 body 上是「全站所有文字都吃」：正文、标题、卡片、标签、导航、页脚，还有编辑器
@@ -291,7 +303,7 @@ body {
    变量缺失会让整条 font-feature-settings 变成无效值，连 halt 一起丢掉。 */
 body.is-rant-article .typography-body,
 body.is-rants-index .rant-card-body {
-    --inter-variant-features: "ss03" 1, "cv03" 1, "cv04" 1, "cv06" 1, "cv09" 1, "cv11" 1, "cv05" 1, "ss08" 1;
+    --inter-variant-features: "ss03" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv06" 1, "cv09" 1, "cv11" 1, "cv05" 1, "ss08" 1;
     font-family: var(--font-inter), 'Noto Sans SC', -apple-system, sans-serif;
     /* 必须在这里再声明一次：font-feature-settings 在 body 上就已经算完了，
        只改后代的自定义属性不会让它重新求值（继承的是计算结果，不是表达式）。 */
@@ -1451,7 +1463,22 @@ html[lang='zh-CN'] .typography-body i {
     border-bottom-color: var(--primary-blue);
 }
 
-/* ==========================================================================
+.typography-body .copyright-card .copyright-url,
+.typography-body .copyright-card .copyright-url:hover {
+    color: var(--text-sub);
+}
+.typography-body .copyright-card .copyright-url:hover {
+    border-bottom-color: var(--text-sub);
+}
+.typography-body .copyright-card .license-link,
+.typography-body .copyright-card .license-link:hover {
+    color: var(--text-main);
+}
+.typography-body .copyright-card .license-link:hover {
+    border-bottom-color: var(--text-main);
+}
+
+/*
    📊 规范三线表（Three-line Tables）- 极简纤细学术风
    ========================================================================== */
 

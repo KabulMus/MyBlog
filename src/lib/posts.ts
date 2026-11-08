@@ -1,5 +1,6 @@
 // 列表页共用的文章工具：日期/时间格式化、引号处理、文章链接
 // ⚠️ 中英文站各一套（靠 lang 区分），改一处两边一起生效
+import { keepsFullWidth } from './punct-width.mjs';
 
 export type Lang = 'zh' | 'en';
 
@@ -112,6 +113,20 @@ const TITLE_EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F
 
 function escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** 以和 Markdown 正文相同的规则渲染纯文本片段（智能引号、开明式句末标点）。 */
+export function renderTypographicHtml(raw: string): string {
+    const text = smartQuotes(String(raw ?? ''));
+    let html = '';
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const escaped = escapeHtml(char);
+        html += /[。！？]/.test(char) && keepsFullWidth(text, i)
+            ? `<span class="punct-full">${escaped}</span>`
+            : escaped;
+    }
+    return html;
 }
 
 export function renderTitleHtml(raw: string): string {

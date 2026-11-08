@@ -1,0 +1,124 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { renderTypographicHtml } from '../../lib/posts';
+import '../../styles/rss.css';
+---
+
+<Layout
+	title={'Subscribe <span class="rss-title-light">with</span> RSS'}
+	brandUrl="https://www.ethan929.com/en-US/"
+	brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
+>
+	<link slot="head" rel="alternate" type="application/rss+xml" title="Ethan's Blog RSS" href="https://blog.ethan929.com/en-US/rss.xml" />
+	<section class="rss-guide">
+		<div class="rss-quick-copy" role="group" aria-label="Quick copy feed addresses">
+			<button type="button" class="rss-copy-button rss-quick-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="Copy English RSS feed">English RSS</button>
+			<button type="button" class="rss-copy-button rss-quick-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/rss.xml" aria-label="Copy Simplified Chinese RSS feed">Chinese RSS</button>
+		</div>
+
+		<h2 set:html={renderTypographicHtml('What is RSS?')}></h2>
+		<p set:html={renderTypographicHtml('RSS (RDF Site Summary, Really Simple Syndication) is an XML-based web content syndication format that delivers updates from websites to readers.')}></p>
+		<p set:html={renderTypographicHtml('Websites publish updates in a standard, structured format. With an RSS reader, you can subscribe to multiple sites and follow their latest posts in one place, without visiting each site individually.')}></p>
+
+		<h2 set:html={renderTypographicHtml("Subscribe to Ethan's Blog")}></h2>
+
+		<h3 set:html={renderTypographicHtml('1. Choose an RSS reader')} style="font-variant-numeric: tabular-nums;"></h3>
+		<p set:html={renderTypographicHtml("You'll need an RSS reader to subscribe. If you don't already have one, here are a few options:")}></p>
+		<div class="rss-reader-table-wrap" role="region" aria-label="RSS reader comparison" tabindex="0">
+			<table class="rss-reader-table">
+				<thead>
+					<tr>
+						<th scope="col">Reader</th>
+						<th scope="col">Platforms</th>
+						<th scope="col">Features</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td><a href="https://feedly.com/" target="_blank" rel="noopener noreferrer">Feedly</a></td>
+						<td><icons>iOS android ie</icons></td>
+						<td>Works across devices and is a good fit if you want your reading synced between them.</td>
+					</tr>
+					<tr>
+						<td><a href="https://www.inoreader.com/" target="_blank" rel="noopener noreferrer">Ino&ZeroWidthSpace;reader</a></td>
+						<td><icons>iOS android ie</icons></td>
+						<td>Offers web and mobile apps, with folders to help organize your subscriptions.</td>
+					</tr>
+					<tr>
+						<td><a href="https://netnewswire.com/" target="_blank" rel="noopener noreferrer">Net&ZeroWidthSpace;News&ZeroWidthSpace;Wire</a></td>
+						<td><icons>macOS iOS</icons></td>
+						<td>Free and open source; a good fit for readers in the Apple ecosystem.</td>
+					</tr>
+					<tr>
+						<td><a href="https://www.thunderbird.net/" target="_blank" rel="noopener noreferrer">Thunder&ZeroWidthSpace;bird</a></td>
+						<td><icons>windows macOS Linux</icons></td>
+						<td>A desktop email client with built-in RSS, so you can manage feeds alongside your email.</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+
+		<h3 set:html={renderTypographicHtml('2. Choose a feed address')} style="font-variant-numeric: tabular-nums;"></h3>
+		<p set:html={renderTypographicHtml("Ethan's Blog has separate RSS feeds in English and Simplified Chinese. Copy the address for the language you'd like to follow:")}></p>
+		<div class="rss-feed-addresses">
+			<div class="rss-feed-address">
+				<span class="rss-feed-label">English</span>
+				<code>https://blog.ethan929.com/en-US/rss.xml</code>
+				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="Copy English RSS feed">Copy</button>
+			</div>
+			<div class="rss-feed-address">
+				<span class="rss-feed-label">Chinese</span>
+				<code>https://blog.ethan929.com/rss.xml</code>
+				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/rss.xml" aria-label="Copy Simplified Chinese RSS feed">Copy</button>
+			</div>
+		</div>
+
+		<h3 set:html={renderTypographicHtml('3. Add the feed to your reader')} style="font-variant-numeric: tabular-nums;"></h3>
+		<p set:html={renderTypographicHtml('In most readers, you can add a feed like this:')}></p>
+		<ol>
+			<li set:html={renderTypographicHtml('Open your RSS reader.')}></li>
+			<li set:html={renderTypographicHtml('Choose “Add subscription” or “Add feed” (often shown as a + button).')}></li>
+			<li set:html={renderTypographicHtml('Paste the feed address, choose “Confirm” or “Search,” then select “Subscribe.”')}></li>
+		</ol>
+		<p class="rss-note" set:html={renderTypographicHtml('The exact steps may vary slightly between readers.')}></p>
+
+		<h3 set:html={renderTypographicHtml('4. Frequently asked questions')} style="font-variant-numeric: tabular-nums;"></h3>
+		<div class="rss-faq-dialogue" role="group" aria-label="Frequently asked questions">
+			<p class="rss-faq-question" set:html={renderTypographicHtml('Why does the feed address open as a wall of code?')}></p>
+			<p class="rss-faq-answer" set:html={renderTypographicHtml("That's normal! The RSS feed is formatted for reader apps, so you don't need to read it in your browser. Just copy the feed address and paste it into your RSS reader.")}></p>
+		</div>
+		<div class="rss-faq-dialogue" role="group" aria-label="Frequently asked questions">
+			<p class="rss-faq-question" set:html={renderTypographicHtml('Do I have to pay to subscribe?')}></p>
+			<p class="rss-faq-answer" set:html={renderTypographicHtml("No, it's completely free! RSS is an open web standard, and this site doesn't charge any subscription fees.")}></p>
+		</div>
+		<div class="rss-faq-dialogue" role="group" aria-label="Frequently asked questions">
+			<p class="rss-faq-question" set:html={renderTypographicHtml('When will I get updates?')}></p>
+			<p class="rss-faq-answer" set:html={renderTypographicHtml('When a new post is published, your reader will fetch it the next time it refreshes and can notify you.')}></p>
+		</div>
+
+		<p set:html={renderTypographicHtml('Happy reading! ✨')} style="text-align: center; font-size: 2rem; font-weight: 700;"></p>
+	</section>
+</Layout>
+
+<script>
+	const guide = document.querySelector<HTMLElement>('.rss-guide');
+	const showToast = (window as Window & {
+		showToast: (message: string, isError?: boolean) => void;
+	}).showToast;
+
+	guide?.querySelectorAll<HTMLButtonElement>('[data-rss-copy]').forEach((copyButton) => {
+		copyButton.addEventListener('click', async () => {
+			const feedUrl = copyButton.dataset.feedUrl;
+			if (!feedUrl) {
+				showToast('Copy failed', true);
+				return;
+			}
+			try {
+				await navigator.clipboard.writeText(feedUrl);
+				showToast('RSS feed address copied');
+			} catch {
+				showToast('Copy failed', true);
+			}
+		});
+	});
+</script>

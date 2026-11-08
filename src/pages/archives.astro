@@ -8,7 +8,7 @@ const LANG: Lang = 'zh';
 // 只收成篇的：吐槽住在 blog/rants/ 下，走 /ramblings 那条线
 const markdownFiles = import.meta.glob('./blog/**/index.md', { eager: true });
 
-const posts = Object.values(markdownFiles)
+const posts = (Object.values(markdownFiles) as any[])
     .filter((p: any) => !p.url.startsWith('/blog/en-US/') && !p.url.includes('/rants/') && !p.url.includes('/drafts/') && !p.frontmatter?.draft)
     .sort((a: any, b: any) => new Date(b.frontmatter?.date || 0).getTime() - new Date(a.frontmatter?.date || 0).getTime());
 
@@ -45,7 +45,6 @@ const rows = years.map((group) => ({
 
 <Layout
     title="Archives"
-    description="全部文章，按年份排列。"
     brandUrl="https://www.ethan929.com/"
     brandText='<img src="/images/avatar-64.webp" alt="Avatar" class="nav-avatar" width="32" height="32"><span>Ethan</span>'
 >

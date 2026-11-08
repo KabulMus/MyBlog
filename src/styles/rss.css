@@ -1,0 +1,146 @@
+.rss-guide {
+    max-width: 720px;
+    margin: 0 auto 3rem;
+}
+
+.typography-body .rss-guide h2 {
+    margin-top: 1.8rem;
+}
+
+.page-hero h1 .rss-title-light {
+    font-weight: 300;
+    font-stretch: 25%;
+}
+
+body.is-rss-page:not(.is-article-page) .page-hero h1 {
+    --rss-title-width: calc(100cqw - 65.5px);
+    width: max-content;
+    max-width: 100%;
+    font-size: max(
+        min(44.8px, calc(-1.4316px + 0.146372 * var(--rss-title-width))),
+        min(60px, calc(2.23324px + 0.0759779 * var(--rss-title-width)))
+    );
+    font-weight: 1000;
+    font-stretch: clamp(25%, min(
+        calc((100 * var(--rss-title-width) / 1px - 29136) / 95.7667 * 1%),
+        calc((100 * var(--rss-title-width) / 1px - 4022.5) / 346.9 * 1%)
+    ), 150%);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.rss-guide ol {
+    padding-left: 1.5rem;
+}
+
+.rss-quick-copy {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+    font-weight: 600;
+}
+
+.rss-quick-copy-button {
+    width: 100%;
+    border-color: var(--color-blue-border);
+    background: var(--color-blue-bg);
+    color: var(--primary-blue);
+    font-size: 0.9rem;
+}
+
+.rss-quick-copy-button:hover {
+    border-color: var(--primary-blue);
+}
+
+.rss-faq-dialogue {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1rem 0 1.5rem;
+}
+
+.typography-body .rss-faq-dialogue p {
+    width: fit-content;
+    max-width: 90%;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--item-border);
+    color: var(--text-main);
+}
+
+.typography-body .rss-faq-question {
+    align-self: flex-end;
+    border-color: var(--color-blue-border);
+    border-radius: 16px 16px 4px 16px;
+    background: var(--color-blue-bg);
+}
+
+.typography-body .rss-faq-answer {
+    align-self: flex-start;
+    border-radius: 16px 16px 16px 4px;
+    background: var(--card-bg);
+}
+
+.rss-feed-addresses {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin: 0.25rem 0 1.25rem;
+}
+
+.rss-feed-address {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem 0.75rem;
+}
+
+.rss-feed-label {
+    flex: 0 0 5.5rem;
+    align-self: center;
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}
+
+.rss-feed-address code {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 2.75rem;
+    overflow-wrap: anywhere;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--item-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-main);
+}
+
+.rss-copy-button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 2.75rem;
+    padding: 0 0.85rem;
+    border: 1px solid var(--item-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    font: inherit;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.rss-copy-button:hover {
+    color: var(--primary-blue);
+    border-color: var(--color-blue-border);
+    background: var(--color-blue-bg);
+}
+
+.typography-body .rss-note {
+    color: var(--text-sub);
+    font-size: 0.9rem;
+}

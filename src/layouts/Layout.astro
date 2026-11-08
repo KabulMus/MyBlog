@@ -1,6 +1,7 @@
 ---
 import '../styles/main.css'
 import LikeButton from '../components/LikeButton.astro';
+import CopyrightCard from '../components/CopyrightCard.astro';
 import FontFaces from '../components/FontFaces.astro';
 import BgDoodles from '../components/BgDoodles.astro';
 import katexAsset from '../generated/katex.json';
@@ -25,6 +26,7 @@ const currentPath = Astro.url.pathname.replace(/\/+$/, "") || "/";
 const isEnglishRoute = currentPath.includes('/en-US');
 // 首页（中/英）不进 pagefind 索引：搜索只命中具体文章页
 const isHome = currentPath === '/' || currentPath === '/en-US';
+const isRssPage = currentPath === '/rss' || currentPath === '/en-US/rss';
 const htmlLang = isEnglishRoute ? 'en-US' : 'zh-CN';
 const resolvedBrandUrl = brandUrl || (isEnglishRoute ? '/en-US' : '/');
 const langSwitchHref = getLangSwitchHref(currentPath);
@@ -50,6 +52,7 @@ const navSection = currentPath === navHrefs.blog ? 'blog'
     : '';
 // 这些是「导航类」页面，本身不进 pagefind 索引（搜索只该命中具体文章页）
 const isListingPage = isHome || isRantsRoute || currentPath === navHrefs.posts || currentPath === navHrefs.search;
+const isArticlePage = Boolean(frontmatter?.date && currentPath.startsWith('/blog/') && !frontmatter?.draft && !isListingPage);
 const menuAriaLabel = isEnglishRoute ? 'Menu' : '菜单';
 const themeAriaLabel = isEnglishRoute ? 'Toggle theme' : '切换亮暗模式';
 
@@ -78,6 +81,7 @@ const ogDescription = description || (isEnglishRoute
 const ogImage = 'https://blog.ethan929.com/favicon.webp';
 const pageDate = formatDate(frontmatter?.date || "");
 const pageTime = formatTime(frontmatter?.date || "");
+const articleUrl = new URL(currentPath, Astro.site ?? 'https://blog.ethan929.com').href;
 
 // 题图与文章同目录保存；由 astro:assets 生成 LCP 图片的 AVIF/WebP 版本。
 const heroSource = getArticleImage(currentPath, frontmatter?.image);
@@ -194,6 +198,8 @@ function getLangSwitchHref(pathname: string) {
     if (normalized === "/en-US/archives") return "/archives";
     if (normalized === "/search") return "/en-US/search";
     if (normalized === "/en-US/search") return "/search";
+    if (normalized === "/rss") return "/en-US/rss";
+    if (normalized === "/en-US/rss") return "/rss";
 
     if (normalized.includes('/en-US')) {
         return normalized.replace('/en-US', '');
@@ -263,6 +269,7 @@ function getLangSwitchHref(pathname: string) {
 		isRantArticle ? 'is-rant-article' : '',
 		currentPath === navHrefs.posts ? 'is-posts-index' : '',
 		currentPath === navHrefs.search ? 'is-search-page' : '',
+		isRssPage ? 'is-rss-page' : '',
 		isHome ? 'is-home' : '',
 		isListingPage ? 'is-listing-page' : '',
 	].filter(Boolean).join(' ')}>
@@ -288,7 +295,7 @@ function getLangSwitchHref(pathname: string) {
                 </a>
 				
 				<div class="nav-links desktop-only">
-					<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-nav-link rss-link" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} aria-label={isEnglishRoute ? 'Copy RSS feed link' : '复制 RSS 订阅链接'} title="RSS">
+					<a href={isEnglishRoute ? '/en-US/rss' : '/rss'} class="rss-nav-link rss-link" aria-label={isEnglishRoute ? 'How to use RSS' : 'RSS 订阅说明'}>
 						<svg viewBox="-4.8 -4.8 57.6 57.6" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="4.8" fill="none" stroke="currentColor"/></g></svg>
 					</a>
 					<span class="nav-divider" aria-hidden="true"></span>
@@ -298,7 +305,7 @@ function getLangSwitchHref(pathname: string) {
 					<a href={navHrefs.search} data-text={navLabels.search} class={navSection === 'search' ? 'active' : undefined}>{navLabels.search}</a>
 				</div>
 
-				<a href={isEnglishRoute ? '/en-US/rss.xml' : '/rss.xml'} class="rss-link mobile-rss mobile-only" data-copy={isEnglishRoute ? 'https://blog.ethan929.com/en-US/rss.xml' : 'https://blog.ethan929.com/rss.xml'} aria-label={isEnglishRoute ? 'Copy RSS feed link' : '复制 RSS 订阅链接'} title="RSS">
+				<a href={isEnglishRoute ? '/en-US/rss' : '/rss'} class="rss-link mobile-rss mobile-only" aria-label={isEnglishRoute ? 'How to use RSS' : 'RSS 订阅说明'}>
 					<svg viewBox="-4.8 -4.8 57.6 57.6" fill="none" aria-hidden="true"><g transform="translate(0 -6.5)"><path d="M8 26C19.046 26 28 34.954 28 46"/><path d="M8 14C25.673 14 40 28.327 40 46"/><circle cx="9" cy="45" r="4.8" fill="none" stroke="currentColor"/></g></svg>
 				</a>
 				<span class="mobile-rss-divider mobile-only" aria-hidden="true"></span>
@@ -505,7 +512,14 @@ function getLangSwitchHref(pathname: string) {
 			)}
 			{currentPath.startsWith('/blog') && (
 				<button class="toc-toggle-btn" id="toc-toggle" aria-label={isEnglishRoute ? 'Table of contents' : '目录'}>
-					<svg viewBox="0 0 24 24"><path d="M4 6.5h16"/><path d="M4 12h16"/><path d="M4 17.5h16"/></svg>
+					<svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<path d="M8 28C10.2091 28 12 26.2091 12 24C12 21.7909 10.2091 20 8 20C5.79086 20 4 21.7909 4 24C4 26.2091 5.79086 28 8 28Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+						<path d="M8 12C9.10457 12 10 11.1046 10 10C10 8.89543 9.10457 8 8 8C6.89543 8 6 8.89543 6 10C6 11.1046 6.89543 12 8 12Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+						<path d="M8 40C9.10457 40 10 39.1046 10 38C10 36.8954 9.10457 36 8 36C6.89543 36 6 36.8954 6 38C6 39.1046 6.89543 40 8 40Z" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+						<path d="M20 24H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M20 38H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+						<path d="M20 10H44" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
 				</button>
 			)}
 			{currentPath.startsWith('/blog') && (
@@ -513,6 +527,15 @@ function getLangSwitchHref(pathname: string) {
 			)}
 			<div class="post-body">
 				<slot />
+				{isArticlePage && (
+					<CopyrightCard
+						title={pageTitleText}
+						url={articleUrl}
+						author={frontmatter?.author || 'Ethan Shaw'}
+						date={pageDate}
+						isEnglish={isEnglishRoute}
+					/>
+				)}
 				{articleSlug && <LikeButton slug={articleSlug} lang={isEnglishRoute ? 'en' : 'zh'} />}
 			</div>
 		</main>
@@ -588,40 +611,7 @@ function getLangSwitchHref(pathname: string) {
 				toast.classList.add('show');
 				setTimeout(function() { toast.classList.remove('show'); }, 3000);
 			}
-
-			// 点击 RSS 订阅：复制链接到剪贴板，弹出 Toast 提示（不跳转 XML 页面）
-			(function() {
-				function fallbackCopy(text, done) {
-					var ta = document.createElement('textarea');
-					ta.value = text;
-					ta.style.position = 'fixed';
-					ta.style.opacity = '0';
-					document.body.appendChild(ta);
-					ta.focus();
-					ta.select();
-					try { document.execCommand('copy'); done(); } catch (e) {}
-					document.body.removeChild(ta);
-				}
-				function copyToClipboard(text, done) {
-					if (navigator.clipboard && navigator.clipboard.writeText) {
-						navigator.clipboard.writeText(text).then(done).catch(function() { fallbackCopy(text, done); });
-					} else {
-						fallbackCopy(text, done);
-					}
-				}
-				var links = document.querySelectorAll('.rss-link');
-				for (var i = 0; i < links.length; i++) {
-					(function(link) {
-						link.addEventListener('click', function(e) {
-							e.preventDefault();
-							var url = link.getAttribute('data-copy') || link.href;
-							copyToClipboard(url, function() {
-								showToast(document.documentElement.lang === 'en-US' ? 'RSS link copied' : 'RSS地址已复制');
-							});
-						});
-					})(links[i]);
-				}
-			})();
+			window.showToast = showToast;
 
 			// 有题头图时：若标题/日期在图片区域内放不下（会顶出导航栏被遮挡），
 			// 自动增高图片区域（保持宽度、中间裁剪），让标题在导航栏下方完整显示。
@@ -791,7 +781,7 @@ function getLangSwitchHref(pathname: string) {
 			var homeTitleReady = false;
 			function fitHomeTitle() {
 				if (!homeTitleReady) return;
-				var h1 = document.querySelector('body:not(.is-article-page) .page-hero h1, body.is-rants-index .page-hero h1');
+				var h1 = document.querySelector('body:not(.is-article-page):not(.is-rss-page) .page-hero h1, body.is-rants-index .page-hero h1');
 				if (!h1 || !h1.parentElement) return;
 				// 先清掉上一次写的 inline，回到 CSS 的底子
 				h1.style.fontStretch = '';
