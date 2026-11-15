@@ -36,20 +36,12 @@ body.is-rss-page:not(.is-article-page) .page-hero h1 {
 .rss-quick-copy {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
+    gap: 0.75rem;
     font-weight: 600;
 }
 
 .rss-quick-copy-button {
     width: 100%;
-    border-color: var(--color-blue-border);
-    background: var(--color-blue-bg);
-    color: var(--primary-blue);
-    font-size: 0.9rem;
-}
-
-.rss-quick-copy-button:hover {
-    border-color: var(--primary-blue);
 }
 
 .rss-faq-dialogue {
@@ -84,37 +76,26 @@ body.is-rss-page:not(.is-article-page) .page-hero h1 {
 .rss-feed-addresses {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    margin: 0.25rem 0 1.25rem;
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
 }
 
-.rss-feed-address {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: stretch;
-    gap: 0.5rem 0.75rem;
+/* 订阅地址直接复用文章代码块（含自带的复制按钮）：只收掉它的上下外边距，
+   语言标签改成正文的黑体、也不做大写转换 —— 那里放的是「中文 / English」这种语言名，不是代码语言。 */
+.typography-body .rss-feed-addresses pre {
+    margin: 0;
 }
 
-.rss-feed-label {
-    flex: 0 0 5.5rem;
-    align-self: center;
-    color: var(--text-sub);
-    font-size: 0.9rem;
+.typography-body .rss-feed-code .code-lang {
+    font-family: var(--font-inter), 'Noto Sans SC', sans-serif;
+    text-transform: none;
 }
 
-.rss-feed-address code {
-    display: flex;
-    flex: 1 1 auto;
-    align-items: center;
-    box-sizing: border-box;
-    min-width: 0;
-    min-height: 2.75rem;
-    overflow-wrap: anywhere;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--item-border);
-    border-radius: 8px;
+/* 深色代码块放在这一页太跳，改成页内的卡片语言：白底 + 细边 + 卡片阴影 */
+.typography-body .rss-feed-code {
     background: var(--card-bg);
-    color: var(--text-main);
+    border-color: var(--item-border);
+    box-shadow: var(--card-shadow);
 }
 
 .rss-copy-button {
@@ -124,20 +105,24 @@ body.is-rss-page:not(.is-article-page) .page-hero h1 {
     justify-content: center;
     box-sizing: border-box;
     min-height: 2.75rem;
-    padding: 0 0.85rem;
+    padding: 0 1rem;
     border: 1px solid var(--item-border);
-    border-radius: 8px;
+    border-radius: var(--card-radius);
     background: var(--card-bg);
-    color: var(--text-main);
+    color: var(--text-sub);
+    box-shadow: var(--card-shadow);
     font: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .rss-copy-button:hover {
-    color: var(--primary-blue);
-    border-color: var(--color-blue-border);
-    background: var(--color-blue-bg);
+    border-color: var(--primary-blue);
+    background: var(--primary-blue);
+    color: var(--on-primary);
+    box-shadow: var(--card-hover-shadow);
 }
 
 .typography-body .rss-note {

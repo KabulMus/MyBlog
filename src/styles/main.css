@@ -1503,8 +1503,18 @@ html[lang='zh-CN'] .typography-body i {
 .typography-body .copyright-card .copyright-url:hover {
     color: var(--text-sub);
 }
+/* URL 很长会换行：border-bottom 只画在 inline-block 盒子的底边（最后一行），
+   换行后中间行没有下划线 ⇒ 改用 text-decoration（每一行都画）。 */
+.typography-body .copyright-card .copyright-url {
+    border-bottom: none;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    transition: text-decoration-color 0.2s ease;
+}
 .typography-body .copyright-card .copyright-url:hover {
-    border-bottom-color: var(--text-sub);
+    text-decoration-color: var(--text-sub);
 }
 .typography-body .copyright-card .license-link,
 .typography-body .copyright-card .license-link:hover {
@@ -1567,6 +1577,42 @@ html[lang='zh-CN'] .typography-body i {
 /* ⚡️ 核心：清除最后一行底部的细线，避免它和表格大底部的 1.5px 粗线重叠 */
 .typography-body tbody tr:last-child td {
     border-bottom: none !important;
+}
+
+/*
+   宽表格：外面套一层可横向滚动的容器（Markdown 表格由 astro.config.mjs 的 rehypeWrapTables 自动包，
+   手写表格加 .table-scroll 即可）。表格只在自身区域内左右滑动，不再把整页撑宽。
+   外层管外边距，内层表格自己不留 margin —— 否则会被 overflow 裁掉一段空隙。
+   滚动条全站隐藏，可滑动的提示交给两端渐变遮罩：做法同 MyWebsite 的里程碑横滑 ——
+   渐变宽度固定，只让两端点颜色的 alpha 跟着 scrollLeft 连续变化（Layout 的 initTableScroll 写这两个变量），
+   于是「还有内容」时渐隐、「已经到头」时逐渐恢复不透明，全程平滑、不需要额外过渡声明。
+*/
+.table-scroll {
+    max-width: 100%;
+    margin: 2.5rem 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    /* 1 = 不透明（没有遮罩），0 = 透明（渐变铺满这一段宽度） */
+    --mask-left: rgba(0, 0, 0, 1);
+    --mask-right: rgba(0, 0, 0, 1);
+    -webkit-mask-image: linear-gradient(to right,
+        var(--mask-left),
+        #000 3rem,
+        #000 calc(100% - 3rem),
+        var(--mask-right));
+    mask-image: linear-gradient(to right,
+        var(--mask-left),
+        #000 3rem,
+        #000 calc(100% - 3rem),
+        var(--mask-right));
+}
+
+.typography-body .table-scroll > table {
+    margin-block: 0;
+    /* 最窄也按 500px 排：容器再窄就交给外层横向滚动，别把列继续压到挤成一团 */
+    min-width: 500px;
 }
 
 /* ==========================================================================
@@ -3404,7 +3450,6 @@ html[lang='zh-CN'] .cat-filter-btn {
     .typography-body .toc { display: none; }
     .toc-toggle-btn { display: flex; }
     .toc-popup { display: block; }
-
     /* 撤销双栏 → 单栏 */
     .is-article-page .page-hero section.hero-content {
         align-self: auto;
@@ -3436,6 +3481,16 @@ html[lang='zh-CN'] .cat-filter-btn {
         overflow: visible;
     }
     .post-nav { max-width: 800px; }
+}
+
+/* RSS 页的目录：本来就不是文章，没有右侧栏的容身之处 ⇒ 无论多宽都只用移动端那套
+   （右下角按钮 + 弹层），不进入上面的双栏布局。 */
+.is-rss-page .toc-toggle-btn {
+    display: flex;
+}
+
+.is-rss-page .toc-popup {
+    display: block;
 }
 
 /* 800~1249px：有题头图时 hero 内容与正文（800px 居中）左边缘对齐，

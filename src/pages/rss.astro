@@ -16,7 +16,7 @@ import '../styles/rss.css';
 			<button type="button" class="rss-copy-button rss-quick-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="复制英文 RSS 地址">英文RSS</button>
 		</div>
 
-		<h2 set:html={renderTypographicHtml('何为RSS')}></h2>
+		<h2 set:html={renderTypographicHtml('RSS是什么？')}></h2>
 		<p set:html={renderTypographicHtml('RSS（RDF Site Summary, Really Simple Syndication）是一种基于XML的网络内容发布汇总格式，用于向用户即时推送更新的网络内容。')}></p>
 		<p set:html={renderTypographicHtml('RSS允许网站内容提供者将其更新的内容以标准的结构化数据输出。用户可以通过专门的RSS阅读器订阅多个网站的RSS摘要，在一个统一界面中集中阅读不同来源的最新更新，而无需逐个访问各个网站。')}></p>
 
@@ -24,7 +24,7 @@ import '../styles/rss.css';
 
 		<h3 set:html={renderTypographicHtml('1. 选择RSS阅读器')} style="font-variant-numeric: tabular-nums;"></h3>
 		<p set:html={renderTypographicHtml('订阅RSS需要RSS阅读器。如果你还没有阅读器，这里可以为你提供一些选择：')}></p>
-		<div class="rss-reader-table-wrap" role="region" aria-label="RSS 阅读器对比" tabindex="0">
+		<div class="table-scroll" role="region" aria-label="RSS 阅读器对比" tabindex="0">
 			<table class="rss-reader-table">
 				<thead>
 					<tr>
@@ -62,16 +62,8 @@ import '../styles/rss.css';
 		<h3 set:html={renderTypographicHtml('2. 订阅地址')} style="font-variant-numeric: tabular-nums;"></h3>
 		<p set:html={renderTypographicHtml('Ethan\'s Blog提供简体中文、英文的RSS。请复制下方地址进行订阅：')}></p>
 		<div class="rss-feed-addresses">
-			<div class="rss-feed-address">
-				<span class="rss-feed-label">中文</span>
-				<code>https://blog.ethan929.com/rss.xml</code>
-				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/rss.xml" aria-label="复制简体中文 RSS 地址">复制</button>
-			</div>
-			<div class="rss-feed-address">
-				<span class="rss-feed-label">英文</span>
-				<code>https://blog.ethan929.com/en-US/rss.xml</code>
-				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="复制英文 RSS 地址">复制</button>
-			</div>
+			<pre class="rss-feed-code" data-language="中文" data-copy-label="复制中文 RSS 地址"><code>https://blog.ethan929.com/rss.xml</code></pre>
+			<pre class="rss-feed-code" data-language="英文" data-copy-label="复制英文 RSS 地址"><code>https://blog.ethan929.com/en-US/rss.xml</code></pre>
 		</div>
 
 		<h3 set:html={renderTypographicHtml('3. 添加订阅')} style="font-variant-numeric: tabular-nums;"></h3>
@@ -97,7 +89,7 @@ import '../styles/rss.css';
 			<p class="rss-faq-answer" set:html={renderTypographicHtml('只要本站发布新文章，你的RSS阅读器就会在下一次刷新时自动抓取并提醒你。')}></p>
 		</div>
 
-		<p set:html={renderTypographicHtml('祝阅读愉快！✨')} style="text-align: center; font-size: 2rem; font-weight: 700;"></p>
+		<p set:html={renderTypographicHtml('祝阅读愉快! ✨')} style="text-align: center; font-size: 2rem; font-weight: 700;"></p>
 	</section>
 </Layout>
 

@@ -24,7 +24,7 @@ import '../../styles/rss.css';
 
 		<h3 set:html={renderTypographicHtml('1. Choose an RSS reader')} style="font-variant-numeric: tabular-nums;"></h3>
 		<p set:html={renderTypographicHtml("You'll need an RSS reader to subscribe. If you don't already have one, here are a few options:")}></p>
-		<div class="rss-reader-table-wrap" role="region" aria-label="RSS reader comparison" tabindex="0">
+		<div class="table-scroll" role="region" aria-label="RSS reader comparison" tabindex="0">
 			<table class="rss-reader-table">
 				<thead>
 					<tr>
@@ -61,16 +61,8 @@ import '../../styles/rss.css';
 		<h3 set:html={renderTypographicHtml('2. Choose a feed address')} style="font-variant-numeric: tabular-nums;"></h3>
 		<p set:html={renderTypographicHtml("Ethan's Blog has separate RSS feeds in English and Simplified Chinese. Copy the address for the language you'd like to follow:")}></p>
 		<div class="rss-feed-addresses">
-			<div class="rss-feed-address">
-				<span class="rss-feed-label">English</span>
-				<code>https://blog.ethan929.com/en-US/rss.xml</code>
-				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/en-US/rss.xml" aria-label="Copy English RSS feed">Copy</button>
-			</div>
-			<div class="rss-feed-address">
-				<span class="rss-feed-label">Chinese</span>
-				<code>https://blog.ethan929.com/rss.xml</code>
-				<button type="button" class="rss-copy-button" data-rss-copy data-feed-url="https://blog.ethan929.com/rss.xml" aria-label="Copy Simplified Chinese RSS feed">Copy</button>
-			</div>
+			<pre class="rss-feed-code" data-language="English" data-copy-label="Copy English RSS feed"><code>https://blog.ethan929.com/en-US/rss.xml</code></pre>
+			<pre class="rss-feed-code" data-language="Chinese" data-copy-label="Copy Simplified Chinese RSS feed"><code>https://blog.ethan929.com/rss.xml</code></pre>
 		</div>
 
 		<h3 set:html={renderTypographicHtml('3. Add the feed to your reader')} style="font-variant-numeric: tabular-nums;"></h3>

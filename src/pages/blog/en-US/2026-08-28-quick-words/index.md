@@ -22,15 +22,7 @@ Hey don't jump to conclusions!! Sure, some classmates have already gotten togeth
 
 ## The New Wei Dongyi??
 
-Seeing "Wei Dongyi 'wannabes'" around the honors classes is nothing new, but classmate Liu W.J. takes being "Wei Dongyi" a bit too far... it's like his brain only developed the problem-solving module and nothing else—he looks kinda goofy<sup>sorry if that's offensive</sup>, and can't even walk straight...
-
-During military training I was walking right beside him, watching how he walks, and I nearly collapsed from holding it in—is he duck-footed or something?
-
-Oh right, we were voting for class officers—and this guy went and ran for **three** positions at once: vice class monitor (and Youth League[^1] secretary), discipline committee member, and English monitor. His campaign speech was dripping with that lecturing "dad energy," like we all owed him something. Zero EQ—where does he get the nerve...
-
-[^1]: The Communist Youth League of China.
-
-**But even so—still, apologies for the offense!!! orz**
+*Updated Nov 16, 2026: Given that the text contains extreme, subjective content, it will not be published.*
 
 ## The homeroom teacher is a "legend"
 

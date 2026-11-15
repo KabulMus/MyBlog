@@ -183,6 +183,20 @@ const licenseUrl = isEnglish
 		}
 	}
 
+	/* 卡片很窄（<350px）时：许可徽标从左排的 flex 项改成浮动，文字绕排到它右边/下方 */
+	@container (max-width: 300px) {
+		.license-explanation {
+			display: block;
+		}
+
+		.license-badge {
+			float: left;
+			width: calc(3.0em * 120 / 42); /* 与高度同比例，图案随视口等比缩放 */
+			height: 3.0em; /* 两行文字：2 × line-height(1.65)，跟字号联动 */
+			margin: 0.05rem 0.5rem 0 0;
+		}
+	}
+
 	@media (max-width: 480px) {
 		.copyright-card {
 			padding: 1rem;

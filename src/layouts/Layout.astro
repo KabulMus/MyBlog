@@ -27,6 +27,8 @@ const isEnglishRoute = currentPath.includes('/en-US');
 // 首页（中/英）不进 pagefind 索引：搜索只命中具体文章页
 const isHome = currentPath === '/' || currentPath === '/en-US';
 const isRssPage = currentPath === '/rss' || currentPath === '/en-US/rss';
+// 目录按钮/弹层：文章页本来就有；RSS 页也给它一份，但只用移动端那套（见 main.css 的 .is-rss-page 规则）
+const showTocPopup = currentPath.startsWith('/blog') || isRssPage;
 const htmlLang = isEnglishRoute ? 'en-US' : 'zh-CN';
 const resolvedBrandUrl = brandUrl || (isEnglishRoute ? '/en-US' : '/');
 const langSwitchHref = getLangSwitchHref(currentPath);
@@ -541,7 +543,7 @@ function getLangSwitchHref(pathname: string) {
 			{currentPath.startsWith('/blog') && (
 				<nav class="toc" id="toc" aria-label={isEnglishRoute ? 'Table of contents' : '目录'} data-pagefind-ignore></nav>
 			)}
-			{currentPath.startsWith('/blog') && (
+			{showTocPopup && (
 				<button class="toc-toggle-btn" id="toc-toggle" aria-label={isEnglishRoute ? 'Table of contents' : '目录'}>
 					<svg width="24" height="24" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
 						<path d="M8 28C10.2091 28 12 26.2091 12 24C12 21.7909 10.2091 20 8 20C5.79086 20 4 21.7909 4 24C4 26.2091 5.79086 28 8 28Z" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
@@ -553,7 +555,7 @@ function getLangSwitchHref(pathname: string) {
 					</svg>
 				</button>
 			)}
-			{currentPath.startsWith('/blog') && (
+			{showTocPopup && (
 				<div class="toc-popup" id="toc-popup" data-pagefind-ignore></div>
 			)}
 			<div class="post-body">
@@ -986,7 +988,7 @@ function getLangSwitchHref(pathname: string) {
 					var btn = document.createElement('button');
 					btn.type = 'button';
 					btn.className = 'code-copy-btn';
-					btn.setAttribute('aria-label', '复制代码');
+					btn.setAttribute('aria-label', pre.getAttribute('data-copy-label') || '复制代码');
 					var copyIcon = '<svg viewBox="0 0 24 24"><rect x="8.15" y="8.15" width="12.26" height="12.26" rx="3" ry="3"/><path d="M3.59,14.7V5.89c0-1.27,1.03-2.3,2.3-2.3h8.81"/></svg>';
 					var checkIcon = '<svg viewBox="0 0 24 24"><polyline points="4.42 12.36 10.11 19.33 19.58 4.67" stroke="#58cc02"/></svg>';
 					btn.innerHTML = copyIcon;
@@ -1179,6 +1181,41 @@ function getLangSwitchHref(pathname: string) {
 				});
 			}
 			document.addEventListener('DOMContentLoaded', initVideoEmbeds);
+
+			// 宽表格的横向滚动提示：两端渐变遮罩的 alpha 跟着 scrollLeft 连续变化
+			// （做法同 MyWebsite 的里程碑横滑）。遮罩宽度是 CSS 里的 3rem，这里按同样的距离换算：
+			// 0px 处 alpha = 1（该侧不透明，说明到头了），滑开 3rem 后 alpha = 0（该侧渐隐，说明还有内容）。
+			var TABLE_FADE = 48;
+			function updateTableScrollHints(el) {
+				var max = el.scrollWidth - el.clientWidth;
+				var leftAlpha = Math.min(1, Math.max(0, 1 - el.scrollLeft / TABLE_FADE));
+				var rightAlpha = Math.min(1, Math.max(0, 1 - (max - el.scrollLeft) / TABLE_FADE));
+				el.style.setProperty('--mask-left', 'rgba(0,0,0,' + leftAlpha + ')');
+				el.style.setProperty('--mask-right', 'rgba(0,0,0,' + rightAlpha + ')');
+			}
+			function initTableScroll() {
+				document.querySelectorAll('.table-scroll').forEach(function(el) {
+					updateTableScrollHints(el);
+					el.addEventListener('scroll', function() { updateTableScrollHints(el); }, { passive: true });
+				});
+				// 容器或表格自身的尺寸变化（换行、字体就位、断点切换）不会触发 scroll，
+				// 得靠观察器把遮罩重新算一遍，否则可能停在「还有内容」或「到头了」的错误状态
+				if (window.ResizeObserver) {
+					var observer = new ResizeObserver(function() { refreshTableScrollHints(); });
+					document.querySelectorAll('.table-scroll').forEach(function(el) {
+						observer.observe(el);
+						if (el.firstElementChild) observer.observe(el.firstElementChild);
+					});
+				}
+			}
+			function refreshTableScrollHints() {
+				document.querySelectorAll('.table-scroll').forEach(updateTableScrollHints);
+			}
+			document.addEventListener('DOMContentLoaded', initTableScroll);
+			// 字体到位 / 视口变化后列宽会变，重算一次，别让遮罩停在错误的一侧
+			window.addEventListener('load', refreshTableScrollHints);
+			window.addEventListener('resize', refreshTableScrollHints);
+			if (document.fonts && document.fonts.ready) document.fonts.ready.then(refreshTableScrollHints);
 
 			// 标签行窄屏重排：
 			//  1) cat 不在行首时，不得把「cat + 首个 tag」拆到两行 → 隐藏前一个 | 并在 cat 前插断行整组换行；

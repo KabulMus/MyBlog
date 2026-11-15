@@ -781,7 +781,19 @@ function blogEditorApi() {
             //    这样正文那一流里只有正文，模型就算「忘了写标题」也吃不掉第一句话；
             //    反过来，这一步失败就当整体失败——宁可不出译文，也不能悄悄把标题写错。
             const style = tr.readStyleGuide();
-            const outTitle = srcTitle ? await tr.translateTitle({ ...common, title: srcTitle, direction, style }) : '';
+            // 目标文章已存在且标题已填 ⇒ 复用现有标题、只翻内容（不另发请求翻标题）；
+            // 目标不存在或标题为空 ⇒ 照旧单独翻标题。
+            let outTitle = '';
+            if (srcTitle) {
+              let existingTitle = '';
+              try {
+                const targetPost = io.readPost(target);
+                existingTitle = typeof targetPost.frontmatter.title === 'string' ? targetPost.frontmatter.title.trim() : '';
+              } catch {
+                // 目标还不存在
+              }
+              outTitle = existingTitle || (await tr.translateTitle({ ...common, title: srcTitle, direction, style }));
+            }
 
             res.statusCode = 200;
             res.setHeader('content-type', 'text/plain; charset=utf-8');
@@ -885,6 +897,29 @@ function rehypeLazyImages() {
   };
 }
 
+// 宽表格：给每个 <table> 套一层横向滚动容器，表格只在自身区域内左右滑动，不把整页撑宽。
+// 样式见 main.css 的 .table-scroll（容器负责外边距与滚动条，内层表格自己不再留 margin）。
+function rehypeWrapTables() {
+  return (tree) => {
+    const wrap = (node) => {
+      if (!Array.isArray(node.children)) return;
+      node.children = node.children.map((child) => {
+        wrap(child);
+        if (child.type === 'element' && child.tagName === 'table') {
+          return {
+            type: 'element',
+            tagName: 'div',
+            properties: { className: ['table-scroll'] },
+            children: [child],
+          };
+        }
+        return child;
+      });
+    };
+    wrap(tree);
+  };
+}
+
 export default defineConfig({
   site: 'https://blog.ethan929.com',
   // 旧地址 → 新地址（列表页改名：/rants ⇒ /ramblings、/posts ⇒ /archives）。
@@ -928,7 +963,7 @@ export default defineConfig({
   ],
   markdown: {
     remarkPlugins: [remarkFigure, remarkEmbed, remarkAbc, remarkJianpu, remarkScoreSwitch, remarkMath], // ⚡️ 图片尺寸/图注 + 视频短代码 + ABC 五线谱 + 简谱 + 「紧贴的两种记谱法合成切换器」+ 识别 $ $$ 语法
-    rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody, rehypePunctFullWidth, rehypeLazyImages], // 正文图片默认懒加载；独立题图由 Layout 提高优先级
+    rehypePlugins: [rehypeKatex, rehypeSmartQuotesBody, rehypePunctFullWidth, rehypeLazyImages, rehypeWrapTables], // 正文图片默认懒加载；宽表格套横向滚动容器；独立题图由 Layout 提高优先级
     // ⚡️ 关闭内置 smartypants 的引号转换，改由 rehypeSmartQuotesBody 统一接管；
     //    保留破折号/省略号；backticks 也关闭（否则正文两个单引号 '' 会被合并成右双引号 ”）
     smartypants: {
