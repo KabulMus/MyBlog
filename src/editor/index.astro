@@ -154,6 +154,10 @@ const editorConfig = {
 								<label for="fm-image-credit">题图标注</label>
 								<input id="fm-image-credit" type="text" placeholder="署名 / 说明" />
 							</div>
+							<div class="fm-meta-group fm-row is-post-meta fm-score-row" id="fm-score-row" hidden>
+								<label for="fm-score">分数</label>
+								<input id="fm-score" type="text" placeholder="作文得分" />
+							</div>
 							<div class="fm-meta-group"><span class="fm-meta-label">标记</span><div class="fm-chips fm-chips--flags" id="fm-flags"></div></div>
 							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">分类</span><div class="fm-chips" id="fm-category"></div></div>
 							<div class="fm-meta-group is-post-meta"><span class="fm-meta-label">标签</span><div class="fm-chips" id="fm-tags"></div></div>
@@ -916,6 +920,7 @@ const editorConfig = {
 						if (kept.length !== tagNow.length) frontmatter.tags = kept.length ? kept : undefined;
 						renderTagChips();
 					}
+					if (group === 'tags') syncScoreRow(); // 考场文 tag 开关牵动「分数」栏
 					setDirty(true);
 				});
 			}
@@ -969,6 +974,16 @@ const editorConfig = {
 			function syncCreditRow() { creditRow.hidden = !imageInput.value.trim(); }
 			creditInput.addEventListener('input', () => {
 				frontmatter.imageCredit = creditInput.value.trim();
+				setDirty(true);
+			});
+
+			// 分数（frontmatter 的 `score`）：只有考场文（tags 含 exam）才显示这一栏；
+			// 清空 = 去掉这个字段（serializeFrontmatter 会把空值整行丢掉）。
+			const scoreInput = el<HTMLInputElement>('fm-score');
+			const scoreRow = el<HTMLDivElement>('fm-score-row');
+			function syncScoreRow() { scoreRow.hidden = !strArray(frontmatter.tags).includes('exam'); }
+			scoreInput.addEventListener('input', () => {
+				frontmatter.score = scoreInput.value.trim();
 				setDirty(true);
 			});
 
@@ -1823,7 +1838,9 @@ const editorConfig = {
 				dateInput.value = String(frontmatter.date ?? '').slice(0, 16);
 				imageInput.value = String(frontmatter.image ?? '');
 				creditInput.value = String(frontmatter.imageCredit ?? '');
+				scoreInput.value = String(frontmatter.score ?? '');
 				syncCreditRow();
+				syncScoreRow();
 				renderChips(); // 含「标记」那一行（草稿 / AI）
 
 				loadBody(editor, detail.body);

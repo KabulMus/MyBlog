@@ -1422,6 +1422,9 @@ html.is-card-dragging { user-select: none; }
    ⚠️ .fm-row 自带 display: flex，会盖掉 [hidden] 的 display: none ⇒ 这里得显式写一遍） */
 .fm-credit-row[hidden] { display: none; }
 
+/* 没挂「考场文」tag 就没有「分数」这一栏（JS 按 tags 是否含 exam 切 [hidden]，同理得显式写） */
+.fm-score-row[hidden] { display: none; }
+
 /* 宽屏：容器不参与布局（它只是手机弹层的外壳），四组直接排在下面的 .fm-row--meta 里 */
 .fm-meta { display: contents; }
 

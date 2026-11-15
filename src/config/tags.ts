@@ -14,6 +14,7 @@ export const tagDefs: Record<string, { zh: string; en: string; cats?: string[] }
     article: { zh: '长文', en: 'Article', cats: ['essays'] },
     note: { zh: '短记', en: 'Note', cats: ['essays'] },
     quote: { zh: '摘抄', en: 'Quote', cats: ['essays'] },
+    exam: { zh: '考场文', en: 'Exam Essay', cats: ['essays'] },
     recap: { zh: '回顾', en: 'Recap', cats: ['achievements'] },
     academic: { zh: '学业', en: 'Academic', cats: ['achievements'] },
     skill: { zh: '技能', en: 'Skill', cats: ['achievements'] },
@@ -29,7 +30,7 @@ export const tagOrder: string[] = [
     // studio
     'channel', 'tutorial', 'resource', 'video', 'code',
     // essays
-    'article', 'note', 'quote',
+    'article', 'note', 'quote', 'exam',
     // achievements
     'recap', 'academic', 'skill', 'award', 'habit',
 ];

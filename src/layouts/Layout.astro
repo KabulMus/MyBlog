@@ -75,6 +75,10 @@ const pageTitle = frontmatter?.title || (frontmatter?.date ? formatDate(frontmat
 // 标题允许行内标记（<i> 等）⇒ 渲染用 renderTitleHtml，元信息用 titleToText（剥标签）
 const renderedTitle = renderTitleHtml(pageTitle);
 const pageTitleText = titleToText(pageTitle);
+// 考场文（tag 含 exam）在标题区右上角叠一个分数（frontmatter.score）：红色半透明、Source Serif 4，
+// 像试卷上老师用红笔批的分数，绝对定位叠在背景上、靠右对齐。没有 score 字段就不渲染。
+const examScore = frontmatter?.score != null && frontmatter?.score !== '' ? String(frontmatter.score) : '';
+const isExamPost = Array.isArray(frontmatter?.tags) && frontmatter.tags.includes('exam');
 const ogDescription = description || (isEnglishRoute
     ? "Ethan's blog—music, creation, essays & achievements."
     : 'Ethan 的博客—音乐、创作、随笔与成就。');
@@ -119,6 +123,27 @@ if (frontmatter?.date && currentPath.startsWith('/blog')) {
     // ⚠️ 按 URL 找自己，别按标题：吐槽已经没有 title，undefined === undefined 会匹到第一篇
     idx = sorted.findIndex((p: any) => p.url === currentPath);
     if (idx !== -1) postIndex = idx + 1;
+}
+
+// 考场文字数：编译后的正文 HTML 剥标签取纯文本——中文按字符（含标点、不含空白）、英文按词
+function countExamWords(html: string, isEn: boolean): number {
+    const text = html
+        .replace(/<[^>]*>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!text) return 0;
+    return isEn ? text.split(' ').filter(Boolean).length : text.replace(/\s/g, '').length;
+}
+let examWordCount = 0;
+if (isExamPost && idx !== -1 && typeof sorted[idx]?.compiledContent === 'function') {
+    const examHtml = await sorted[idx].compiledContent();
+    examWordCount = countExamWords(examHtml, isEnglishRoute);
 }
 
 let prevPost: { title: string; url: string } | null = null;
@@ -399,6 +424,7 @@ function getLangSwitchHref(pathname: string) {
 									</span>
 								)}
 							</div>
+							{isExamPost && examScore && <span class="exam-score">{examScore}</span>}
 						</section>
 					</div>
 					{(() => {
@@ -502,6 +528,7 @@ function getLangSwitchHref(pathname: string) {
 							);
 						})()}
 					</div>
+					{isExamPost && examScore && <span class="exam-score">{examScore}</span>}
 				</section>
 			)}
 		</header>
@@ -527,6 +554,11 @@ function getLangSwitchHref(pathname: string) {
 			)}
 			<div class="post-body">
 				<slot />
+				{isExamPost && examWordCount > 0 && (
+					<p class="post-word-count" data-pagefind-ignore>
+						{isEnglishRoute ? `${examWordCount} words` : `${examWordCount} 字`}
+					</p>
+				)}
 				{isArticlePage && (
 					<CopyrightCard
 						title={pageTitleText}

@@ -1002,6 +1002,23 @@ footer a:hover {
     background: none;
 }
 
+/* 考场文分数：绝对定位叠在标题区右上角，红色半透明、Source Serif 4，像老师用红笔批的分数。
+   靠右对齐（右缘与标题文字右缘的 32px 内边距对齐），不占文档流、不跟标题渐变色打架。 */
+.page-hero .exam-score {
+    position: absolute;
+    right: 32px;
+    z-index: 3;
+    color: var(--color-red-bg);
+    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-style: italic;
+    font-weight: 900;
+    font-size: 10rem;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+}
+
 /* 主页标题：收缩到文字宽度，让渐变完整铺满文字（保持原有左对齐，仅主页，文章页不受影响）。
    字体换成 Google Sans Flex（只引了最粗的 1000），拉伸交给宽度轴：脚本 fitHomeTitle 把
    font-stretch（= wdth 轴 25%–150%）调到刚好铺满标题区可用宽度，顶到 150 就到头。 */
@@ -1476,6 +1493,13 @@ html[lang='zh-CN'] .typography-body i {
 }
 .typography-body .copyright-card .license-link:hover {
     border-bottom-color: var(--text-main);
+}
+
+/* 考场文字数：版权卡片前的一行小字，对齐跟正文一致（左对齐/两端对齐） */
+.typography-body .post-word-count {
+    margin: 28px 0 0;
+    font-size: 0.85rem;
+    color: var(--text-sub);
 }
 
 /*
