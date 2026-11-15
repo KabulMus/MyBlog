@@ -125,9 +125,13 @@ if (frontmatter?.date && currentPath.startsWith('/blog')) {
     if (idx !== -1) postIndex = idx + 1;
 }
 
-// 考场文字数：编译后的正文 HTML 剥标签取纯文本——中文按字符（含标点、不含空白）、英文按词
+// 考场文字数：编译后的正文 HTML 剥标签取纯文本——中文按字符（含标点、不含空白）、英文按词。
+// 脚注不参与统计：底部的 .footnotes 定义区整块去掉，正文里的脚注引用（<sup><a data-footnote-ref>）也去掉。
 function countExamWords(html: string, isEn: boolean): number {
     const text = html
+        .replace(/<section[^>]*class="[^"]*footnotes[^"]*"[^>]*>[\s\S]*?<\/section>/gi, '')
+        .replace(/<div[^>]*class="[^"]*footnotes[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+        .replace(/<sup[^>]*><a[^>]*data-footnote-ref[^>]*>[\s\S]*?<\/a><\/sup>/gi, '')
         .replace(/<[^>]*>/g, '')
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')

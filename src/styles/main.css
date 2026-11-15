@@ -38,6 +38,16 @@
     font-display: swap;
 }
 
+/* Playfair-Digits - 考场文分数批注专用的子集（Playfair Display Black Italic 只切 0-9 / A-F / +-，~3.7 KB）。
+   族名独立于系统的 Playfair Display；斜体 + 900 字重与分数装饰的样式匹配。等级（如 A+ / B-）也够用。 */
+@font-face {
+    font-family: 'Playfair-Digits';
+    src: url('/fonts/Playfair-Digits.woff2') format('woff2');
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap;
+}
+
 /* --- 2. 颜色变量 --- */
 :root {
     --font-inter: 'InterVariable';
@@ -1006,10 +1016,11 @@ footer a:hover {
    靠右对齐（右缘与标题文字右缘的 32px 内边距对齐），不占文档流、不跟标题渐变色打架。 */
 .page-hero .exam-score {
     position: absolute;
+    top: -2rem;
     right: 32px;
     z-index: 3;
     color: var(--color-red-bg);
-    font-family: 'Source Serif 4', 'Noto Serif SC', serif;
+    font-family: 'Playfair-Digits', 'Source Serif 4', 'Noto Serif SC', serif;
     font-style: italic;
     font-weight: 900;
     font-size: 10rem;
@@ -1017,6 +1028,14 @@ footer a:hover {
     white-space: nowrap;
     pointer-events: none;
     user-select: none;
+}
+
+/* 双栏（≥1250px，不是 1200）：标题区横跨 1100px（正文 800 + 目录 200 + 32 间隙），
+   分数装饰右缘收进正文列右缘，别跑到右侧目录上方。正文列右缘距标题区右缘 = 1100 − (34 + 800) = 266px */
+@media (min-width: 1250px) {
+    .is-article-page .page-hero .exam-score {
+        right: 266px;
+    }
 }
 
 /* 主页标题：收缩到文字宽度，让渐变完整铺满文字（保持原有左对齐，仅主页，文章页不受影响）。
