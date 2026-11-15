@@ -246,7 +246,7 @@ function getLangSwitchHref(pathname: string) {
 
 ---
 <!doctype html>
-<html lang={htmlLang} data-pagefind-ignore={frontmatter?.draft || isListingPage || isRantArticle ? '' : undefined}> 
+<html lang={htmlLang} data-pagefind-ignore={frontmatter?.draft || isListingPage || isRssPage || isRantArticle ? '' : undefined}> 
 	<head>
 		<script is:inline>
 		(function () {
