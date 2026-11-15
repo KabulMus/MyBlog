@@ -154,6 +154,10 @@ const editorConfig = {
 								<label for="fm-image-credit">题图标注</label>
 								<input id="fm-image-credit" type="text" placeholder="署名 / 说明" />
 							</div>
+							<div class="fm-meta-group fm-row is-post-meta">
+								<label for="fm-author">作者</label>
+								<input id="fm-author" type="text" placeholder="Ethan Shaw" />
+							</div>
 							<div class="fm-meta-group fm-row is-post-meta fm-score-row" id="fm-score-row" hidden>
 								<label for="fm-score">分数</label>
 								<input id="fm-score" type="text" placeholder="作文得分" />
@@ -974,6 +978,14 @@ const editorConfig = {
 			function syncCreditRow() { creditRow.hidden = !imageInput.value.trim(); }
 			creditInput.addEventListener('input', () => {
 				frontmatter.imageCredit = creditInput.value.trim();
+				setDirty(true);
+			});
+
+			// 作者（frontmatter 的 `author`）：版权卡片上显示的名字，不填就用默认 Ethan Shaw；
+			// 清空 = 去掉这个字段（serializeFrontmatter 会把空值整行丢掉）。
+			const authorInput = el<HTMLInputElement>('fm-author');
+			authorInput.addEventListener('input', () => {
+				frontmatter.author = authorInput.value.trim();
 				setDirty(true);
 			});
 
@@ -1830,6 +1842,7 @@ const editorConfig = {
 				lang = (posts.find((p) => p.path === path)?.lang ?? 'zh') as 'zh' | 'en';
 				// 正文样式（.typography-body）有 html[lang] 分支（中/英字体、中文斜体）⇒ 跟着文章语言切
 				document.documentElement.lang = lang === 'en' ? 'en-US' : 'zh-CN';
+				authorInput.value = String(frontmatter.author ?? '');
 				const p = posts.find((x) => x.path === path);
 				metaEl.innerHTML = p ? fmtLanguage(p) : '';
 				setPostPath(path); // 下拉触发器上那行字 + 菜单里的选中态
