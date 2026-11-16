@@ -194,7 +194,7 @@ function rehypePunctFullWidth() {
     const scan = (n) => {
       if (!n || n.type !== 'element') return false;
       const p = n.properties || {};
-      if (p.dataFootNoteRef != null || p['data-footnote-ref'] != null) return true;
+      if (p.dataFootnoteRef != null || p['data-footnote-ref'] != null) return true;
       return (n.children || []).some(scan);
     };
     return scan(node);
