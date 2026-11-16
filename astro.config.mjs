@@ -14,7 +14,7 @@ import { loadEnv } from 'vite';
 //    它们只依赖 node:fs / node:path，静态导入没有额外代价。
 import * as io from './scripts/lib/post-io.mjs';
 import * as tr from './scripts/lib/translate.mjs';
-import { SENTENCE_END, BOUNDARY, keepsFullWidth } from './src/lib/punct-width.mjs';
+import { SENTENCE_END, BOUNDARY, FOOTNOTE, keepsFullWidth } from './src/lib/punct-width.mjs';
 
 // ⚡️ 把「只当 mask 用的小 SVG」内联成 CSS 里的 data: URI。
 // 为什么必须内联、不能用 preload 提速：浏览器对 mask 资源是「绘制时才发请求」，
@@ -188,6 +188,17 @@ function rehypeSmartQuotesBody() {
 // ⚠️ 不加码 blockquote/li/figcaption 之类的例外：断行规则和文本内容都不受 span 影响。
 function rehypePunctFullWidth() {
   const PROTECTED = new Set(['code', 'pre', 'kbd', 'samp', 'script', 'style', 'math', 'annotation']);
+  // 脚注引用：remark-gfm 渲染成 <sup><a data-footnote-ref>（属性名可能被 hast 写成 dataFootNoteRef）
+  const isFootnoteSup = (node) => {
+    if (!node || node.tagName !== 'sup') return false;
+    const scan = (n) => {
+      if (!n || n.type !== 'element') return false;
+      const p = n.properties || {};
+      if (p.dataFootNoteRef != null || p['data-footnote-ref'] != null) return true;
+      return (n.children || []).some(scan);
+    };
+    return scan(node);
+  };
   return (tree) => {
     // 第一遍：按文档顺序把可见文字摊平成一条字符串（与逐字符对应的位置表并行维护）。
     // 受保护的整块、块级元素边界、硬换行（<br>）都插一个 BOUNDARY 哨兵：它既不是句末点号也
@@ -200,6 +211,9 @@ function rehypePunctFullWidth() {
       const cls = node.properties && node.properties.className;
       if (Array.isArray(cls) && cls.includes('katex')) { text += BOUNDARY; cells.push(null); return; }
       if (node.tagName === 'br') { text += BOUNDARY; cells.push(null); return; } // 硬换行：这里就是行尾
+      // 脚注引用（<sup><a data-footnote-ref>…）也是「句末点号后面紧跟注释序号」的那种邻居：
+      // 插 FOOTNOTE 哨兵，点号压半宽（跟编辑器的 footnoteRef 原子节点同一待遇）
+      if (isFootnoteSup(node)) { text += FOOTNOTE; cells.push(null); return; }
       if (node.type === 'text') {
         for (let i = 0; i < node.value.length; i++) { text += node.value[i]; cells.push({ node, i }); }
         return;

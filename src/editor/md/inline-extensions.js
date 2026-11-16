@@ -14,7 +14,7 @@
 import { Extension, Mark, Node } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { SENTENCE_END, BOUNDARY, keepsFullWidth } from '../../lib/punct-width.mjs';
+import { SENTENCE_END, BOUNDARY, FOOTNOTE, keepsFullWidth } from '../../lib/punct-width.mjs';
 
 /** 能当「真格式」用的行内 HTML 标签（markdown-io 那边也按这个名单识别成对标签）
  *  ⚠️ 加新标签前先想清楚「会不会叠在同一段文字上」：这里每个标签都用 htmlInline 这一种 mark，
@@ -235,6 +235,13 @@ export const PunctFullWidth = Extension.create({
 				block.descendants((node, pos) => {
 					if (node.type.name === 'hardBreak') {
 						text += BOUNDARY;
+						cells.push(null);
+						return true;
+					}
+					// 脚注引用是原子节点：像站点渲染层那样插 FOOTNOTE 哨兵，
+					// 让「。^1」里的点号也压半宽（而不是被跳过、当成段末）
+					if (node.type.name === 'footnoteRef') {
+						text += FOOTNOTE;
 						cells.push(null);
 						return true;
 					}

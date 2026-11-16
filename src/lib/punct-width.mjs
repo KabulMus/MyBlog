@@ -22,6 +22,9 @@ export const CLOSERS = new Set([
  *  选一个正文里经不会出现的控制字符，免得跟真实文字撞上。 */
 export const BOUNDARY = '\u0002';
 
+/** 注释序号（脚注引用 [^1]）哨兵：句末点号后面紧跟它时，点号也压半宽。 */
+export const FOOTNOTE = '\u0003';
+
 /**
  * text 的第 i 个字符是句末点号时，它该不该占全角。
  * 收尾也要压半宽：后面没东西、或后面紧跟边界（块末、硬换行、行内代码）时，
@@ -31,6 +34,6 @@ export const BOUNDARY = '\u0002';
  */
 export const keepsFullWidth = (text, i) => {
 	const next = text[i + 1];
-	if (next === undefined || next === BOUNDARY) return false;
+	if (next === undefined || next === BOUNDARY || next === FOOTNOTE) return false;
 	return !SENTENCE_END.has(next) && !CLOSERS.has(next);
 };
