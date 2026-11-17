@@ -101,6 +101,9 @@
        亮底 ≈0.105 的品牌蓝 与 暗底 0.075 的亮蓝，感知亮度差接近（ΔL* 都 ≈5）。 */
     --bg-doodle: rgba(30, 102, 198, 0.105);
     --selection-bg: #1e67c640;
+    --code-toolbar-bg: rgba(255, 255, 255, 0.05);
+    --code-toolbar-border: rgba(255, 255, 255, 0.08);
+    --code-lang: #adb0c2;
 }
 
 /* 深色模式变量 */
@@ -1384,10 +1387,9 @@ html[lang='zh-CN'] .typography-body i {
     margin: 2rem 0;
     padding: 0;                         
     background-color: #1a1a1e;          
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--code-toolbar-border);
     border-radius: var(--card-radius); 
     overflow: hidden;        
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* 有复制按钮时隐藏伪元素语言标签，改用 JS 注入的统一工具栏 */
@@ -1402,9 +1404,9 @@ html[lang='zh-CN'] .typography-body i {
     right: 0;
     display: flex;
     align-items: center;
-    background-color: rgba(255, 255, 255, 0.05);
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: var(--code-toolbar-bg);
+    border-left: 1px solid var(--code-toolbar-border);
+    border-bottom: 1px solid var(--code-toolbar-border);
     border-bottom-left-radius: 6px;
     z-index: 11;
 }
@@ -1417,7 +1419,7 @@ html[lang='zh-CN'] .typography-body i {
     font-size: 0.78rem;
     font-weight: 600;
     text-transform: uppercase;
-    color: #adb0c2;
+    color: var(--code-lang);
     padding: 0 10px;
     user-select: none;
 }
@@ -1428,17 +1430,17 @@ html[lang='zh-CN'] .typography-body i {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #adb0c2;
+    color: var(--code-lang);
     background: transparent;
     border: none;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-left: 1px solid var(--code-toolbar-border);
     cursor: pointer;
     transition: color 0.2s ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
     .code-copy-btn:hover {
-        color: white;
+        color: var(--primary-blue);
     }
 }
 
@@ -3871,7 +3873,7 @@ html.hero-lock .page-hero.has-hero-image.is-hero-ready {
     align-items: center;
     /* 29 = .score-convert-btn 的 28 + 1px 底边：只有标签、没按钮的（单谱外框）也保持同高 */
     min-height: 29px;
-    background-color: rgba(127, 127, 127, 0.07);
+    background-color: rgba(0, 0, 0, 0.05);
     border-left: 1px solid var(--item-border);
     border-bottom: 1px solid var(--item-border);
     border-bottom-left-radius: var(--card-radius);

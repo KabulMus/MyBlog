@@ -1,3 +1,15 @@
+:root {
+    --code-toolbar-bg: rgba(0, 0, 0, 0.05);
+    --code-toolbar-border: rgba(0, 0, 0, 0.08);
+    --code-lang: #6b7280;
+}
+
+:root[data-theme='dark'] {
+    --code-toolbar-bg: rgba(255, 255, 255, 0.05);
+    --code-toolbar-border: rgba(255, 255, 255, 0.08);
+    --code-lang: #adb0c2;
+}
+
 .rss-guide {
     max-width: 720px;
     margin: 0 auto 3rem;
@@ -96,6 +108,12 @@ body.is-rss-page:not(.is-article-page) .page-hero h1 {
     background: var(--card-bg);
     border-color: var(--item-border);
     box-shadow: var(--card-shadow);
+}
+
+.typography-body .rss-feed-code code {
+    padding: 1.5rem;
+    color: var(--text-main);
+    border-radius: var(--card-radius);
 }
 
 .rss-copy-button {
