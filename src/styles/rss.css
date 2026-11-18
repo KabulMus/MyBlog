@@ -10,6 +10,14 @@
     --code-lang: #adb0c2;
 }
 
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        --code-toolbar-bg: rgba(255, 255, 255, 0.05);
+        --code-toolbar-border: rgba(255, 255, 255, 0.08);
+        --code-lang: #adb0c2;
+    }
+}
+
 .rss-guide {
     max-width: 720px;
     margin: 0 auto 3rem;
