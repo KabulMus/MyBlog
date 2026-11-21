@@ -102,7 +102,9 @@ body.is-rss-page:not(.is-article-page) .page-hero h1 {
 }
 
 .typography-body .rss-feed-code code {
+    font-family: var(--font-inter), 'Noto Sans SC', sans-serif;
     padding: 1.5rem;
+    font-weight: 500;
     color: var(--text-main);
     border-radius: var(--card-radius);
 }

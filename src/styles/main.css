@@ -2010,7 +2010,7 @@ html[lang='en-US'] .typography-body .footnotes::before {
     justify-content: center;
     width: 2.4rem;
     height: 2.4rem;
-    font-family: var(--font-google-sans-flex), var(--font-inter), sans-serif;
+    font-family: var(--font-google-sans-flex), var(--font-inter), 'Noto Sans SC', sans-serif;
     font-stretch: 50%;
     font-size: 1.2rem;
     font-weight: 600;
