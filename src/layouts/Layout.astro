@@ -5346,7 +5346,7 @@ function getLangSwitchHref(pathname: string) {
 		//   所以把下一行开头那几项粘成一整块（合计宽度超过半格就塞不进了）。中文项是整格，本来就不用粘。
 		// ⚠️ 编辑器里的 contenteditable 也带 .typography-body，但那个 DOM 归 ProseMirror 管，
 		//    碰不得（包 span / 加类会被它当成外部篡改）⇒ 见到 .editor-prose 直接退出。
-		import { SENTENCE_END } from '../lib/punct-width.mjs';
+		import { SENTENCE_END, CLOSERS } from '../lib/punct-width.mjs';
 
 		const END_CLASS = 'punct-line-end';
 		const HEAD_CLASS = 'punct-line-head';
@@ -5397,7 +5397,8 @@ function getLangSwitchHref(pathname: string) {
 						const next = lines[index + 1];
 						if (!next) return; // 段末行本来就右不齐，不用管
 						const last = line.items[line.items.length - 1];
-						if (!SENTENCE_END.has(last.ch)) return;
+						// 行末恒半形：句末点号、以及「。」里的右标号，落在行尾都压半宽
+						if (!SENTENCE_END.has(last.ch) && !CLOSERS.has(last.ch)) return;
 						const span = last.node.parentElement;
 						if (!span || !span.classList.contains('punct-full')) return; // 已经是半宽的（后面跟了闭标号那种）不用管
 						// 下一行第一项就窄过半格的话，得先把它跟后面几项粘成一整块，否则它会被吸上来

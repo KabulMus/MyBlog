@@ -1,22 +1,5 @@
-:root {
-    --code-toolbar-bg: rgba(0, 0, 0, 0.05);
-    --code-toolbar-border: rgba(0, 0, 0, 0.08);
-    --code-lang: #6b7280;
-}
-
-:root[data-theme='dark'] {
-    --code-toolbar-bg: rgba(255, 255, 255, 0.05);
-    --code-toolbar-border: rgba(255, 255, 255, 0.08);
-    --code-lang: #adb0c2;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-        --code-toolbar-bg: rgba(255, 255, 255, 0.05);
-        --code-toolbar-border: rgba(255, 255, 255, 0.08);
-        --code-lang: #adb0c2;
-    }
-}
+/* RSS 页复用文章代码块，但这里是卡片底（跟随主题）⇒ toolbar 颜色走共享的 --panel-toolbar-bg，
+   不再覆盖 --code-* 那套「深色代码块」专用变量（见下面 .rss-feed-code 那组局部覆盖）。 */
 
 .rss-guide {
     max-width: 720px;
@@ -122,6 +105,24 @@ body.is-rss-page:not(.is-article-page) .page-hero h1 {
     padding: 1.5rem;
     color: var(--text-main);
     border-radius: var(--card-radius);
+}
+
+/* 右上角 toolbar：跟随主题的卡片窄条（跟乐谱切换器、ramblings 原文按钮同一套变量） */
+.typography-body .rss-feed-code .code-toolbar {
+    background-color: var(--panel-toolbar-bg);
+    border-color: var(--item-border);
+}
+.typography-body .rss-feed-code .code-copy-btn {
+    color: var(--text-sub);
+    border-left-color: var(--item-border);
+}
+/* ⚠️ 上面这条是 (0,3,0)，会压过 main.css 里的 `.code-copy-btn:hover`（(0,2,0)）
+   ⇒ hover 变蓝得在这里补一条同权重的 */
+.typography-body .rss-feed-code .code-copy-btn:hover {
+    color: var(--primary-blue);
+}
+.typography-body .rss-feed-code .code-lang {
+    color: var(--text-sub);
 }
 
 .rss-copy-button {

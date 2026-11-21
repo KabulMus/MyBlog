@@ -37,3 +37,18 @@ export const keepsFullWidth = (text, i) => {
 	if (next === undefined || next === BOUNDARY || next === FOOTNOTE) return false;
 	return !SENTENCE_END.has(next) && !CLOSERS.has(next);
 };
+
+/**
+ * text 的第 i 个字符是闭标号（右括号/右直角引号等）时，它该不该占全角。
+ * 只有前面紧跟句末点号（。！？）的闭标号才全角（如「。」的右引号）；
+ * 其余闭标号维持 body 的 halt 半宽。
+ * ⚠️ 调用方同样要先把整块文字摊平，否则闭标号前面的点号可能被行内元素边界截断。
+ */
+export const keepsFullWidthCloser = (text, i) => {
+	const prev = text[i - 1];
+	if (prev === undefined || prev === BOUNDARY || prev === FOOTNOTE) return false;
+	// 行末恒半形优先：闭标号自己落在行尾（块末/硬换行/注释序号之后）时也压半宽
+	const next = text[i + 1];
+	if (next === undefined || next === BOUNDARY || next === FOOTNOTE) return false;
+	return SENTENCE_END.has(prev);
+};

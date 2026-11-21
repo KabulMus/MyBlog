@@ -14,7 +14,7 @@
 import { Extension, Mark, Node } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { SENTENCE_END, BOUNDARY, FOOTNOTE, keepsFullWidth } from '../../lib/punct-width.mjs';
+import { SENTENCE_END, CLOSERS, BOUNDARY, FOOTNOTE, keepsFullWidth, keepsFullWidthCloser } from '../../lib/punct-width.mjs';
 
 /** 能当「真格式」用的行内 HTML 标签（markdown-io 那边也按这个名单识别成对标签）
  *  ⚠️ 加新标签前先想清楚「会不会叠在同一段文字上」：这里每个标签都用 htmlInline 这一种 mark，
@@ -259,7 +259,10 @@ export const PunctFullWidth = Extension.create({
 					return true;
 				});
 				for (let k = 0; k < text.length; k++) {
-					if (cells[k] === null || !SENTENCE_END.has(text[k]) || !keepsFullWidth(text, k)) continue;
+					if (cells[k] === null) continue;
+					const full = (SENTENCE_END.has(text[k]) && keepsFullWidth(text, k))
+						|| (CLOSERS.has(text[k]) && keepsFullWidthCloser(text, k));
+					if (!full) continue;
 					positions.push(cells[k]);
 				}
 				return true;
@@ -313,7 +316,8 @@ export const PunctFullWidth = Extension.create({
 				glue.push([view.posAtDOM(first.node, first.i), view.posAtDOM(tail.node, tail.i + 1)]);
 			};
 			chars.forEach((c, i) => {
-				if (!SENTENCE_END.has(c.ch)) return;
+				// 行末恒半形：句末点号、以及「。」里的右标号，落在行尾都压半宽
+				if (!SENTENCE_END.has(c.ch) && !CLOSERS.has(c.ch)) return;
 				const span = c.node.parentElement;
 				if (!span || !span.classList.contains('punct-full')) return; // 静态已经压半宽的不用管
 				const after = chars[i + 1];

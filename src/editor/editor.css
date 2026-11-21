@@ -1761,24 +1761,6 @@ body .editor-prose {
 	line-break: strict;
 }
 
-/* 开明式标点：句末点号（。！？）撤销上面刚恢复的 halt，回到全角字形 —— 与站点渲染层一致。
-   类由 PunctFullWidth 的装饰挂上（装饰不进文档，markdown 序列化拿到的还是原文）。 */
-body .editor-prose .punct-full {
-	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 0;
-}
-
-/* 行末句末号：压回半宽（量行尾那套在 inline-extensions.js 的 PunctFullWidth 里）。
-   省下的半格由 justify 摊进本行字间，所以行依然两端对齐、墨迹贴到版心右缘。
-   ⚠️ 这条必须在上面那条**之后**：两个类同优先级，靠后者生效。 */
-body .editor-prose .punct-full.punct-line-end {
-	font-feature-settings: 'liga' 1, 'calt' 1, 'halt' 1;
-}
-
-/* 下一行开头那几项被粘成一整块：合计宽过半格就塞不进压半宽省出来的那半格 */
-body .editor-prose .punct-line-head {
-	white-space: nowrap;
-}
-
 /* 代码里尤其不能要字体特性（`//` 会被排成一个宽字形）：站点 main.css 的 `.typography-body code`
    写的是 `"liga", "calt", "halt"`（= 全开，优先级也比继承高）⇒ 这里显式盖掉。 */
 body .editor-prose :is(code, pre),

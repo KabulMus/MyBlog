@@ -14,7 +14,7 @@ import { loadEnv } from 'vite';
 //    它们只依赖 node:fs / node:path，静态导入没有额外代价。
 import * as io from './scripts/lib/post-io.mjs';
 import * as tr from './scripts/lib/translate.mjs';
-import { SENTENCE_END, BOUNDARY, FOOTNOTE, keepsFullWidth } from './src/lib/punct-width.mjs';
+import { SENTENCE_END, CLOSERS, BOUNDARY, FOOTNOTE, keepsFullWidth, keepsFullWidthCloser } from './src/lib/punct-width.mjs';
 
 // ⚡️ 把「只当 mask 用的小 SVG」内联成 CSS 里的 data: URI。
 // 为什么必须内联、不能用 preload 提速：浏览器对 mask 资源是「绘制时才发请求」，
@@ -230,7 +230,10 @@ function rehypePunctFullWidth() {
     const hits = new Map();
     for (let k = 0; k < text.length; k++) {
       const cell = cells[k];
-      if (!cell || !SENTENCE_END.has(text[k]) || !keepsFullWidth(text, k)) continue;
+      if (!cell) continue;
+      const full = (SENTENCE_END.has(text[k]) && keepsFullWidth(text, k))
+        || (CLOSERS.has(text[k]) && keepsFullWidthCloser(text, k));
+      if (!full) continue;
       if (!hits.has(cell.node)) hits.set(cell.node, new Set());
       hits.get(cell.node).add(cell.i);
     }
