@@ -64,19 +64,19 @@ From the above it's easy to establish: true italics simply don't exist in Chines
 ![](../../2026-11-22-little-touches-in-the-site/images/2026-11-22-united-nations-document.webp)
 *Chinese kaiti "大会/通过" corresponds to English italics "The General Assembly / Adopts."</br>Source: UN General Assembly A/RES/70/1*
 
-But my body text is <ruby>sans-serif<rt>heiti</rt></ruby>, while the UN's is <ruby>serif<rt>songti</rt></ruby>, so going straight to kaiti would feel a bit out of place. So I bumped it up a level and switched to Noto Serif CJK, which distinguishes itself nicely from Noto Sans CJK without being too jarring. For Western italics on Chinese pages, to pair with Noto Serif CJK, I used serif italics—of course, English pages never show serif fonts, so those are still sans-serif italics~
+But my body text is <ruby>sans-serif<rt>heiti</rt></ruby>, while the UN's is <ruby>serif<rt>songti</rt></ruby>, so going straight to kaiti would feel a bit out of place. So I bumped it up a level and switched to Noto Serif CJK, which distinguishes itself nicely from Noto Sans CJK without being too jarring. For Western italics on Chinese pages, to pair with the Serif, I used serif italics—of course, English pages never show serif fonts, so those are still sans-serif italics~
 
 Comparison:
 
 > <span style="font-family: 'Source Serif 4', serif; font-style: italic;">Apple</span><span style="font-family: 'Noto Serif SC', serif;">公司最近发布了新款</span><span style="font-family: 'Source Serif 4', serif; font-style: italic;">iPhone。</span>
-> 
+>
 > <i>Apple recently released a new iPhone.</i>
 
-## Open-style punctuation
+## Kaiming-style punctuation
 
-> **Open-style punctuation** is a Chinese publishing typographic style whose core principle is that sentence-ending punctuation takes full width while all other punctuation takes half width. It originated from publications of the Kaiming Bookstore, and stands in contrast to the common "full-width style" where all punctuation occupies one character width.
+> **Kaiming-style punctuation** is a Chinese publishing typographic style whose core principle is that sentence-ending punctuation takes full width while all other punctuation takes half width. It originated from publications of the Kaiming Bookstore, and stands in contrast to the common "full-width style" where all punctuation occupies one character width.
 
-Given that "punctuation compression" is a rather time- and labor-intensive operation that generally only professional typesetting software can handle, fortunately Source Han Sans itself ships with half-width punctuation glyphs, so once again I invoked my money power<sup>where's the money this time</sup> and ordered DeepSeek to write this display logic.
+Given that "punctuation compression" is a rather time- and labor-intensive operation that generally only professional typesetting software can handle, fortunately Noto Sans CJK itself ships with half-width punctuation glyphs, so once again I invoked my money power<sup>where's the money this time</sup> and ordered DeepSeek to write this display logic.
 
 There are quite a lot of rules here—impossible to explain in a sentence or two. Better to just drop an excerpt (I recommend visiting the Chinese page to view the full Chinese layout):
 
@@ -88,7 +88,7 @@ Not bad, right?🤓
 
 Speaking of punctuation, I can't not mention quotation marks..
 
-### Corner brackets vs curly quotes
+### Corner brackets v.s. curly quotes
 
 Chinese quotation marks and Western quotation marks `“”` actually use the same code points `U+2018, U+2019`—the distinction is mainly made through font design. And if the designer didn't think it through, you can end up with something like this:
 
@@ -107,14 +107,14 @@ After a long time debugging, it now basically matches perfectly.
 For example:
 
 - `I'm here!` -&gt; I'm here!
-- `"I'm Ethan," said he.` -&gt; "I'm Ethan," said he.
+- `"I'm John," said he.` -&gt; "I'm John," said he.
 
 Even:
 
 - `She said 'don't do it' and left.` -&gt; She said 'don't do it' and left.
 - `''Cause I believe I love you.'` -&gt; ''Cause I believe I love you.'
 
-*btw while I'm at it, let me take a jab—by using American English I've indirectly dodged some of those pile-ups of single quotes (sorry sorry sorry to all you BrE lovers)*
+*btw while I'm at it, let me take a jab—by using American English I've indirectly dodged some of those pile-ups of single quotes (sorry sorry sorry to all BrE lovers)*
 
 ---
 

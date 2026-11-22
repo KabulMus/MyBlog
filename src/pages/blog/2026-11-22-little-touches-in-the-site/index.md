@@ -87,7 +87,7 @@ warning: []
 
 说起标点又不得不提引号这玩意了。。
 
-### 直角引号 vs 弯引号
+### 直角引号 v.s. 弯引号
 
 中文引号和西文引号 `“”` 其实用的是一样的码位 `U+2018, U+2019` ，主要是靠字体的设计来区分。而如果设计师考虑不周，就可能出现这种情况：
 
@@ -106,7 +106,7 @@ warning: []
 比如：
 
 - `I'm here!` -&gt; I'm here!
-- `"I'm Ethan," said he.` -&gt; "I'm Ethan," said he.
+- `"I'm John," said he.` -&gt; "I'm John," said he.
 
 甚至：
 

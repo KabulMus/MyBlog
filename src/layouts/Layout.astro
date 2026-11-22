@@ -1065,8 +1065,11 @@ function getLangSwitchHref(pathname: string) {
 					a.href = '#';
 					a.setAttribute('data-text', label); /* 供弹层条目 ::before 占位防字重位移 */
 					var span = document.createElement('span');
-					span.className = 'toc-text';
-					span.textContent = label;
+					span.className = 'toc-nav';
+					var zhSpan = document.createElement('span');
+					if (!isEn) zhSpan.className = 'toc-nav-zh'; /* 中文正体 300；英文沿用链接的常规斜体 */
+					zhSpan.textContent = label;
+					span.appendChild(zhSpan);
 					a.appendChild(span);
 					a.addEventListener('click', function(e) {
 						e.preventDefault();
@@ -1085,7 +1088,7 @@ function getLangSwitchHref(pathname: string) {
 
 					var list = document.createElement('ul');
 					list.className = 'toc-list';
-					list.appendChild(makeNavItem('Top', function() { return 0; }));
+					list.appendChild(makeNavItem(isEn ? 'Top' : '顶部', function() { return 0; }));
 
 					items.forEach(function(it) {
 						var li = document.createElement('li');
@@ -1102,7 +1105,7 @@ function getLangSwitchHref(pathname: string) {
 						list.appendChild(li);
 					});
 
-					list.appendChild(makeNavItem('Bottom', function() {
+					list.appendChild(makeNavItem(isEn ? 'Bottom' : '底部', function() {
 						return document.documentElement.scrollHeight;
 					}));
 					container.appendChild(list);

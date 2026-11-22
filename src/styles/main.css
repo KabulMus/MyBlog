@@ -3332,9 +3332,17 @@ html[lang='zh-CN'] .cat-filter-btn {
 .toc-item--h3 a { padding-left: 12px; }
 .toc-item--h4 a { padding-left: 24px; }
 
-/* 页面级导航（篇首 / 篇末）：斜体区分 */
+/* 页面级导航（篇首 / 篇末）：中文正体细体 350，西文常规斜体 */
 .toc .toc-item--nav a,
 .toc-popup .toc-item--nav a { font-style: italic; }
+.toc .toc-item--nav .toc-nav,
+.toc-popup .toc-item--nav .toc-nav { display: block; width: 100%; min-width: 0; }
+.toc .toc-item--nav .toc-nav-zh,
+.toc-popup .toc-item--nav .toc-nav-zh { font-style: normal; font-weight: 350; }
+.toc .toc-item--nav a:hover .toc-nav-zh,
+.toc-popup .toc-item--nav a:hover .toc-nav-zh,
+.toc .toc-item--nav a.is-active .toc-nav-zh,
+.toc-popup .toc-item--nav a.is-active .toc-nav-zh { font-weight: 500; }
 
 /* 移动端目录按钮（右下角常驻，排在语言/主题按钮最上头，样式同主题/语言切换按钮） */
 .toc-toggle-btn {
