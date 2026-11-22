@@ -38,6 +38,20 @@ export const keepsFullWidth = (text, i) => {
 	return !SENTENCE_END.has(next) && !CLOSERS.has(next);
 };
 
+/** 是否是标点（中文标点块、全角标点、弯引号、省略号和破折号）。全角字母数字不算。 */
+const isPunct = (ch) => {
+	const c = ch.charCodeAt(0);
+	return (
+		(c >= 0x3000 && c <= 0x303f) ||
+		(c >= 0xff01 && c <= 0xff0f) ||
+		(c >= 0xff1a && c <= 0xff20) ||
+		(c >= 0xff3b && c <= 0xff40) ||
+		(c >= 0xff5b && c <= 0xff65) ||
+		c === 0x2018 || c === 0x2019 || c === 0x201c || c === 0x201d ||
+		c === 0x2026 || c === 0x2014
+	);
+};
+
 /**
  * text 的第 i 个字符是闭标号（右括号/右直角引号等）时，它该不该占全角。
  * 只有前面紧跟句末点号（。！？）的闭标号才全角（如「。」的右引号）；
@@ -50,5 +64,7 @@ export const keepsFullWidthCloser = (text, i) => {
 	// 行末恒半形优先：闭标号自己落在行尾（块末/硬换行/注释序号之后）时也压半宽
 	const next = text[i + 1];
 	if (next === undefined || next === BOUNDARY || next === FOOTNOTE) return false;
-	return SENTENCE_END.has(prev);
+	if (!SENTENCE_END.has(prev)) return false;
+	// 闭标号后面紧跟标点（！）、）⇒ 这句还没真的收尾，全角那半格留着会和后面的标点挤在一起
+	return !isPunct(next);
 };

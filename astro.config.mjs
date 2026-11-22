@@ -188,6 +188,8 @@ function rehypeSmartQuotesBody() {
 // ⚠️ 不加码 blockquote/li/figcaption 之类的例外：断行规则和文本内容都不受 span 影响。
 function rehypePunctFullWidth() {
   const PROTECTED = new Set(['code', 'pre', 'kbd', 'samp', 'script', 'style', 'math', 'annotation']);
+  // 连用时才换中文字体的符号：省略号 … 和破折号 —
+  const CJK_MARK = new Set(['\u2026', '\u2014']);
   // 脚注引用：remark-gfm 渲染成 <sup><a data-footnote-ref>（属性名可能被 hast 写成 dataFootNoteRef）
   const isFootnoteSup = (node) => {
     if (!node || node.tagName !== 'sup') return false;
@@ -227,15 +229,33 @@ function rehypePunctFullWidth() {
     })(tree);
 
     // 第二遍：判完再把命中的文本节点按字符切开
-    const hits = new Map();
+    const hits = new Map(); // 文本节点 → Map(字符下标 → 类名)
+    const mark = (cell, cls) => {
+      let m = hits.get(cell.node);
+      if (!m) { m = new Map(); hits.set(cell.node, m); }
+      m.set(cell.i, cls);
+    };
     for (let k = 0; k < text.length; k++) {
       const cell = cells[k];
       if (!cell) continue;
       const full = (SENTENCE_END.has(text[k]) && keepsFullWidth(text, k))
         || (CLOSERS.has(text[k]) && keepsFullWidthCloser(text, k));
-      if (!full) continue;
-      if (!hits.has(cell.node)) hits.set(cell.node, new Set());
-      hits.get(cell.node).add(cell.i);
+      if (full) mark(cell, 'punct-full');
+    }
+    // 连用的省略号（……）、破折号（——）：西文那一对字形又窄又挤，改由中文字体画。
+    // 单个的不动 —— 一个 … 是西文省略号，本来就该用西文字体。
+    for (let k = 0; k < text.length; ) {
+      const ch = text[k];
+      if (!CJK_MARK.has(ch)) { k++; continue; }
+      let end = k;
+      while (end < text.length && text[end] === ch) end++;
+      if (end - k >= 2) {
+        for (let m = k; m < end; m++) {
+          const cell = cells[m];
+          if (cell) mark(cell, 'punct-cjk');
+        }
+      }
+      k = end;
     }
     if (!hits.size) return;
 
@@ -250,12 +270,13 @@ function rehypePunctFullWidth() {
         let buf = '';
         const flush = () => { if (buf) { out.push({ type: 'text', value: buf }); buf = ''; } };
         for (let i = 0; i < child.value.length; i++) {
-          if (!hit.has(i)) { buf += child.value[i]; continue; }
+          const cls = hit.get(i);
+          if (!cls) { buf += child.value[i]; continue; }
           flush();
           out.push({
             type: 'element',
             tagName: 'span',
-            properties: { className: ['punct-full'] },
+            properties: { className: [cls] },
             children: [{ type: 'text', value: child.value[i] }],
           });
         }

@@ -350,6 +350,17 @@ body.is-rants-index .rant-card-body {
     white-space: nowrap;
 }
 
+/* 连用的省略号（……）和破折号（——）：西文那两个字形又窄又挤，连起来不成样子 ⇒ 交回中文字体画。
+   单个的不动（一个 … 本来就是西文省略号）。判定和挂类在 astro.config.mjs 的 rehypePunctFullWidth 里。 */
+.punct-cjk {
+    font-family: 'Noto Sans SC', -apple-system, sans-serif;
+}
+/* 中文斜体那一块是衬线的，连用符号跟着换成衬线中文 */
+html[lang='zh-CN'] .typography-body em .punct-cjk,
+html[lang='zh-CN'] .typography-body i .punct-cjk {
+    font-family: 'Noto Serif SC', serif;
+}
+
 /* --- 选中文字颜色 --- */
 ::selection {
     background: var(--selection-bg);
