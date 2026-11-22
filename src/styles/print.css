@@ -1,0 +1,302 @@
+/* ==========================================================================
+   🖨️ 打印样式（以黑白打印为基准）
+   ⚠️ 单独一份，由 Layout.astro 在 main.css 之后 import —— 打印规则要和屏幕规则
+      同权重比源码顺序，必须排在 main.css 后面才压得住。
+   · 交互部件（导航、悬浮按钮、目录、点赞、翻页、复制工具栏、视频占位）一律不印；
+   · 暗色主题印在白纸上等于白字 ⇒ 纸上一律按亮色；
+   · 黑白打印机只有灰度：分类/标签/徽标那一整套色相变量全塌成黑白灰，
+     否则红色标签和蓝色标签会印成两坨看不出区别、浅色底又会变白；
+   · 浏览器默认不画「背景」，凡靠背景表达的东西（引用块的竖线、标签的浅灰底、
+     代码块的黑底、任务列表的对勾）都得改用边框或 print-color-adjust 兜住；
+   · 代码块改成白底黑字（彩色语法色在灰度下只剩深浅不一的灰，满版黑底还费墨）；
+   · 图片不动，该什么颜色就什么颜色。
+   ========================================================================== */
+
+/* 页边距交给 @page，正文不再自己留 32px 内边距 */
+@page {
+    margin: 16mm 14mm;
+}
+
+@media print {
+    /* ── 变量：亮色 + 全黑白的配色 ──────────────────────────── */
+    /* 亮色压过 :root[data-theme='dark'] 和跟随系统深色那两条（同权重、这里排最后） */
+    :root,
+    :root[data-theme='dark'],
+    :root:not([data-theme='light']) {
+        --primary-blue: #000000;
+        --primary-purple: #000000;
+        --bg-light: #ffffff;
+        --text-main: #1D1D1F;
+        --text-sub: #55585e;
+        --card-bg: #ffffff;
+        --item-border: rgba(0, 0, 0, 0.15);
+        --card-shadow: none;
+        --card-hover-shadow: none;
+        --selection-bg: rgba(0, 0, 0, 0.12);
+        /* 黑白下的「反色」就是白：任务列表的黑底白勾靠它 */
+        --on-primary: #ffffff;
+        /* 标签色相全部塌成黑白灰：文字一律黑，底色一档浅灰，描边一档中灰 */
+        --color-blue: #000000;
+        --color-amber: #000000;
+        --color-green: #000000;
+        --color-cyan: #000000;
+        --color-red: #000000;
+        --color-purple: #000000;
+        --color-indigo: #000000;
+        --color-rose: #000000;
+        --color-gray: #000000;
+        --color-blue-bg: rgba(0, 0, 0, 0.08);
+        --color-amber-bg: rgba(0, 0, 0, 0.08);
+        --color-green-bg: rgba(0, 0, 0, 0.08);
+        --color-cyan-bg: rgba(0, 0, 0, 0.08);
+        --color-red-bg: rgba(0, 0, 0, 0.08);
+        --color-purple-bg: rgba(0, 0, 0, 0.08);
+        --color-indigo-bg: rgba(0, 0, 0, 0.08);
+        --color-rose-bg: rgba(0, 0, 0, 0.08);
+        --color-gray-bg: rgba(0, 0, 0, 0.08);
+        --color-blue-border: rgba(0, 0, 0, 0.35);
+        --color-amber-border: rgba(0, 0, 0, 0.35);
+        --color-green-border: rgba(0, 0, 0, 0.35);
+        --color-cyan-border: rgba(0, 0, 0, 0.35);
+        --color-red-border: rgba(0, 0, 0, 0.35);
+        --color-purple-border: rgba(0, 0, 0, 0.35);
+        --color-indigo-border: rgba(0, 0, 0, 0.35);
+        --color-rose-border: rgba(0, 0, 0, 0.35);
+        --color-gray-border: rgba(0, 0, 0, 0.35);
+    }
+
+    body {
+        background: #fff;
+        color: #000;
+    }
+
+    /* 背景线稿装饰 */
+    .bg-doodle {
+        display: none;
+    }
+
+    /* ── 标点：纸上版心宽度不同，行尾压缩量出来的行尾不成立 ────── */
+    /* 一律按全角，宁可有那半格凹陷 */
+    .punct-full.punct-line-end {
+        font-feature-settings: "liga" 1, "calt" 1, "halt" 0, var(--inter-variant-features);
+    }
+    .punct-line-head {
+        white-space: normal;
+    }
+
+    /* ── 交互部件：不印 ─────────────────────────────────────── */
+    .navbar,
+    .nav-dropdown,
+    .menu-toggle,
+    .mobile-rss,
+    .article-back-btn,
+    .theme-toggle-btn,
+    .lang-toggle-btn,
+    .toc-toggle-btn,
+    .toc,
+    .toc-popup,
+    .pagination,
+    .tag-filter-bar,
+    .cat-filter-bar,
+    .code-toolbar,
+    .score-toolbar,
+    .like-section,
+    .post-nav,
+    .rant-preview,
+    .rant-card-source,
+    .video-embed,
+    .video-note,
+    .toast-notice,
+    .charlie-star,
+    footer {
+        display: none !important;
+    }
+
+    /* ── 版心：交给 @page，标题区不再给悬浮按钮/目录留位 ──────── */
+    .typography-body {
+        max-width: none;
+        padding: 0;
+    }
+    .typography-body:has(.toc) {
+        display: block;
+        max-width: none;
+        margin: 0;
+    }
+    .page-hero,
+    .is-article-page .page-hero,
+    .is-article-page .page-hero.has-hero-image {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    .page-hero section.hero-content,
+    .is-article-page .page-hero section.hero-content,
+    body.is-rants-index .page-hero section.hero-content {
+        max-width: none;
+        margin-left: 0;
+        align-self: auto;
+    }
+    .page-hero h1 {
+        padding: 0;
+        margin-bottom: 6px;
+    }
+    /* 标题是渐变字（文字本身透明）⇒ 不印背景就什么都看不见，纸上改回实色 */
+    .page-hero h1 {
+        background: none;
+        -webkit-background-clip: initial;
+        background-clip: initial;
+        -webkit-text-fill-color: currentColor;
+        color: var(--text-main);
+    }
+    .page-hero .date,
+    .article-tags,
+    .page-hero.has-hero-image .article-tags,
+    .is-article-page .page-hero:not(.has-hero-image) section.hero-content .article-tags {
+        width: auto;
+        margin-left: 0;
+        margin-right: 0;
+        padding: 0;
+    }
+
+    /* ── 带题图的文章：标题从照片上拿下来，改成照片下方一行黑字 ─────
+       屏幕上标题是白色字压在照片底部（靠黑色渐变垫底）；纸上渐变不印，
+       白字落在深浅不定的照片上很容易看不清 ⇒ 干脆让它排到照片下面。 */
+    .page-hero.has-hero-image {
+        padding-bottom: 8px;
+    }
+    .page-hero.has-hero-image .hero-content {
+        position: static;
+        margin: 10px 0 0;
+        bottom: auto;
+    }
+    .page-hero.has-hero-image h1 {
+        color: #000;
+        text-shadow: none;
+    }
+    .page-hero.has-hero-image .page-index,
+    .page-hero.has-hero-image .date {
+        color: #333;
+        text-shadow: none;
+    }
+    .page-hero.has-hero-image .date svg.date-icon {
+        filter: none;
+    }
+    /* 照片底部那层黑色渐变遮罩就是背景，反正印不出来，直接收掉 */
+    .hero-image-fade {
+        display: none;
+    }
+    /* 题图本身压一下高度，别一张图就吃掉半页 */
+    .hero-image-wrap img {
+        max-height: 85mm;
+    }
+
+    /* ── 分页断点 ───────────────────────────────────────────── */
+    .typography-body h1,
+    .typography-body h2,
+    .typography-body h3,
+    .typography-body h4,
+    .typography-body h5,
+    .typography-body h6,
+    .page-hero h1 {
+        break-after: avoid-page;
+        break-inside: avoid;
+    }
+    .typography-body p {
+        orphans: 2;
+        widows: 2;
+    }
+    .typography-body pre,
+    .typography-body .abc-score,
+    .typography-body .jianpu-score,
+    .typography-body .score-switch,
+    .typography-body .table-scroll,
+    .typography-body blockquote,
+    .typography-body img,
+    .typography-body li,
+    .post-card-image,
+    .hero-image-wrap,
+    .post-item,
+    .rant-card,
+    .copyright-card {
+        break-inside: avoid;
+    }
+
+    /* ── 代码块：白底黑字 ───────────────────────────────────── */
+    /* Shiki 把底色和 token 颜色写成内联 style，只能用 !important 压 */
+    .typography-body pre {
+        background: #fff !important;
+        border-color: rgba(0, 0, 0, 0.35);
+    }
+    .typography-body pre code {
+        color: #000;
+    }
+    .typography-body pre code * {
+        color: #000 !important;
+    }
+    .typography-body code {
+        color: #000;
+    }
+    /* 行内代码：屏幕上是浅灰底，不印背景就成了平文本 ⇒ 补一圈细描边 */
+    .typography-body :not(pre) > code {
+        background: none;
+        border: 1px solid rgba(0, 0, 0, 0.35);
+        border-radius: 2px;
+    }
+
+    /* ── 行内链接：黑白下靠下划线认，不能只靠颜色 ─────────────── */
+    .typography-body a:not(.post-title-link) {
+        color: #000;
+        border-bottom-color: rgba(0, 0, 0, 0.45);
+    }
+
+    /* ── 引用块的左边线：屏幕上是伪元素的背景色，打印默认不画背景 ⇒ 换成真边框 ── */
+    .typography-body blockquote {
+        border-left: 3px solid #000;
+        padding-left: 13px;
+    }
+    .typography-body blockquote::before {
+        content: none;
+    }
+    .typography-body blockquote blockquote {
+        border-left-color: #777;
+        padding-left: 13px;
+    }
+
+    /* ── 标签/徽标：浅灰底属于「背景」，补一圈描边，没打底也认得出是个小块 ── */
+    .cat-tag,
+    .cw-pill,
+    .ai-badge {
+        border: 1px solid rgba(0, 0, 0, 0.35);
+    }
+    /* 带题图的文章：AI 徽标那套紫色变量写在元素自己身上，压不到 :root，这里单独塌成黑白 */
+    .page-hero.has-hero-image {
+        --color-purple: #ffffff;
+        --color-purple-bg: rgba(0, 0, 0, 0.55);
+        --color-purple-border: rgba(255, 255, 255, 0.5);
+    }
+
+    /* ── 靠底色画出来的东西：强制印 ─────────────────────────── */
+    /* 任务列表的对勾（直接给黑底白勾） */
+    .typography-body li input[type="checkbox"] {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .typography-body li input[type="checkbox"]:checked {
+        background-color: #000;
+        border-color: #000;
+    }
+    /* 荧光笔标记的底色，否则高亮部分在纸上是平的 */
+    .typography-body mark {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* ── 宽表格：去掉两端渐隐遮罩和最小宽度，整表缩进版心 ─────── */
+    .typography-body .table-scroll {
+        overflow: visible;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+    .typography-body .table-scroll > table {
+        min-width: 0;
+    }
+}

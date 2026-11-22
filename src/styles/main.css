@@ -286,10 +286,6 @@ button, input, select, textarea { font-family: inherit; }
     mask-position: 190px 110px;
 }
 
-@media print {
-    .bg-doodle { display: none; }
-}
-
 body {
     font-size: 1rem;
     font-family: var(--font-inter), 'Noto Sans SC', -apple-system, sans-serif;
@@ -352,16 +348,6 @@ body.is-rants-index .rant-card-body {
    于是断行点不动，下一行的第一个字不会被吸上来。 */
 .punct-line-head {
     white-space: nowrap;
-}
-
-/* 打印是另一套版心宽度，屏幕上量出来的行尾在纸上不成立 ⇒ 一律按全角，宁可有那半格凹陷。 */
-@media print {
-    .punct-full.punct-line-end {
-        font-feature-settings: "liga" 1, "calt" 1, "halt" 0, var(--inter-variant-features);
-    }
-    .punct-line-head {
-        white-space: normal;
-    }
 }
 
 /* --- 选中文字颜色 --- */
@@ -2697,12 +2683,6 @@ body.is-listing-page footer {
     }
 }
 
-@media print {
-    .rant-preview {
-        display: none;
-    }
-}
-
 /* 2. 撑满整张卡片的绝对定位点击层 */
 .post-title-link::before {
     content: "";
@@ -3979,8 +3959,8 @@ html.hero-lock .page-hero.has-hero-image.is-hero-ready {
     fill: none;
     stroke: currentColor;
 }
-@media print {
-    .score-toolbar {
-        display: none;
-    }
-}
+/* ==========================================================================
+   🖨️ 打印样式不在这里：整套都在 src/styles/print.css
+   ⚠️ 那份由 Layout.astro 在 main.css 之后 import —— 打印规则和屏幕规则同权重时
+      拼的是源码顺序，必须排在 main.css 后面才压得住。
+   ========================================================================== */

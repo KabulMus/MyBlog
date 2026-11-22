@@ -911,18 +911,26 @@ const editorConfig = {
 					const group = btn.dataset.group as 'category' | 'tags' | 'warning';
 					const key = String(btn.dataset.key);
 					const list = strArray(frontmatter[group]);
-					const next = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+					// 分类是单选：点已选中的就取消，点别的就只留它
+					const next = group === 'category'
+						? (list.includes(key) ? [] : [key])
+						: (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
 					frontmatter[group] = next;
-					toggleChip(btn, next.includes(key));
 					// ⚠️ 只有分类会牵动「哪些 tag 可选」⇒ 那时才重画标签那排；其余一律就地改，
 					//    被点的这枚留在原地，过渡才跑得起来。
 					if (group === 'category') {
+						// 单选：整排重设选中态（就地改，不重画）
+						for (const b of chips.category.querySelectorAll<HTMLButtonElement>('button[data-key]')) {
+							toggleChip(b, next.includes(String(b.dataset.key)));
+						}
 						// 取消分类时，把那分类专属的 tag 一并撤掉：标签那排已经不显示它了，
 						// 值再留着的话文章上照样挂着这枚 tag
 						const tagNow = strArray(frontmatter.tags);
 						const kept = tagNow.filter((k) => !isOrphanTag(k, next));
 						if (kept.length !== tagNow.length) frontmatter.tags = kept.length ? kept : undefined;
 						renderTagChips();
+					} else {
+						toggleChip(btn, next.includes(key));
 					}
 					if (group === 'tags') syncScoreRow(); // 考场文 tag 开关牵动「分数」栏
 					setDirty(true);
@@ -1405,12 +1413,19 @@ const editorConfig = {
 					const group = btn.dataset.group as 'category' | 'tags' | 'warning';
 					const key = String(btn.dataset.key);
 					const list = npPick[group];
-					const next = list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
+					// 分类是单选：点已选中的就取消，点别的就只留它
+					const next = group === 'category'
+						? (list.includes(key) ? [] : [key])
+						: (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
 					npPick[group] = next;
-					toggleChip(btn, next.includes(key));
 					if (group === 'category') {
+						for (const b of npBoxes.category.querySelectorAll<HTMLButtonElement>('button[data-key]')) {
+							toggleChip(b, next.includes(String(b.dataset.key)));
+						}
 						npPick.tags = npPick.tags.filter((k) => !isOrphanTag(k, next)); // 同上：分类没了，专属 tag 也不留
 						renderNewTagChips();
+					} else {
+						toggleChip(btn, next.includes(key));
 					}
 				});
 			}
